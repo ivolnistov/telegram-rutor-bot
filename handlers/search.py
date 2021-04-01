@@ -15,7 +15,7 @@ __all__ = (
 def search_list(update, context):
     message = ''
     for search in get_searches(show_empty=True):
-        message += f'/ds_{search.id} /subscribe_{search.id} {search.url} {search.cron}'
+        message += f'/ds_{search.id} /subscribe_{search.id} {search.url} {" ".join(search.cron)}\n'
     if not message:
         message = 'No searches is defined'
     context.bot.send_message(chat_id=update.effective_chat.id, text=message)
