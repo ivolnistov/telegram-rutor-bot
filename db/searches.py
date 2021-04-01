@@ -1,10 +1,11 @@
-from typing import Iterable, List
+from typing import Iterable, List, TYPE_CHECKING
 
 from .connections import cursor, execute
 import models as m
 
 
-SEARCHES_QUERY = 'SELECT *, (SELECT COUNT(*) FROM subscribes WHERE search_id =searches.id) subscribers FROM searches WHERE subscribers;'
+if TYPE_CHECKING:
+    from sqlite3 import Connection
 
 
 def add_search_to_db(url: str, cron: str, creator_id: int):
@@ -16,14 +17,12 @@ def add_search_to_db(url: str, cron: str, creator_id: int):
         return cur.lastrowid
 
 
-def get_searches(cursor_=None) -> List['m.Search']:
-    if cursor_:
-        for search in cursor_.execute(SEARCHES_QUERY):
+def get_searches(show_empty: bool = False, connection: 'Connection' = None) -> List['m.Search']:
+    non_empty_q = 'SELECT *, (SELECT COUNT(*) FROM subscribes WHERE search_id =searches.id) subscribers FROM searches WHERE subscribers;'
+    with_empty_q = 'SELECT * FROM searches'
+    with cursor(connection) as cur:
+        for search in cur.execute(with_empty_q if show_empty else non_empty_q):
             yield m.Search(*search[:4])
-    else:
-        with cursor() as cur:
-            for search in cur.execute(SEARCHES_QUERY):
-                yield m.Search(*search[:4])
 
 
 def delete_search(id: int) -> None:

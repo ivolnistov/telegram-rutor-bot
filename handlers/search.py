@@ -14,7 +14,7 @@ __all__ = (
 @security(settings.USERS_WHITE_LIST)
 def search_list(update, context):
     message = ''
-    for search in get_searches():
+    for search in get_searches(show_empty=True):
         message += f'/ds_{search.id} /subscribe_{search.id} {search.url} {search.cron}'
     if not message:
         message = 'No searches is defined'

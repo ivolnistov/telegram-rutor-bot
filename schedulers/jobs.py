@@ -46,7 +46,7 @@ def notify_about_new(search):
 
 def scan_about_new_schedules(sc: BlockingScheduler):
     with connection() as con:
-        searches = {gen_hash(s.url, 'search_'): s for s in get_searches(con.cursor())}
+        searches = {gen_hash(s.url, 'search_'): s for s in get_searches(connection=con)}
         job_ids = []
         for job in sc.get_jobs():
             if not job.id.startswith('search_'):

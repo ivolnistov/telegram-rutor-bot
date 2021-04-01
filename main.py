@@ -39,7 +39,7 @@ def scheduler():
         sc = BlockingScheduler()
         sc.add_job(scan_about_new_schedules, 'cron', month='*', day='*', hour='*', minute='*', args=(sc,))
         with connection() as con:
-            for search in get_searches(con.cursor()):
+            for search in get_searches(connection=con):
                 # noinspection PyTupleAssignmentBalance
                 minute, hour, day, month, day_of_week = search.cron
                 id = gen_hash(search.url, 'search_')
