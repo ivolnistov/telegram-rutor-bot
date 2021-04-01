@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+python-telegram-bot = {extras = ["socks"], version = "*"}
+requests = {extras = ["socks"], version = "*"}
+beautifulsoup4 = "*"
+lxml = "*"
+transmission-rpc = {extras = ["socks"], version = "*"}
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
