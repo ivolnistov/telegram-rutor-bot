@@ -1,0 +1,47 @@
+from typing import Iterable, List
+from .connections import cursor
+import models as m
+
+
+__all__ = (
+    'add_torrent',
+    'get_torrent_by_id',
+    'get_torrents',
+    'get_torrent_by_blake',
+    'get_torrents_by_film',
+)
+
+
+def get_torrent_by_blake(blake, connection):
+    q = f'SELECT id FROM torrents WHERE blake = \'{blake}\''
+    res = connection.cursor().execute(q).fetchone()
+    if res:
+        return res[0]
+
+
+def add_torrent(film_id, blake, name, created, magnet, link, size, approved, downloaded, connection):
+    name = name.replace('\'', '\'\'')
+    q = f'''INSERT INTO torrents 
+    (film_id, blake, name, magnet, created, link, sz, approved, downloaded) 
+    VALUES ('{film_id}', '{blake}', '{name}', '{magnet}', '{created}', '{link}', {size}, {approved}, {downloaded});'''
+    with cursor(connection) as cur:
+        cur.execute(q)
+        return cur.lastrowid
+
+
+def get_torrents_by_film(film_id: int) -> Iterable:
+    q = 'SELECT * FROM torrents WHERE film_id = ' + str(film_id)
+    with cursor() as cur:
+        for torrent in cur.execute(q):
+            yield m.Torrent(*torrent)
+
+
+def get_torrent_by_id(id: int):
+    with cursor() as cur:
+        return m.Torrent(*cur.execute('SELECT * FROM torrents WHERE id = ' + str(id)).fetchone())
+
+
+def get_torrents(films: List[int]) -> Iterable:
+    q = 'SELECT * FROM torrents WHERE id IN (' + ','.join(map(str, films)) + ')'
+    with cursor() as cur:
+        return cur.execute(q)
