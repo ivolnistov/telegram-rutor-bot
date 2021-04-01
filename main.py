@@ -11,7 +11,7 @@ from helpers import gen_hash
 from schedulers import notify_about_new, scan_about_new_schedules
 
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=settings.LOG_LEVEL, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
 def bot():
