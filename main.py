@@ -54,7 +54,8 @@ def main():
         multiprocessing.set_start_method('fork')
     bot_proc = multiprocessing.Process(target=bot, args=())
     sc_proc = multiprocessing.Process(target=scheduler, args=())
-    init()
+    with connection() as con:
+        init(con)
     try:
         bot_proc.start()
         sc_proc.start()
