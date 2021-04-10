@@ -7,6 +7,14 @@ import models as m
 if TYPE_CHECKING:
     from sqlite3 import Connection
 
+__all__ = (
+    'add_search_to_db',
+    'get_search',
+    'get_searches',
+    'get_search_subscribers',
+    'delete_search',
+)
+
 
 def add_search_to_db(url: str, cron: str, creator_id: int):
     with cursor() as cur:
@@ -23,6 +31,12 @@ def get_searches(show_empty: bool = False, connection: 'Connection' = None) -> L
     with cursor(connection) as cur:
         for search in cur.execute(with_empty_q if show_empty else non_empty_q):
             yield m.Search(*search[:4])
+
+
+def get_search(id: int, connection: 'Connection' = None):
+    q = f'SELECT * FROM searches WHERE id={id}'
+    with cursor(connection) as cur:
+        return m.Search(*cur.execute(q).fetchone())
 
 
 def delete_search(id: int) -> None:

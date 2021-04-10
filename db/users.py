@@ -8,6 +8,7 @@ from .helpers import value_fmt
 __all__ = (
     'get_user',
     'get_user_by_chat',
+    'get_or_create_user_by_chat_id',
 )
 
 
