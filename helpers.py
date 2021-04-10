@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 def gen_hash(text: str, prefix: str = None) -> str:
-    return prefix or '' + blake2s(text.encode()).hexdigest()
+    return (prefix or '') + blake2s(text.encode()).hexdigest()
 
 
 def humanize_bytes(num, suffix='B'):
