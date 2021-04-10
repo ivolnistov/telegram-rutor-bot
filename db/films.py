@@ -21,9 +21,12 @@ def get_or_create_film(name: List[str], year: int, blake: str, connection: 'Conn
         return cur.lastrowid, True
 
 
-def get_films(limit: int = 20, connection: 'Connection' = None) -> Iterable:
+def get_films(limit: int = 20, connection: 'Connection' = None, query='', order='ASC') -> Iterable:
     sub_q = '(SELECT min(created) FROM torrents WHERE torrents.film_id = films.id)'
-    q = f'''SELECT films.*, {sub_q} created FROM films ORDER BY created DESC LIMIT {limit};'''
+    where_clause = ''
+    if query:
+        where_clause = f'WHERE {query}'
+    q = f'''SELECT films.*, {sub_q} created FROM films {where_clause} ORDER BY created {str.upper(order)} LIMIT {limit};'''
     with cursor(connection) as cur:
         for film in cur.execute(q):
             yield m.Film(*film)
