@@ -19,6 +19,7 @@ def bot():
     dp = updater.dispatcher
     dp.add_handler(CommandHandler('start', h.start))
     dp.add_handler(CommandHandler('list', h.torrent_list))
+    dp.add_handler(CommandHandler('search', h.torrent_search))
     dp.add_handler(CommandHandler('add_search', h.search_add))
     dp.add_handler(CommandHandler('list_search', h.search_list))
     dp.add_handler(CommandHandler('list_subscriptions', h.subscriptions_list))
