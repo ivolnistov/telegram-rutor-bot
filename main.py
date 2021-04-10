@@ -25,6 +25,7 @@ def bot():
     dp.add_handler(MessageHandler(Filters.text & Filters.regex(r'^(/dl_\d+)$'), h.torrent_download))
     dp.add_handler(MessageHandler(Filters.text & Filters.regex(r'^(/in_\d+)$'), h.torrent_info))
     dp.add_handler(MessageHandler(Filters.text & Filters.regex(r'^(/ds_\d+)$'), h.search_delete))
+    dp.add_handler(MessageHandler(Filters.text & Filters.regex(r'^(/es_\d+)$'), h.search_execute))
     dp.add_handler(MessageHandler(Filters.text & Filters.regex(r'^(/subscribe_\d+)$'), h.subscribe))
     dp.add_handler(MessageHandler(Filters.text & Filters.regex(r'^(/unsubscribe_\d+)$'), h.unsubscribe))
     dp.add_handler(MessageHandler(Filters.command, h.unknown))
