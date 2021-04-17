@@ -9,7 +9,11 @@ __all__ = (
     'get_torrents',
     'get_torrent_by_blake',
     'get_torrents_by_film',
+    'get_torrent_by_magnet',
+    'modify_torrent',
 )
+
+from .helpers import where_fmt
 
 
 def get_torrent_by_blake(blake, connection):
@@ -17,6 +21,19 @@ def get_torrent_by_blake(blake, connection):
     res = connection.cursor().execute(q).fetchone()
     if res:
         return res[0]
+
+
+def modify_torrent(id, connection=None, **kwargs):
+    q = f'UPDATE torrents SET {where_fmt(**kwargs)} WHERE id = {id}'
+    with cursor(connection) as cur:
+        cur.execute(q)
+
+
+def get_torrent_by_magnet(magnet):
+    q = f'SELECT * FROM torrents WHERE magnet = \'{magnet}\''
+    with cursor() as cur:
+        for torrent in cur.execute(q):
+            yield m.Torrent(*torrent)
 
 
 def add_torrent(film_id, blake, name, created, magnet, link, size, approved, downloaded, connection):

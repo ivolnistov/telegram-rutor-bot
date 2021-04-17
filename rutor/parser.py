@@ -3,6 +3,7 @@ import datetime
 import locale
 import pickle
 import re
+import sqlite3
 import sys
 from contextlib import contextmanager
 from hashlib import blake2s
@@ -17,7 +18,7 @@ from transmission_rpc import Client
 
 import settings
 from settings import DB_PATH, TRANSMISSION_HOST, TRANSMISSION_PASSWORD, TRANSMISSION_PORT, TRANSMISSION_USERNAME
-from db import add_torrent, get_or_create_film, get_torrent_by_blake
+from db import add_torrent, get_or_create_film, get_torrent_by_blake, get_torrent_by_magnet, modify_torrent
 import db
 
 
@@ -153,7 +154,20 @@ def parse_rutor(url, connection: 'Connection' = None):
                 film_cache[blake] = film_id
                 if is_new:
                     new.append(film_id)
-            add_torrent(film_id, torrent_lnk_blake, torrent.get_text(), date, magnet, torrent_lnk, size, False, False, con)
+            try:
+                add_torrent(film_id, torrent_lnk_blake, torrent.get_text(), date, magnet, torrent_lnk, size, False, False, con)
+            except sqlite3.IntegrityError:
+                torrent = get_torrent_by_magnet(magnet)
+                modify_torrent(
+                        torrent.id, con,
+                        film_id=film_id,
+                        blake=torrent_lnk_blake,
+                        name=torrent.get_text(),
+                        magnet=magnet,
+                        created=date,
+                        link=torrent_lnk,
+                        sz=size
+                )
         con.commit()
         return new
 
