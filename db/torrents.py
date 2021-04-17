@@ -32,8 +32,7 @@ def modify_torrent(id, connection=None, **kwargs):
 def get_torrent_by_magnet(magnet):
     q = f'SELECT * FROM torrents WHERE magnet = \'{magnet}\''
     with cursor() as cur:
-        for torrent in cur.execute(q):
-            yield m.Torrent(*torrent)
+        return m.Torrent(*cur.execute(q).fetchone())
 
 
 def add_torrent(film_id, blake, name, created, magnet, link, size, approved, downloaded, connection):
