@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import locale
+import logging
 import pickle
 import re
 import sqlite3
@@ -21,6 +22,8 @@ from settings import DB_PATH, TRANSMISSION_HOST, TRANSMISSION_PASSWORD, TRANSMIS
 from db import add_torrent, get_or_create_film, get_torrent_by_blake, get_torrent_by_magnet, modify_torrent
 import db
 
+
+log = logging.getLogger(f'{settings.LOG_PREFIX}.schedule')
 
 if TYPE_CHECKING:
     from sqlite3 import Connection
@@ -176,10 +179,16 @@ def parse_rutor(url, connection: 'Connection' = None):
 def get_torrent_info(url, download_url):
     url = urljoin('http://rutor.info', url)
     text = _opener(url).text
+    if not text:
+        return 'failed to download torrent info'
     soup = BeautifulSoup(text, 'lxml')
     data = soup.find('table', {
         'id': 'details'
-    }).findChildren('td')[1]
+    })
+    if not data:
+        log.error('parse failed: %s', text)
+        return 'parse error'
+    data = data.findChildren('td')[1]
     start_delete = False
     for el in data.find_all():
         if hasattr(el, 'attrs') and el.attrs.get('class', None) == ['hidewrap']:
