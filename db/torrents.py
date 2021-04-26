@@ -29,9 +29,9 @@ def modify_torrent(id, connection=None, **kwargs):
         cur.execute(q)
 
 
-def get_torrent_by_magnet(magnet):
+def get_torrent_by_magnet(magnet, connection=None):
     q = f'SELECT * FROM torrents WHERE magnet = \'{magnet}\''
-    with cursor() as cur:
+    with cursor(connection=connection) as cur:
         return m.Torrent(*cur.execute(q).fetchone())
 
 

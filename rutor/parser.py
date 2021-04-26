@@ -160,7 +160,7 @@ def parse_rutor(url, connection: 'Connection' = None):
             try:
                 add_torrent(film_id, torrent_lnk_blake, torrent.get_text(), date, magnet, torrent_lnk, size, False, False, con)
             except sqlite3.IntegrityError:
-                obj = get_torrent_by_magnet(magnet)
+                obj = get_torrent_by_magnet(magnet, con)
                 modify_torrent(
                         obj.id,
                         con,
