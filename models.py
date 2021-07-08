@@ -71,11 +71,13 @@ class Search:
     url: str
     cron: Tuple[str]
     creator_id: int
+    last_success: datetime
 
-    def __init__(self, id: int, url: str, cron: str, creator_id: int):
+    def __init__(self, id: int, url: str, cron: str, creator_id: int, last_success: datetime = None):
         self.id = id
         self.url = url
         self.creator_id = creator_id
+        self.last_success = last_success
         cron_ = tuple(cron.split(' '))
         if len(cron_) != 5:
             raise ValueError('Invalid cron')
@@ -83,6 +85,10 @@ class Search:
 
     def __str__(self):
         return self.url
+
+    def last_success_from_now(self) -> Optional[int]:
+        if self.last_success:
+            return int((datetime.now() - self.last_success).total_seconds())
 
 
 class User:

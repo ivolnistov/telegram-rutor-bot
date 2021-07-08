@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS searches
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     url          TEXT    NOT NULL,
     cron         TEXT    NOT NULL,
+    last_success DATE,
     creator_id   INTEGER,
     FOREIGN KEY(creator_id) REFERENCES user(id)
 );
