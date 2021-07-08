@@ -3,7 +3,7 @@ from telegram.ext import Updater
 
 import settings
 from helpers import format_films, gen_hash
-from db import connection, delete_search, get_films_by_ids, get_search_subscribers, get_searches, get_user
+from db import connection, delete_search, get_films_by_ids, get_search_subscribers, get_searches, get_user, update_last_success
 from rutor import parse_rutor
 import traceback
 import logging
@@ -24,6 +24,7 @@ def notify_about_new(search):
         user = get_user(search.creator_id, con)
         try:
             new = parse_rutor(search.url, con)
+            update_last_success(search.id)
         except ValueError as e:
             log.exception(e)
             delete_search(search.id)
@@ -33,6 +34,13 @@ def notify_about_new(search):
             log.exception(e)
             tb_str = ''.join(traceback.format_tb(e.__traceback__))
             updater.bot.send_message(user.chat_id, f'/ds_{search.id} search with id {search.id} failed: {tb_str}')
+            return
+        except ConnectionError as e:
+            if search.last_success and search.last_success >= 60 * 60 * 24 * 7:
+                tb_str = ''.join(traceback.format_tb(e.__traceback__))
+                last_success_days = search.last_success / 60 * 60 * 24
+                msg = f'/ds_{search.id} search with id {search.id} lasts success was {last_success_days} days ago, failed: {tb_str}'
+                updater.bot.send_message(user.chat_id, msg)
             return
         if not new:
             return

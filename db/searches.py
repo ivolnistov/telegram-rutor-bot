@@ -1,7 +1,9 @@
+import datetime
 from typing import Iterable, List, TYPE_CHECKING
 
 from .connections import cursor, execute
 import models as m
+from .helpers import where_fmt
 
 
 if TYPE_CHECKING:
@@ -12,6 +14,7 @@ __all__ = (
     'get_search',
     'get_searches',
     'get_search_subscribers',
+    'update_last_success',
     'delete_search',
 )
 
@@ -31,6 +34,12 @@ def get_searches(show_empty: bool = False, connection: 'Connection' = None) -> L
     with cursor(connection) as cur:
         for search in cur.execute(with_empty_q if show_empty else non_empty_q):
             yield m.Search(*search[:4])
+
+
+def update_last_success(id: int, connection: 'Connection' = None):
+    q = f'UPDATE searches SET {where_fmt(last_success=datetime.datetime.now().isoformat())} WHERE {where_fmt(id=str(id))}'
+    with cursor(connection) as cur:
+        cur.execute(q)
 
 
 def get_search(id: int, connection: 'Connection' = None):
