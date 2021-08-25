@@ -146,7 +146,7 @@ def parse_rutor(url, connection: 'Connection' = None):
             text = parse_name(torrent.get_text())
             year = text.pop()
             blake = blake2s(text[-1].encode()).hexdigest()
-            if int(size) > settings.SIZE_LIMIT:
+            if settings.SIZE_LIMIT and int(size) > settings.SIZE_LIMIT:
                 continue
             torrent_id = get_torrent_by_blake(torrent_lnk_blake, con)
             if torrent_id:
