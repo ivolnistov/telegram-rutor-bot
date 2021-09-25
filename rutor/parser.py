@@ -9,7 +9,7 @@ import sys
 from contextlib import contextmanager
 from hashlib import blake2s
 
-from typing import TYPE_CHECKING
+from typing import List, Tuple, TYPE_CHECKING
 from urllib.parse import urljoin
 
 import requests
@@ -37,6 +37,8 @@ PATTERN = re.compile(r'^(.*)\s+\((\d{4})\)\s+.*\s?(\|.*)?$')
 
 FILMS = {}
 TV_SHOWS = {}
+IMDB_RE = re.compile(r'http://s.rutor.info/imdb/pic/[0-9]+\.gif')
+KINOPOISK_RE = re.compile(r'http://www.kinopoisk.ru/rating/[0-9]+\.gif')
 
 
 def _load_db():
@@ -175,18 +177,26 @@ def parse_rutor(url, connection: 'Connection' = None):
         return new
 
 
-def get_torrent_info(url, download_url):
+def images_filter(source: str) -> bool:
+    if IMDB_RE.match(source):
+        return True
+    if KINOPOISK_RE.match(source):
+        return True
+    return False
+
+
+def get_torrent_info(url, download_url) -> Tuple[str, str, List[str]]:
     url = urljoin('http://rutor.info', url)
     text = _opener(url).text
     if not text:
-        return 'failed to download torrent info'
+        return 'failed to download torrent info', '', []
     soup = BeautifulSoup(text, 'lxml')
     data = soup.find('table', {
         'id': 'details'
     })
     if not data:
         log.error('parse failed: %s', text)
-        return 'parse error'
+        return 'parse error', '', []
     data = data.findChildren('td')[1]
     start_delete = False
     for el in data.find_all():
@@ -195,20 +205,14 @@ def get_torrent_info(url, download_url):
         if not start_delete:
             continue
         el.extract()
-    images = [i.attrs['src'] for idx, i in enumerate(data.find_all('img')) if
-              idx == 0 or i.attrs['src'].startswith('http://s.rutor') or i.attrs['src'].startswith('http://www.kinopoisk')]
+    images = [i.attrs['src'] for idx, i in enumerate(data.find_all('img')) if idx == 0 or images_filter(i.attrs['src'])]
     txt = data.get_text().rstrip()
     chars_cnt = len(txt)
     download_lnk = f'\n{download_url}'
     max_msg_len = 4096 - len(download_lnk)
     if chars_cnt > max_msg_len:
         return txt[:4092 - len(download_lnk)] + '...' + download_lnk
-    images_link_chars_cnt = 0
-    for i in images:
-        images_link_chars_cnt += len(i)
-    if chars_cnt + 2 + images_link_chars_cnt > max_msg_len:
-        return txt + download_lnk
-    return txt + '\n\n' + '\n'.join(images) + download_lnk
+    return txt + '\n\n' + download_lnk, images[0], images[1:]
 
 
 def download_torrent(torrent: 'm.Torrent'):

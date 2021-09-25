@@ -29,8 +29,12 @@ def torrent_download(update, context):
 def torrent_info(update, context):
     id = update.message.text.replace('/in_', '')
     torrent = get_torrent_by_id(int(id))
-    message = get_torrent_info(torrent.link, f'/dl_{id}')
+    message, poster, images = get_torrent_info(torrent.link, f'/dl_{id}')
+    if poster:
+        update.message.reply_photo(poster, caption='Poster')
     update.message.reply_text(message)
+    for image in images:
+        update.message.reply_photo(image)
 
 
 # noinspection PyUnusedLocal
