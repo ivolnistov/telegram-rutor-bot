@@ -1,8 +1,6 @@
-from typing import Optional, TYPE_CHECKING, Tuple
+from datetime import datetime
+from typing import Optional, Tuple
 
-
-if TYPE_CHECKING:
-    from datetime import datetime
 __all__ = ('Film', 'Torrent',)
 
 
@@ -10,7 +8,7 @@ class Film:
     name: str
     blake: str
     year: int
-    crete: Optional['datetime.date']
+    crete: Optional[datetime.date]
 
     def __init__(self, id, blake, year, name, created=None):
         self.id = id
@@ -29,7 +27,7 @@ class Torrent:
     blake: str
     name: str
     magnet: str
-    created: 'datetime.date'
+    created: datetime.date
     link: str
     size: int
     approved: bool

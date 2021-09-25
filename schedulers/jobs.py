@@ -24,7 +24,7 @@ def notify_about_new(search):
         user = get_user(search.creator_id, con)
         try:
             new = parse_rutor(search.url, con)
-            update_last_success(search.id)
+            update_last_success(search.id, con)
         except ValueError as e:
             log.exception(e)
             delete_search(search.id)
