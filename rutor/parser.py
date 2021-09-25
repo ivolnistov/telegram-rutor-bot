@@ -22,7 +22,6 @@ from settings import DB_PATH, TRANSMISSION_HOST, TRANSMISSION_PASSWORD, TRANSMIS
 from db import add_torrent, get_or_create_film, get_torrent_by_blake, get_torrent_by_magnet, modify_torrent
 import db
 
-
 log = logging.getLogger(f'{settings.LOG_PREFIX}.schedule')
 
 if TYPE_CHECKING:
@@ -162,15 +161,15 @@ def parse_rutor(url, connection: 'Connection' = None):
             except sqlite3.IntegrityError:
                 obj = get_torrent_by_magnet(magnet, con)
                 modify_torrent(
-                        obj.id,
-                        con,
-                        film_id=film_id,
-                        blake=torrent_lnk_blake,
-                        name=torrent.get_text(),
-                        magnet=magnet,
-                        created=date,
-                        link=torrent_lnk,
-                        sz=size
+                    obj.id,
+                    con,
+                    film_id=film_id,
+                    blake=torrent_lnk_blake,
+                    name=torrent.get_text(),
+                    magnet=magnet,
+                    created=date,
+                    link=torrent_lnk,
+                    sz=size
                 )
         con.commit()
         return new
@@ -196,16 +195,20 @@ def get_torrent_info(url, download_url):
         if not start_delete:
             continue
         el.extract()
-    poster = data.find('img').attrs['src']
+    images = [i.attrs['src'] for idx, i in enumerate(data.find_all('img')) if
+              i == 0 or i.attrs['src'].startswith('http://s.rutor') or i.attrs['src'].startswith('http://www.kinopoisk')]
     txt = data.get_text().rstrip()
     chars_cnt = len(txt)
     download_lnk = f'\n{download_url}'
     max_msg_len = 4096 - len(download_lnk)
     if chars_cnt > max_msg_len:
         return txt[:4092 - len(download_lnk)] + '...' + download_lnk
-    if chars_cnt + 2 + len(poster) > max_msg_len:
+    images_link_chars_cnt = 0
+    for i in images:
+        images_link_chars_cnt += len(i)
+    if chars_cnt + 2 + images_link_chars_cnt > max_msg_len:
         return txt + download_lnk
-    return txt + '\n\n' + poster + download_lnk
+    return txt + '\n\n' + '\n'.join(images) + download_lnk
 
 
 def download_torrent(torrent: 'm.Torrent'):

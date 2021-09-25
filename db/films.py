@@ -21,7 +21,7 @@ def get_or_create_film(name: List[str], year: int, blake: str, connection: 'Conn
         return cur.lastrowid, True
 
 
-def get_films(limit: int = 20, connection: 'Connection' = None, query='', order='ASC') -> Iterable:
+def get_films(limit: int = 50, connection: 'Connection' = None, query='', order='DESC') -> Iterable:
     sub_q = '(SELECT min(created) FROM torrents WHERE torrents.film_id = films.id)'
     where_clause = ''
     if query:
