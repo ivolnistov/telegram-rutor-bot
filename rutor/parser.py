@@ -196,7 +196,7 @@ def get_torrent_info(url, download_url):
             continue
         el.extract()
     images = [i.attrs['src'] for idx, i in enumerate(data.find_all('img')) if
-              i == 0 or i.attrs['src'].startswith('http://s.rutor') or i.attrs['src'].startswith('http://www.kinopoisk')]
+              idx == 0 or i.attrs['src'].startswith('http://s.rutor') or i.attrs['src'].startswith('http://www.kinopoisk')]
     txt = data.get_text().rstrip()
     chars_cnt = len(txt)
     download_lnk = f'\n{download_url}'
