@@ -2,7 +2,9 @@ from typing import Any
 
 
 def escape_value(value: Any) -> str:
-    return str.replace(value, '\'', '\'\'')
+    if isinstance(value, str):
+        return str.replace(value, '\'', '\'\'')
+    return str(value)
 
 
 def value_fmt(*args: Any) -> str:
