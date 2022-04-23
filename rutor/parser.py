@@ -5,6 +5,7 @@ import logging
 import pickle
 import re
 import sqlite3
+import os
 import sys
 from contextlib import contextmanager
 from hashlib import blake2s
@@ -128,7 +129,7 @@ def parse_rutor(url, connection: 'Connection' = None):
     new = []
     film_cache = {}
     con = connection or db.connection()
-    with localize(locale.LC_ALL, 'ru_RU'):
+    with localize(locale.LC_ALL, os.getenv('HTML_LOCALE', 'ru_RU.UTF-8')):
         for lnk in soup.body.find_all('a'):
             href = lnk.attrs.get('href', None)
             if not href or not href.startswith('magnet'):
