@@ -1,0 +1,10 @@
+# Ignore example files and documentation
+DEPLOYMENT.md:*
+README.md:*
+config.toml.example:*
+alembic.ini:*
+.env.example:*
+docs/*:*
+
+# Ignore alembic migrations (revision IDs are not secrets)
+alembic/versions/*:*

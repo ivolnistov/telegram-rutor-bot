@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.single
+    container_name: telegram-rutor-bot
+    restart: unless-stopped
+
+    # Environment variables - set these in .env file
+    environment:
+      # Required
+      - RUTOR_BOT_TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - RUTOR_BOT_USERS_WHITE_LIST=${USERS_WHITE_LIST}
+
+      # Torrent client settings (choose one)
+      # qBittorrent (default)
+      - RUTOR_BOT_TORRENT_CLIENT=${TORRENT_CLIENT:-qbittorrent}
+      - RUTOR_BOT_TRANSMISSION_HOST=${TRANSMISSION_HOST:-localhost}
+      - RUTOR_BOT_TRANSMISSION_PORT=${TRANSMISSION_PORT:-9091}
+      - RUTOR_BOT_TRANSMISSION_USERNAME=${TRANSMISSION_USERNAME:-}
+      - RUTOR_BOT_TRANSMISSION_PASSWORD=${TRANSMISSION_PASSWORD:-}
+
+      # qBittorrent (alternative)
+      - RUTOR_BOT_QBITTORRENT_HOST=${QBITTORRENT_HOST:-localhost}
+      - RUTOR_BOT_QBITTORRENT_PORT=${QBITTORRENT_PORT:-8080}
+      - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-}
+      - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-}
+
+      # Optional
+      - RUTOR_BOT_PROXY=${PROXY:-}
+      - RUTOR_BOT_LOG_LEVEL=${LOG_LEVEL:-INFO}
+
+    # Mount volume for persistent data
+    volumes:
+      - bot-data:/app/data
+
+    # Network mode - use host if torrent client is on localhost
+    # network_mode: host
+
+    # Or use custom network
+    networks:
+      - rutor-net
+
+volumes:
+  bot-data:
+    driver: local
+
+networks:
+  rutor-net:
+    driver: bridge

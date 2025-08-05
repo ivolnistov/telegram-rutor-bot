@@ -1,0 +1,52 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-json
+      - id: detect-private-key
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check
+        language: system
+        types: [python]
+        args: [--fix]
+        pass_filenames: false
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: mypy
+        name: mypy
+        entry: uv run mypy src/telegram_rutor_bot
+        language: system
+        types: [python]
+        args: [--config-file=pyproject.toml]
+        exclude: ^(alembic/|tests/)
+        pass_filenames: false
+
+      - id: pylint
+        name: pylint
+        entry: uv run pylint src/telegram_rutor_bot
+        language: system
+        types: [python]
+        args: [--rcfile=pyproject.toml, --fail-under=9.9]
+        exclude: ^(alembic/|tests/)
+        pass_filenames: false
