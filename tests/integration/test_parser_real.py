@@ -11,7 +11,7 @@ async def test_parse_torrent_100():
     """Test parsing torrent ID 100 - The Unlit movie"""
     torrent_link = '/torrent/840427/mama-vozvrawenie-iz-tmy_the-unlit-2020-web-dl-1080p-itunes'
 
-    message, poster, images = await get_torrent_info(torrent_link, '/dl_100')
+    message, poster, images = await get_torrent_info(torrent_link)
 
     # Print for debugging
     print('\n' + '=' * 60)
