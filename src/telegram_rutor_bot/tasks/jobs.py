@@ -181,7 +181,7 @@ async def _notify_requester(bot: Bot, chat_id: int | None, message: str) -> None
         return
     try:
         await bot.send_message(chat_id, message)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         log.error('Failed to send notification: %s', e)
 
 
@@ -351,7 +351,7 @@ async def execute_scheduled_searches() -> None:
             # Execute search
             await execute_search.kiq(search.id)
             log.info('Scheduled search %s (cron: %s)', search.id, search.cron)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             log.exception('Failed to schedule search %s', search.id)
 
     log.info('Finished checking scheduled searches')
@@ -381,7 +381,7 @@ async def cleanup_torrents() -> None:
                 log.info('Removing torrent %s (Status: %s)', torrent.get('name'), status)
                 await client.remove_torrent(torrent['hash'])
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         log.error('Torrent cleanup failed: %s', e)
     finally:
         await client.disconnect()
