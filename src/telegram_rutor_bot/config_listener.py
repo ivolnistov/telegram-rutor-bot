@@ -102,7 +102,7 @@ async def refresh_settings_from_db() -> None:
             settings.refresh(**final_updates)
             log.info('Settings refreshed from DB')
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         log.error('Failed to refresh settings from DB: %s', e)
 
 
@@ -123,6 +123,6 @@ async def config_listener_task() -> None:
             if message['type'] == 'message':
                 log.info('Received config reload signal')
                 await refresh_settings_from_db()
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         log.error('Config listener failed: %s', e)
         # Retry logic? For now let it crash/log
