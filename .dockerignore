@@ -1,0 +1,12 @@
+.git
+.venv
+.env
+.mypy_cache
+.pytest_cache
+.ruff_cache
+__pycache__
+frontend/node_modules
+var
+docker-compose-dev.yml
+deploy
+tests
