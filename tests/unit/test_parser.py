@@ -176,7 +176,7 @@ class TestGetTorrentInfo:
                 with patch('telegram_rutor_bot.rutor.parser.get_movie_ratings') as mock_ratings:
                     mock_ratings.return_value = ('8.7', '8.5')
 
-                    message, _poster, _images = await get_torrent_info('/torrent/123/matrix', '/dl_123')
+                    message, _poster, _images = await get_torrent_info('/torrent/123/matrix')
 
         # Check message content
         assert '🎬' in message
@@ -237,7 +237,7 @@ class TestGetTorrentInfo:
                 with patch('telegram_rutor_bot.rutor.parser.get_movie_ratings') as mock_ratings:
                     mock_ratings.return_value = (None, None)
 
-                    message, _poster, _images = await get_torrent_info('/torrent/456/some-movie', '/dl_456')
+                    message, _poster, _images = await get_torrent_info('/torrent/456/some-movie')
 
         # Should at least have title and download link
         assert '🎬' in message
