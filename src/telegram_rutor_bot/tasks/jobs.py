@@ -163,7 +163,7 @@ async def execute_search(
             tb_str = ''.join(traceback.format_tb(e.__traceback__))
             await _notify_requester(bot, requester_chat_id, f'❌ Search failed:\n{e!s}\n\nTraceback:\n{tb_str}')
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             # Generic error handling
             log.exception('Unexpected error: %s', e)
             task.status = 'failed'
