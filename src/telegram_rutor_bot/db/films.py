@@ -2,6 +2,7 @@
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import text
 
 from .models import Film
@@ -10,6 +11,7 @@ __all__ = (
     'get_films',
     'get_films_by_ids',
     'get_or_create_film',
+    'search_films',
     'update_film_metadata',
 )
 
@@ -22,6 +24,7 @@ async def get_or_create_film(
     ru_name: str | None = None,
     poster: str | None = None,
     rating: float | None = None,
+    category_id: int | None = None,
 ) -> Film:
     """Get existing film or create new one"""
     # Try to get existing film
@@ -40,12 +43,20 @@ async def get_or_create_film(
             film.poster = poster
         if rating and not film.rating:
             film.rating = str(rating)
+        if category_id and not film.category_id:
+            film.category_id = category_id
         await session.commit()
         return film
 
     # Create new film
     new_film = Film(
-        blake=blake, year=year, name=name, ru_name=ru_name, poster=poster, rating=str(rating) if rating else None
+        blake=blake,
+        year=year,
+        name=name,
+        ru_name=ru_name,
+        poster=poster,
+        rating=str(rating) if rating else None,
+        category_id=category_id,
     )
     session.add(new_film)
     await session.commit()
@@ -53,10 +64,13 @@ async def get_or_create_film(
     return new_film
 
 
-async def get_films(session: AsyncSession, limit: int = 20, query: str | None = None) -> list[Film]:
+async def get_films(
+    session: AsyncSession, limit: int = 20, query: str | None = None, category_id: int | None = None
+) -> list[Film]:
     """Get films with optional query filter"""
     if query:
         # Use raw SQL for the LIKE query
+        # Note: category_id filtering not implemented for raw query mode yet as it's not used by API
         text_stmt = text(f"""
             SELECT DISTINCT f.* FROM films f
             JOIN torrents t ON f.id = t.film_id
@@ -65,9 +79,14 @@ async def get_films(session: AsyncSession, limit: int = 20, query: str | None = 
             LIMIT :limit
         """)
         result = await session.execute(text_stmt, {'limit': limit})
-        return [Film(**dict(row._mapping)) for row in result]  # pylint: disable=protected-access
+        return [Film(**row) for row in result.mappings()]
+
     # Simple query for recent films
-    select_stmt = select(Film).order_by(Film.id.desc()).limit(limit)
+    select_stmt = select(Film).options(selectinload(Film.torrents)).order_by(Film.id.desc()).limit(limit)
+
+    if category_id:
+        select_stmt = select_stmt.where(Film.category_id == category_id)
+
     result = await session.execute(select_stmt)
     return list(result.scalars().all())
 
@@ -77,7 +96,26 @@ async def get_films_by_ids(session: AsyncSession, film_ids: list[int]) -> list[F
     if not film_ids:
         return []
 
-    result = await session.execute(select(Film).where(Film.id.in_(film_ids)))
+    result = await session.execute(select(Film).options(selectinload(Film.torrents)).where(Film.id.in_(film_ids)))
+    return list(result.scalars().all())
+
+
+async def search_films(
+    session: AsyncSession, query: str, limit: int = 20, category_id: int | None = None
+) -> list[Film]:
+    """Search films safely"""
+    sanitized_query = f'%{query}%'
+    stmt = (
+        select(Film)
+        .options(selectinload(Film.torrents))
+        .where((Film.name.ilike(sanitized_query)) | (Film.ru_name.ilike(sanitized_query)))
+    )
+
+    if category_id:
+        stmt = stmt.where(Film.category_id == category_id)
+
+    stmt = stmt.limit(limit)
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
@@ -89,6 +127,8 @@ async def update_film_metadata(
     ru_name: str | None = None,
     poster: str | None = None,
     rating: float | None = None,
+    country: str | None = None,
+    genres: str | None = None,
 ) -> bool:
     """Update film metadata"""
     result = await session.execute(select(Film).where(Film.id == film_id))
@@ -107,6 +147,10 @@ async def update_film_metadata(
         film.poster = poster
     if rating is not None:
         film.rating = str(rating)
+    if country is not None:
+        film.country = country
+    if genres is not None:
+        film.genres = genres
 
     await session.commit()
     return True

@@ -1,11 +1,18 @@
 """Configuration management using pydantic-settings"""
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
+from typing import Any
 
-import toml
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    TomlConfigSettingsSource,
+)
 
 
 class Settings(BaseSettings):
@@ -18,21 +25,31 @@ class Settings(BaseSettings):
         extra='ignore',
     )
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            file_secret_settings,
+            TomlConfigSettingsSource(settings_cls),
+        )
+
+    # General settings
+    is_configured: bool = Field(default=False, description='Whether the application has been configured')
+
     # Telegram settings
-    telegram_token: str = Field(description='Telegram bot API token')
+    telegram_token: str | None = Field(default=None, description='Telegram bot API token')
     unauthorized_message: str = Field(
         default='Unauthorized user, please contact my master', description='Message shown to unauthorized users'
     )
-    users_white_list: list[int] = Field(default_factory=list, description='List of authorized Telegram user IDs')
-
-    # Torrent client settings
-    torrent_client: str = Field(default='qbittorrent', description='Torrent client to use: qbittorrent or transmission')
-
-    # Transmission settings
-    transmission_host: str = Field(default='localhost', description='Transmission RPC host')
-    transmission_port: int = Field(default=9091, description='Transmission RPC port')
-    transmission_username: str = Field(default='', description='Transmission RPC username')
-    transmission_password: str = Field(default='', description='Transmission RPC password')
 
     # qBittorrent settings
     qbittorrent_host: str = Field(default='localhost', description='qBittorrent Web UI host')
@@ -54,6 +71,7 @@ class Settings(BaseSettings):
     database_url: str | None = Field(
         default=None, description='PostgreSQL database URL (e.g., postgresql://user:password@host:5432/dbname)'
     )
+    run_migrations: bool = Field(default=False, description='Run database migrations on startup (only for bot mode)')
 
     # Parser settings
     timeout: int = Field(default=60, description='Request timeout in seconds')
@@ -61,6 +79,7 @@ class Settings(BaseSettings):
 
     # TaskIQ settings
     redis_url: str | None = Field(default=None, description='Redis URL for TaskIQ broker (e.g., redis://host:6379)')
+    secret_key: str = Field(default='rutor-bot-secret-key-change-me', description='Secret key for JWT')
 
     # Genre to category mapping
     genre_mapping: dict[str, list[str]] = Field(
@@ -99,21 +118,25 @@ class Settings(BaseSettings):
             return getattr(logging, v.upper(), logging.INFO)
         return v
 
-    @classmethod
-    def from_toml(cls, config_path: str | Path = 'config.toml') -> 'Settings':
-        """Load settings from TOML file"""
-        config_path = Path(config_path)
-        if not config_path.is_absolute():
-            # Look for config.toml in project root
-            project_root = Path(__file__).parent.parent.parent
-            config_path = project_root / config_path
+    def refresh(self, **data: Any) -> None:  # noqa: ANN401
+        """Update settings in-place from dictionary."""
+        # Filter valid keys to avoid errors
+        model_fields = self.model_fields.keys()
+        valid_data = {k: v for k, v in data.items() if k in model_fields}
 
-        if config_path.exists():
-            config_data = toml.load(config_path)
-            return cls(**config_data)
-        # If no config file, try to load from environment
-        return cls()
+        # Pydantic v2 usually recommends model_copy(update=data) but for in-place we must iterate
+        # Or better: create a new instance and copy values?
+        # But we want to keep the Reference to 'settings'
+        for key, value in valid_data.items():
+            setattr(self, key, value)
+
+        # Re-evaluate is_configured logic if needed, but it's a field now.
 
 
 # Global settings instance
-settings = Settings.from_toml()
+settings = Settings()
+
+
+def get_settings() -> Settings:
+    """Get global settings instance."""
+    return settings

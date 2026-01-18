@@ -381,7 +381,7 @@ async def test_real_torrent_info(torrent_data):
     pytest.skip('Skipping external API test')
 
     try:
-        message, poster, images = await get_torrent_info(torrent_data['link'], '/dl_test')
+        message, _poster, _images = await get_torrent_info(torrent_data['link'], '/dl_test')
 
         # Check message content
         assert message is not None

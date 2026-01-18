@@ -5,24 +5,51 @@ import asyncio
 import logging
 import multiprocessing
 import sys
+import time
 from contextlib import suppress
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
+from sqlalchemy import update
 from taskiq import InMemoryBroker
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from taskiq.receiver import Receiver
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from telegram_rutor_bot import handlers as h
 from telegram_rutor_bot.config import settings
-from telegram_rutor_bot.db import init_db
+from telegram_rutor_bot.config_listener import config_listener_task, refresh_settings_from_db
+from telegram_rutor_bot.db import get_async_session, init_db
 from telegram_rutor_bot.db.migrate import init_database
+from telegram_rutor_bot.db.models import TaskExecution
 from telegram_rutor_bot.tasks.broker import broker, scheduler
-from telegram_rutor_bot.tasks.jobs import execute_scheduled_searches, notify_about_new
+from telegram_rutor_bot.tasks.jobs import (
+    cleanup_torrents,
+    execute_scheduled_searches,
+    execute_search,
+    notify_about_new,
+)
 
 logging.basicConfig(level=settings.log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
 
+# Keep strong references to background tasks to prevent garbage collection
+_background_tasks: set[asyncio.Task[Any]] = set()
+
 
 async def run_bot() -> None:
     """Run the Telegram bot in async mode"""
+    # Sync config
+    await refresh_settings_from_db()
+
+    # Store reference to prevent garbage collection
+    task = asyncio.create_task(config_listener_task())
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+    if not settings.telegram_token:
+        log.error('Telegram token not configured. Please configure via Web UI.')
+        return
+
     application = Application.builder().token(settings.telegram_token).build()
 
     # Add handlers
@@ -38,7 +65,21 @@ async def run_bot() -> None:
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/es_\d+)$'), h.search_execute))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/subscribe_\d+)$'), h.subscribe))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/unsubscribe_\d+)$'), h.unsubscribe))
+    application.add_handler(CommandHandler('adduser', h.add_user_cmd))
+    application.add_handler(CommandHandler('language', h.language_handler))
+    application.add_handler(CallbackQueryHandler(h.search_callback_handler, pattern=r'^(ds_|es_|sub_|unsub_)'))
+    application.add_handler(CallbackQueryHandler(h.set_language_callback, pattern='^lang_'))
+    application.add_handler(CallbackQueryHandler(h.callback_query_handler))
     application.add_handler(MessageHandler(filters.COMMAND, h.unknown))
+
+    # Menu Handlers
+    application.add_handler(CommandHandler('help', h.help_handler))
+    application.add_handler(
+        MessageHandler(filters.Regex(r'^📜 (My Subscriptions|Мои подписки)$'), h.subscriptions_list)
+    )
+    application.add_handler(MessageHandler(filters.Regex(r'^🔎 (Saved Searches|Сохраненные поиски)$'), h.search_list))
+    application.add_handler(MessageHandler(filters.Regex(r'^📥 (Active Torrents|Активные торренты)$'), h.torrent_list))
+    application.add_handler(MessageHandler(filters.Regex(r'^ℹ️ (Help|Помощь)$'), h.help_handler))
 
     # Start bot
     await application.initialize()
@@ -61,17 +102,49 @@ async def run_bot() -> None:
 
 async def run_scheduler() -> None:
     """Run the TaskIQ scheduler"""
+    # Sync config
+    await refresh_settings_from_db()
+
+    # Store reference to prevent garbage collection
+    task = asyncio.create_task(config_listener_task())
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
     # Import tasks to register them
     _ = notify_about_new
     _ = execute_scheduled_searches
+    _ = execute_search
+    _ = cleanup_torrents
 
     await broker.startup()
     await scheduler.startup()
 
+    last_search_run = 0.0
+    last_cleanup_run = 0.0
+
     try:
         # Keep the scheduler running
-        while True:
-            await asyncio.sleep(1)
+        log.info('Scheduler started, entering loop...')
+        try:
+            while True:
+                now = time.time()
+
+                # Run searches every minute
+                if now - last_search_run >= 60:
+                    log.info('Triggering execute_scheduled_searches')
+                    await execute_scheduled_searches.kiq()
+                    last_search_run = now
+
+                # Run cleanup every 5 minutes
+                if now - last_cleanup_run >= 300:
+                    log.info('Triggering cleanup_torrents')
+                    await cleanup_torrents.kiq()
+                    last_cleanup_run = now
+
+                await asyncio.sleep(1)
+        except Exception as e:
+            log.exception('Scheduler crashed: %s', e)
+            raise
     except KeyboardInterrupt:
         pass
     finally:
@@ -80,23 +153,26 @@ async def run_scheduler() -> None:
 
 
 def main() -> int:
-    """Main entry point for the application"""
+    """Main entry point"""
     parser = argparse.ArgumentParser(description='Telegram Rutor Bot')
-    parser.add_argument(
-        'mode',
-        choices=['bot', 'scheduler', 'worker'],
-        help='Run mode: bot for telegram bot, scheduler for TaskIQ scheduler, worker for TaskIQ worker',
-    )
+    parser.add_argument('mode', choices=['api', 'bot', 'scheduler', 'worker', 'all'], help='Mode to run')
     args = parser.parse_args()
+
+    if args.mode == 'all':
+        log.error("Mode 'all' is not yet implemented.")
+        return 1
 
     if sys.platform == 'darwin':
         multiprocessing.set_start_method('fork')
 
-    # Initialize database with SQLAlchemy and run migrations
+    # Initialize database with SQLAlchemy
     init_db()
-    init_database()
 
     if args.mode == 'bot':
+        # Only run migrations if configured to do so
+        if settings.run_migrations:
+            init_database()
+
         with suppress(KeyboardInterrupt):
             asyncio.run(run_bot())
     elif args.mode == 'scheduler':
@@ -106,6 +182,7 @@ def main() -> int:
         # Import tasks to register them
         _ = notify_about_new
         _ = execute_scheduled_searches
+        _ = execute_search
 
         # Check if broker supports workers
         if isinstance(broker, InMemoryBroker):
@@ -115,8 +192,40 @@ def main() -> int:
 
         # Run worker
         async def run_worker() -> None:
-            async for _ in broker.listen():
-                pass
+            # Sync config
+            await refresh_settings_from_db()
+
+            # Store reference to prevent garbage collection
+            task = asyncio.create_task(config_listener_task())
+            _background_tasks.add(task)
+            task.add_done_callback(_background_tasks.discard)
+
+            # Clean up stale pending tasks (older than 5 minutes)
+            # This is safe for multi-worker setups as we only cancel tasks that are clearly stuck/abandoned
+            try:
+                log.info('Cleaning up stale pending tasks...')
+                async with get_async_session() as session:
+                    stmt = (
+                        update(TaskExecution)
+                        .where(
+                            TaskExecution.status.in_(['pending', 'running']),
+                            TaskExecution.start_time < datetime.now(UTC) - timedelta(minutes=5),
+                        )
+                        .values(
+                            status='cancelled',
+                            result='Cancelled on worker startup (stale)',
+                            end_time=datetime.now(UTC),
+                        )
+                    )
+                    await session.execute(stmt)
+                    await session.commit()
+                    log.info('Cleaned up stale pending tasks')
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                log.error('Failed to cleanup stale tasks: %s', e)
+
+            receiver = Receiver(broker=broker)
+            stop_event = asyncio.Event()
+            await receiver.listen(stop_event)
 
         with suppress(KeyboardInterrupt):
             asyncio.run(run_worker())

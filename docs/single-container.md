@@ -14,7 +14,7 @@ The single-container deployment includes:
 
 - Docker and Docker Compose installed
 - Telegram bot token from [@BotFather](https://t.me/botfather)
-- Access to a torrent client (Transmission or qBittorrent)
+- Access to qBittorrent
 
 ## Quick Start
 
@@ -38,10 +38,8 @@ Edit `.env` with your settings:
 ```env
 # Required
 TELEGRAM_TOKEN=your-bot-token-here
-USERS_WHITE_LIST=123456789,987654321
 
 # Torrent client (qBittorrent is default)
-TORRENT_CLIENT=qbittorrent
 QBITTORRENT_HOST=localhost
 QBITTORRENT_PORT=8080
 QBITTORRENT_USERNAME=admin
@@ -72,10 +70,8 @@ All settings can be configured via environment variables with the `RUTOR_BOT_` p
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `RUTOR_BOT_TELEGRAM_TOKEN` | Telegram bot token | Required |
-| `RUTOR_BOT_USERS_WHITE_LIST` | Comma-separated list of authorized user IDs | Required |
-| `RUTOR_BOT_TORRENT_CLIENT` | Torrent client type: `transmission` or `qbittorrent` | `qbittorrent` |
-| `RUTOR_BOT_TRANSMISSION_HOST` | Transmission RPC host | `localhost` |
-| `RUTOR_BOT_TRANSMISSION_PORT` | Transmission RPC port | `9091` |
+| `RUTOR_BOT_QBITTORRENT_HOST` | qBittorrent Web UI host | `localhost` |
+| `RUTOR_BOT_QBITTORRENT_PORT` | qBittorrent Web UI port | `8080` |
 | `RUTOR_BOT_PROXY` | Proxy URL for accessing rutor.info | None |
 | `RUTOR_BOT_LOG_LEVEL` | Log level: DEBUG, INFO, WARNING, ERROR | `INFO` |
 
@@ -175,9 +171,8 @@ docker-compose -f docker-compose.single.yml up -d
 
 ### Bot doesn't respond to commands
 
-1. Check if your Telegram user ID is in `USERS_WHITE_LIST`
-2. Verify the bot token is correct
-3. Check logs for errors
+1. Verify the bot token is correct
+2. Check logs for errors
 
 ### Can't connect to torrent client
 

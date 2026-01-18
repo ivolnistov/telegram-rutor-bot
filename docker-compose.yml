@@ -1,8 +1,30 @@
-version: '3.8'
-
 services:
+  web:
+    build: .
+    entrypoint: []
+    command: uv run uvicorn src.telegram_rutor_bot.web.app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8088:8000"
+    environment:
+      RUTOR_BOT_DATABASE_URL: postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      RUTOR_BOT_REDIS_URL: redis://redis:6379/0
+      RUTOR_BOT_TORRENT_CLIENT: qbittorrent
+      RUTOR_BOT_QBITTORRENT_HOST: qbittorrent
+      RUTOR_BOT_QBITTORRENT_PORT: 8080
+      RUTOR_BOT_QBITTORRENT_USERNAME: admin
+      RUTOR_BOT_QBITTORRENT_PASSWORD: adminadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - film_cache:/app/data/film_cache
+    restart: unless-stopped
+
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: rutor
@@ -11,10 +33,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rutor -d rutorbot"]
+      test: [ "CMD-SHELL", "pg_isready -U rutor -d rutorbot" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    ports:
+      - "5433:5432"
 
   redis:
     image: redis:7-alpine
@@ -22,58 +46,74 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 3
+    ports:
+      - "6380:6379"
+
+  qbittorrent:
+    build:
+      context: ./docker/qbittorrent
+      dockerfile: Dockerfile
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+      - WEBUI_PASSWORD=rutor_secret_pass
+      - DELETE_AFTER_RATIO=0
+    volumes:
+      - qbittorrent_config:/config
+      - qbittorrent_downloads:/downloads
+    ports:
+      - 8090:8080
+      - 6881:6881
+      - 6881:6881/udp
+    restart: unless-stopped
 
   bot:
     build: .
     restart: unless-stopped
-    command: ["bot"]
+    command: [ "bot" ]
     volumes:
       - film_cache:/app/data/film_cache
+      - ./config.toml:/app/config.toml
     environment:
       - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
       - RUTOR_BOT_REDIS_URL=redis://redis:6379
-      - RUTOR_BOT_TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-      - RUTOR_BOT_TORRENT_CLIENT=${TORRENT_CLIENT:-transmission}
-      - RUTOR_BOT_TRANSMISSION_HOST=${TRANSMISSION_HOST:-localhost}
-      - RUTOR_BOT_TRANSMISSION_PORT=${TRANSMISSION_PORT:-9091}
-      - RUTOR_BOT_TRANSMISSION_USERNAME=${TRANSMISSION_USERNAME}
-      - RUTOR_BOT_TRANSMISSION_PASSWORD=${TRANSMISSION_PASSWORD}
-      - RUTOR_BOT_QBITTORRENT_HOST=${QBITTORRENT_HOST:-localhost}
-      - RUTOR_BOT_QBITTORRENT_PORT=${QBITTORRENT_PORT:-8080}
+      - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_PORT=8080
       - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
       - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
-      - RUTOR_BOT_USERS_WHITE_LIST=${USERS_WHITE_LIST}
       - RUTOR_BOT_PROXY=${PROXY:-}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      qbittorrent:
+        condition: service_started
 
   scheduler:
     build: .
     restart: unless-stopped
-    command: ["scheduler"]
+    command: [ "scheduler" ]
     volumes:
       - film_cache:/app/data/film_cache
+      - ./config.toml:/app/config.toml
     environment:
       - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
       - RUTOR_BOT_REDIS_URL=redis://redis:6379
-      - RUTOR_BOT_TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-      - RUTOR_BOT_TORRENT_CLIENT=${TORRENT_CLIENT:-transmission}
-      - RUTOR_BOT_TRANSMISSION_HOST=${TRANSMISSION_HOST:-localhost}
-      - RUTOR_BOT_TRANSMISSION_PORT=${TRANSMISSION_PORT:-9091}
-      - RUTOR_BOT_TRANSMISSION_USERNAME=${TRANSMISSION_USERNAME}
-      - RUTOR_BOT_TRANSMISSION_PASSWORD=${TRANSMISSION_PASSWORD}
-      - RUTOR_BOT_QBITTORRENT_HOST=${QBITTORRENT_HOST:-localhost}
-      - RUTOR_BOT_QBITTORRENT_PORT=${QBITTORRENT_PORT:-8080}
+      - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_PORT=8080
       - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
       - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
-      - RUTOR_BOT_USERS_WHITE_LIST=${USERS_WHITE_LIST}
       - RUTOR_BOT_PROXY=${PROXY:-}
     depends_on:
       postgres:
@@ -84,23 +124,18 @@ services:
   worker:
     build: .
     restart: unless-stopped
-    command: ["worker"]
+    command: [ "worker" ]
     volumes:
       - film_cache:/app/data/film_cache
+      - ./config.toml:/app/config.toml
     environment:
       - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
       - RUTOR_BOT_REDIS_URL=redis://redis:6379
-      - RUTOR_BOT_TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-      - RUTOR_BOT_TORRENT_CLIENT=${TORRENT_CLIENT:-transmission}
-      - RUTOR_BOT_TRANSMISSION_HOST=${TRANSMISSION_HOST:-localhost}
-      - RUTOR_BOT_TRANSMISSION_PORT=${TRANSMISSION_PORT:-9091}
-      - RUTOR_BOT_TRANSMISSION_USERNAME=${TRANSMISSION_USERNAME}
-      - RUTOR_BOT_TRANSMISSION_PASSWORD=${TRANSMISSION_PASSWORD}
-      - RUTOR_BOT_QBITTORRENT_HOST=${QBITTORRENT_HOST:-localhost}
-      - RUTOR_BOT_QBITTORRENT_PORT=${QBITTORRENT_PORT:-8080}
+      - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_PORT=8080
       - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
       - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
-      - RUTOR_BOT_USERS_WHITE_LIST=${USERS_WHITE_LIST}
       - RUTOR_BOT_PROXY=${PROXY:-}
     depends_on:
       postgres:
@@ -112,7 +147,8 @@ services:
 
   migrations:
     build: .
-    command: ["alembic", "upgrade", "head"]
+    entrypoint: []
+    command: [ "uv", "run", "alembic", "upgrade", "head" ]
     environment:
       - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
     depends_on:
@@ -123,3 +159,5 @@ volumes:
   postgres_data:
   redis_data:
   film_cache:
+  qbittorrent_config:
+  qbittorrent_downloads:

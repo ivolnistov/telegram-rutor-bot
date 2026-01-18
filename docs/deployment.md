@@ -40,7 +40,7 @@ uv sync
 2. Configure `config.toml`:
 ```toml
 telegram_token = "your-token"
-users_white_list = [your_id]
+qbittorrent_host = "qbittorrent"
 database_path = "var/rutor.db"
 ```
 

@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import json
 from typing import Any, TypedDict, Unpack
 
 import httpx
@@ -85,7 +86,14 @@ class QBittorrentClient(TorrentClient):
         return response.text
 
     async def add_torrent(
-        self, magnet_link: str, download_dir: str | None = None, category: str | None = None
+        self,
+        magnet_link: str,
+        download_dir: str | None = None,
+        category: str | None = None,
+        rename: str | None = None,
+        ratio_limit: float | None = None,
+        seed_time_limit: int | None = None,
+        inactive_seeding_time_limit: int | None = None,
     ) -> dict[str, Any]:
         """Add a torrent by magnet link"""
         data = {'urls': magnet_link}
@@ -93,6 +101,16 @@ class QBittorrentClient(TorrentClient):
             data['savepath'] = download_dir
         if category:
             data['category'] = category
+        if ratio_limit is not None and ratio_limit > 0:
+            data['ratioLimit'] = str(ratio_limit)
+        if seed_time_limit is not None and seed_time_limit > 0:
+            data['seedingTimeLimit'] = str(seed_time_limit)
+        if inactive_seeding_time_limit is not None and inactive_seeding_time_limit > 0:
+            # Note: Parameter name might be case sensitive or specific.
+            # qBittorrent API usually uses camelCase: inactiveSeedingTimeLimit
+            data['inactiveSeedingTimeLimit'] = str(inactive_seeding_time_limit)
+        if rename:
+            data['rename'] = rename
 
         await self._request('POST', 'torrents/add', data=data)
 
@@ -154,6 +172,19 @@ class QBittorrentClient(TorrentClient):
         await self._request('POST', 'torrents/resume', data={'hashes': str(torrent_id)})
         return True
 
+    async def get_app_preferences(self) -> dict[str, Any]:
+        """Get application preferences"""
+        result = await self._request('GET', 'app/preferences')
+        if isinstance(result, dict):
+            return result
+        raise TorrentClientError(f'Expected dict from app/preferences, got {type(result)}')
+
+    async def set_app_preferences(self, prefs: dict[str, Any]) -> None:
+        """Set application preferences"""
+        # qBittorrent expects 'json' parameter containing the preferences
+        # Note: keys must be exact match to qB API
+        await self._request('POST', 'app/setPreferences', data={'json': json.dumps(prefs)})
+
     def _normalize_torrent_info(self, torrent: dict[str, Any]) -> dict[str, Any]:
         """Normalize qBittorrent torrent info to standard format"""
         return {
@@ -167,4 +198,6 @@ class QBittorrentClient(TorrentClient):
             'upload_rate': torrent.get('upspeed', 0),
             'download_dir': torrent.get('save_path'),
             'magnet_uri': torrent.get('magnet_uri', ''),
+            'seeds': torrent.get('num_seeds', 0),
+            'peers': torrent.get('num_leechs', 0),
         }

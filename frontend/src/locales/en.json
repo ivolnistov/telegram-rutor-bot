@@ -1,0 +1,209 @@
+{
+    "common": {
+        "loading": "Loading...",
+        "save": "Save",
+        "saved": "Saved successfully",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "search": "Search",
+        "status": "Status",
+        "actions": "Actions",
+        "error": "Error",
+        "success": "Success",
+        "saving": "Saving...",
+        "update": "Update",
+        "close": "Close",
+        "unknown": "Unknown"
+    },
+    "sidebar": {
+        "dashboard": "Dashboard",
+        "searches": "Searches",
+        "torrents": "Torrents",
+        "films": "Films",
+        "users": "Users",
+        "categories": "Categories",
+        "tasks": "Tasks",
+        "settings": "Settings",
+        "logout": "Logout"
+    },
+    "auth": {
+        "welcome": "Welcome Back",
+        "tfa_title": "Two-Factor Auth",
+        "signin_desc": "Sign in to manage your monitoring",
+        "tfa_desc": "Enter the code sent to your Telegram",
+        "username": "Username",
+        "password": "Password",
+        "username_placeholder": "Enter your username",
+        "password_placeholder": "Enter your password",
+        "signin": "Sign In",
+        "signing_in": "Signing in...",
+        "tfa_code": "Verification Code",
+        "tfa_placeholder": "Enter 6-character code",
+        "verify": "Verify Code",
+        "verifying": "Verifying...",
+        "back_to_login": "Back to Login",
+        "login_failed": "Login failed",
+        "invalid_code": "Invalid code"
+    },
+    "library": {
+        "title": "Film Library",
+        "all_categories": "All Categories",
+        "search_placeholder": "Search films...",
+        "loading": "Loading library...",
+        "unknown_title": "Unknown Title",
+        "unknown_year": "Unknown Year",
+        "download": "Download",
+        "files": "Files",
+        "more": "more...",
+        "no_films": "No films found matching your search.",
+        "downloads_modal": "Downloads: {{title}}",
+        "download_started": "Download started successfully",
+        "download_failed": "Failed to start download"
+    },
+    "tasks": {
+        "title": "Task History",
+        "search_id": "Search #{{id}}",
+        "duration": "Duration",
+        "running": "Running",
+        "pending": "Pending",
+        "success": "Success",
+        "failed": "Failed",
+        "processing": "Processing... {{progress}}%",
+        "no_tasks": "No task history found."
+    },
+    "downloads": {
+        "title": "Downloads",
+        "no_downloads": "No active downloads"
+    },
+    "settings": {
+        "title": "Configuration",
+        "subtitle": "System Configuration",
+        "description": "Manage core system settings",
+        "telegram": "Telegram Settings",
+        "telegram_token": "Telegram Bot Token",
+        "telegram_token_hint": "API Token from @BotFather",
+        "torrent_client": "Torrent Client",
+        "client_type": "Client Type",
+        "host": "Host",
+        "port": "Port",
+        "username": "Username",
+        "password": "Password",
+        "password_placeholder": "Enter password",
+        "save_config": "Save Configuration",
+        "saving": "Saving...",
+        "tfa_secret": "2FA Secret",
+        "is_configured": "Configured",
+        "not_configured": "Not Configured",
+        "seed_ratio_limit_hint": "Stop seeding when this ratio is reached (e.g., 1.0 = 1:1 ratio). Set to 0 to stop immediately after download.",
+        "seed_ratio_limit_desc": "Upload/Download ratio target. 0 = Stop immediately.",
+        "seed_time_limit_desc": "Maximum seeding time in minutes. 0 = No time limit.",
+        "inactive_seeding_time_limit_desc": "Stop seeding if inactive for this many minutes. 0 = Disable check.",
+        "telegram_token_placeholder": "123456:ABC-DEF...",
+        "clients": {
+            "qbittorrent": "qBittorrent",
+            "transmission": "Transmission"
+        },
+        "downloads": "Download Settings",
+        "seed_ratio_limit": "Seed Ratio Limit",
+        "seed_time_limit": "Seed Time Limit (min)",
+        "inactive_seeding_time_limit": "Inactive Timeout (min)"
+    },
+    "users": {
+        "title": "Manage Users",
+        "subtitle": "Manage telegram users available for subscription",
+        "roles": {
+            "guest": "Guest",
+            "authorized": "Authorized",
+            "admin": "Admin"
+        },
+        "status": {
+            "admin": "Admin",
+            "authorized": "Authorized",
+            "guest": "Guest",
+            "unknown": "Unknown User"
+        },
+        "tfa": {
+            "on": "TFA ON",
+            "enable": "Enable TFA",
+            "disable": "Disable TFA",
+            "updating": "Updating TFA status...",
+            "enabled": "enabled",
+            "disabled": "disabled",
+            "failed": "Failed to update TFA"
+        },
+        "password": {
+            "set_title": "Set Password for {{name}}",
+            "set_tooltip": "Set Password",
+            "new": "New Password",
+            "placeholder": "Enter new password",
+            "hint": "Setting a password enables web login for this user (Future feature).",
+            "save": "Save Password",
+            "saving": "Setting password...",
+            "saved": "Password set for {{name}}",
+            "failed": "Failed to set password"
+        },
+        "role_update": {
+            "loading": "Updating role...",
+            "success": "User role updated",
+            "error": "Failed to update role"
+        },
+        "no_users": "No users found",
+        "info_hint": "Users are automatically added when they interact with the bot or are added to a search. To add a new user manually, simply add their Chat ID when creating a monitor."
+    },
+    "categories": {
+        "title": "Manage Categories",
+        "subtitle": "Configure search categories and folders",
+        "add": "Add Category",
+        "edit": "Edit Category",
+        "create": "Create Category",
+        "no_categories": "No categories found",
+        "form": {
+            "name": "Name",
+            "icon": "Icon (Emoji or URL)",
+            "folder": "Download Folder",
+            "name_placeholder": "Movies",
+            "icon_placeholder": "🎬",
+            "folder_placeholder": "/downloads/movies",
+            "error_create": "Error creating category",
+            "error_update": "Error updating category",
+            "error_delete": "Failed to delete",
+            "name_required": "Name is required",
+            "delete_confirm": "Delete category?"
+        }
+    },
+    "searches": {
+        "title": "Active Monitors",
+        "add": "Add Monitoring",
+        "edit_title": "Edit Monitoring #{{id}}",
+        "create_title": "Add New Monitoring",
+        "no_searches": "No monitors found for this category.",
+        "filter_category": "Filter by Category",
+        "all_categories": "All Categories",
+        "url": "Rutor URL",
+        "url_placeholder": "https://rutor.info/search/...",
+        "category_label": "Category (Required)",
+        "select_category": "Select Category...",
+        "cron_label": "Cron Schedule",
+        "subscribers_label": "Subscribers",
+        "no_subscribers": "No subscribers",
+        "select_user": "Select User...",
+        "add_subscriber": "Add Another Subscriber",
+        "delete_confirm_title": "Delete Search",
+        "delete_confirm_desc": "Are you sure you want to delete this search? This action cannot be undone.",
+        "validation": {
+            "url_required": "URL is required",
+            "url_invalid": "Must be a valid Rutor URL",
+            "category_required": "Category is required",
+            "subscribers_required": "At least one subscriber is required"
+        },
+        "messages": {
+            "created": "Search created successfully",
+            "updated": "Changes saved successfully",
+            "deleted": "Search deleted",
+            "task_started": "Task started!",
+            "failed_create": "Failed to create search",
+            "failed_task": "Failed to start task"
+        }
+    }
+}

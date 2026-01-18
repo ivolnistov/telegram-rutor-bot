@@ -1,11 +1,11 @@
 # Telegram Rutor Bot
 
-A Telegram bot for monitoring and downloading torrents from rutor.info with support for Transmission and qBittorrent.
+A Telegram bot for monitoring and downloading torrents from rutor.info with support for qBittorrent.
 
 ## Features
 
 - 🔍 Monitor rutor.info for new torrents
-- 📥 Automatic downloads via Transmission or qBittorrent
+- 📥 Automatic downloads via qBittorrent
 - 🔔 Search subscriptions with notifications
 - 🎬 Extract movie information with posters
 - 👥 Multi-user support with whitelist authorization
@@ -20,33 +20,11 @@ A Telegram bot for monitoring and downloading torrents from rutor.info with supp
 
 #### Option 1: Single Container (Simple)
 
-Perfect for personal use or small deployments:
-
-```bash
-# Clone and configure
-git clone https://github.com/yourusername/telegram-rutor-bot.git
-cd telegram-rutor-bot
-cp .env.example .env
-# Edit .env with your settings
-
-# Run single container
-docker-compose -f docker-compose.single.yml up -d
-```
+Perfect for personal use or small deployments. See [Single Container Guide](docs/single-container.md).
 
 #### Option 2: Multi-Container (Production)
 
-For high-availability production deployments:
-
-```bash
-# Clone and configure
-git clone https://github.com/yourusername/telegram-rutor-bot.git
-cd telegram-rutor-bot
-cp config.toml.example config.toml
-# Edit config.toml with your settings
-
-# Run full stack
-docker-compose up -d
-```
+For high-availability production deployments. See [Deployment Guide](docs/deployment.md).
 
 ### Local Development
 
@@ -54,10 +32,17 @@ docker-compose up -d
 ```bash
 # Using uv (recommended)
 uv sync
-
-# Or using pip
-pip install -e .
 ```
+
+### Hybrid Development (Frontend + Backend)
+
+For full-stack development with React/Vite and FastAPI:
+
+1.  **Start Infra:** `docker compose up -d postgres redis qbittorrent`
+2.  **Run Backend:** See [Installation Guide](docs/installation.md#frontend--backend-development-hybrid-mode).
+3.  **Run Frontend:** `cd frontend && npm run dev`
+
+See [Installation Guide](docs/installation.md) for full details.
 
 2. Apply database migrations:
 ```bash
@@ -91,8 +76,10 @@ uv run python -m telegram_rutor_bot
 | Parameter | Description | Required | Default |
 |-----------|-------------|----------|---------|
 | `telegram_token` | Telegram bot token | Yes | - |
-| `users_white_list` | List of allowed Telegram IDs | Yes | [] |
-| `torrent_client` | Torrent client (transmission/qbittorrent) | No | transmission |
+| `qbittorrent_host` | qBittorrent Web UI host | No | localhost |
+| `qbittorrent_port` | qBittorrent Web UI port | No | 8080 |
+| `qbittorrent_username` | qBittorrent username | No | admin |
+| `qbittorrent_password` | qBittorrent password | No | adminadmin |
 | `proxy` | Proxy for accessing rutor.info | No | - |
 | `log_level` | Logging level | No | INFO |
 | `database_path` | SQLite database path | No | var/rutor.db |
@@ -104,8 +91,7 @@ All settings can be configured via environment variables with `RUTOR_BOT_` prefi
 
 ```bash
 RUTOR_BOT_TELEGRAM_TOKEN=your-token
-RUTOR_BOT_USERS_WHITE_LIST=[123456789]
-RUTOR_BOT_TORRENT_CLIENT=qbittorrent
+RUTOR_BOT_QBITTORRENT_HOST=localhost
 RUTOR_BOT_PROXY=socks5://localhost:1080
 ```
 
@@ -114,7 +100,7 @@ RUTOR_BOT_PROXY=socks5://localhost:1080
 - [Installation Guide](docs/installation.md) - Detailed installation instructions
 - [Configuration Guide](docs/configuration.md) - All configuration options explained
 - [Deployment Guide](docs/deployment.md) - Production deployment strategies
-- [Torrent Clients](docs/torrent-clients.md) - Setting up Transmission and qBittorrent
+- [Torrent Client](docs/torrent-clients.md) - Setting up qBittorrent
 - [API Reference](docs/api.md) - Bot commands and API documentation
 
 ## Quick Deployment
@@ -131,6 +117,7 @@ This starts:
 - Bot service
 - TaskIQ scheduler
 - TaskIQ workers
+- qBittorrent (optional if external)
 
 ### Single Container Deployment
 
@@ -144,7 +131,6 @@ docker-compose -f docker-compose.single.yml up -d
 docker build -f Dockerfile.single -t telegram-rutor-bot:single .
 docker run -d --name telegram-rutor-bot \
   -e RUTOR_BOT_TELEGRAM_TOKEN=your-token \
-  -e RUTOR_BOT_USERS_WHITE_LIST=123456789 \
   -v bot-data:/app/data \
   telegram-rutor-bot:single
 ```
@@ -152,23 +138,6 @@ docker run -d --name telegram-rutor-bot \
 See [Single Container Guide](docs/single-container.md) for details.
 
 ### Adding Torrent Client to Docker Compose
-
-#### Transmission Example
-
-```yaml
-transmission:
-  image: linuxserver/transmission
-  environment:
-    - PUID=1000
-    - PGID=1000
-    - USER=admin
-    - PASS=password
-  volumes:
-    - ./transmission/config:/config
-    - ./downloads:/downloads
-  ports:
-    - 9091:9091
-```
 
 #### qBittorrent Example
 

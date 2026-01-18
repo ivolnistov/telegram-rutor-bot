@@ -1,9 +1,10 @@
 """SQLAlchemy ORM models for the database."""
 
-from datetime import UTC, datetime
-from typing import Optional
+from __future__ import annotations
 
-from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Integer, String, Table
+from datetime import UTC, datetime
+
+from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -30,9 +31,13 @@ class Film(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     ru_name: Mapped[str | None] = mapped_column(String, nullable=True)
     poster: Mapped[str | None] = mapped_column(String, nullable=True)
+    country: Mapped[str | None] = mapped_column(String, nullable=True)
+    genres: Mapped[str | None] = mapped_column(String, nullable=True)
     rating: Mapped[str | None] = mapped_column(String, nullable=True)
+    category_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('categories.id'), nullable=True)
 
-    torrents: Mapped[list['Torrent']] = relationship('Torrent', back_populates='film')
+    torrents: Mapped[list[Torrent]] = relationship('Torrent', back_populates='film')
+    category_rel: Mapped[Category | None] = relationship('Category')
 
     def __str__(self) -> str:
         return self.name
@@ -50,13 +55,13 @@ class Torrent(Base):
     magnet: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     created: Mapped[datetime] = mapped_column(Date, nullable=False)
     link: Mapped[str] = mapped_column(String, nullable=False)
-    sz: Mapped[int] = mapped_column(Integer, nullable=False)
+    sz: Mapped[int] = mapped_column(BigInteger, nullable=False)
     approved: Mapped[bool] = mapped_column(Boolean, default=False)
     downloaded: Mapped[bool] = mapped_column(Boolean, default=False)
     seeds: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    film: Mapped['Film'] = relationship('Film', back_populates='torrents')
+    film: Mapped[Film] = relationship('Film', back_populates='torrents')
 
     @property
     def size(self) -> int:
@@ -95,14 +100,33 @@ class User(Base):
     __tablename__ = 'users'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    chat_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     name: Mapped[str | None] = mapped_column(String, nullable=True)
     username: Mapped[str | None] = mapped_column(String, nullable=True)
+    password: Mapped[str | None] = mapped_column(String, nullable=True)
+    is_authorized: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_tfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    language: Mapped[str] = mapped_column(String, default='en')
 
-    created_searches: Mapped[list['Search']] = relationship('Search', back_populates='creator')
-    subscribed_searches: Mapped[list['Search']] = relationship(
+    created_searches: Mapped[list[Search]] = relationship('Search', back_populates='creator')
+    subscribed_searches: Mapped[list[Search]] = relationship(
         'Search', secondary=subscribes_table, back_populates='subscribers'
     )
+
+
+class Category(Base):
+    """Category model for grouping searches."""
+
+    __tablename__ = 'categories'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    icon: Mapped[str | None] = mapped_column(String, nullable=True)
+    folder: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    searches: Mapped[list[Search]] = relationship('Search', back_populates='category_rel')
 
 
 class Search(Base):
@@ -113,14 +137,21 @@ class Search(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     url: Mapped[str] = mapped_column(String, nullable=False)
     cron: Mapped[str] = mapped_column(String, nullable=False)
-    last_success: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_success: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     creator_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('users.id'), nullable=True)
     query: Mapped[str | None] = mapped_column(String, nullable=True)
+    category_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('categories.id'), nullable=True)
 
-    creator: Mapped[Optional['User']] = relationship('User', back_populates='created_searches')
-    subscribers: Mapped[list['User']] = relationship(
+    creator: Mapped[User | None] = relationship('User', back_populates='created_searches')
+    category_rel: Mapped[Category | None] = relationship('Category', back_populates='searches')
+    subscribers: Mapped[list[User]] = relationship(
         'User', secondary=subscribes_table, back_populates='subscribed_searches'
     )
+
+    @property
+    def category(self) -> str | None:
+        """Get category name."""
+        return self.category_rel.name if self.category_rel else None
 
     @property
     def cron_tuple(self) -> tuple[str, ...]:
@@ -138,3 +169,57 @@ class Search(Base):
         if self.last_success:
             return int((datetime.now(UTC) - self.last_success).total_seconds())
         return None
+
+
+class TaskExecution(Base):
+    """Task execution model for tracking search jobs."""
+
+    __tablename__ = 'task_executions'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    search_id: Mapped[int] = mapped_column(Integer, ForeignKey('searches.id'), nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default='pending')  # pending, running, success, failed
+    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    result: Mapped[str | None] = mapped_column(String, nullable=True)  # JSON or text result summary
+    progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    search: Mapped[Search] = relationship('Search')
+
+
+class AppConfig(Base):
+    """Application configuration model."""
+
+    __tablename__ = 'config'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)  # Singleton: always ID=1
+
+    # General
+    is_configured: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Telegram
+    telegram_token: Mapped[str | None] = mapped_column(String, nullable=True)
+    unauthorized_message: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Torrent Client
+    torrent_client: Mapped[str] = mapped_column(String, default='qbittorrent')
+
+    # qBittorrent
+    qbittorrent_host: Mapped[str] = mapped_column(String, default='localhost')
+    qbittorrent_port: Mapped[int] = mapped_column(Integer, default=8080)
+    qbittorrent_username: Mapped[str] = mapped_column(String, default='admin')
+    qbittorrent_password: Mapped[str | None] = mapped_column(String, default='adminadmin')
+
+    # Transmission
+    transmission_host: Mapped[str] = mapped_column(String, default='localhost')
+    transmission_port: Mapped[int] = mapped_column(Integer, default=9091)
+    transmission_username: Mapped[str | None] = mapped_column(String, nullable=True)
+    transmission_password: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Secret
+    proxy: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Seed limits
+    seed_ratio_limit: Mapped[float] = mapped_column(Float, default=1.0)
+    seed_time_limit: Mapped[int] = mapped_column(Integer, default=2880)  # Minutes (48h)
+    inactive_seeding_time_limit: Mapped[int] = mapped_column(Integer, default=0)  # Minutes (0 = disabled)

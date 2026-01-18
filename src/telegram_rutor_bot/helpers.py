@@ -1,17 +1,24 @@
 """Helper functions for the bot"""
 
+import html
 import logging
 import re
 from collections.abc import Iterable
 from hashlib import blake2s
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+from urllib.parse import urljoin
 
-from telegram_rutor_bot.db import get_async_session, get_torrents_by_film
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+from telegram_rutor_bot.db import get_async_session, get_torrents_by_film, update_film_metadata
 from telegram_rutor_bot.rutor import get_torrent_info
+from telegram_rutor_bot.schemas import Notification
 
 log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from telegram_rutor_bot.db.models import Film
 
 
@@ -51,74 +58,103 @@ def _clean_torrent_name(torrent_name: str, film_name: str, film_year: int) -> st
     return re.sub(rf'^{re.escape(film_name)}\s+{film_year}\s+', '', clean_name)
 
 
-def _split_long_message(message: str, max_length: int = 4096) -> list[str]:
-    """Split long message into smaller parts"""
-    if len(message) <= max_length:
-        return [message.strip()]
+def _format_torrents_buttons(
+    torrents: list[Any], film: Film, metadata: dict[str, Any] | None = None
+) -> InlineKeyboardMarkup:
+    """Format list of torrents as inline buttons"""
+    buttons = []
 
-    messages = []
-    parts = message.split('\n')
-    current_msg = ''
-
-    for part in parts:
-        if len(current_msg) + len(part) + 1 > max_length:
-            messages.append(current_msg.strip())
-            current_msg = part + '\n'
-        else:
-            current_msg += part + '\n'
-
-    if current_msg.strip():
-        messages.append(current_msg.strip())
-
-    return messages
-
-
-def _format_torrents_list(torrents: list, film: 'Film') -> str:
-    """Format list of torrents as options"""
-    lines = []
     for t in torrents:
         clean_name = _clean_torrent_name(t.name, film.name, film.year)
-        lines.append(f'   /dl_{t.id} • {clean_name} • {humanize_bytes(t.size)}')
-    return '\n'.join(lines)
+        # Truncate clean_name if too long for button
+        if len(clean_name) > 30:
+            clean_name = clean_name[:27] + '...'
+
+        size = humanize_bytes(t.size)
+        # Text: "↓ 1080p (10.5 GB)"
+        text = f'⬇️ {clean_name} ({size})'
+
+        row = [InlineKeyboardButton(text, callback_data=f'dl_{t.id}')]
+
+        # Add Rutor button
+        rutor_url = urljoin('http://rutor.info', t.link)
+        row.append(InlineKeyboardButton('🔗', url=rutor_url))
+
+        buttons.append(row)
+
+    # Add IMDB/KP buttons if metadata exists
+    if metadata:
+        info_row = []
+        if metadata.get('imdb_url'):
+            info_row.append(InlineKeyboardButton('⭐ IMDB', url=metadata['imdb_url']))
+        if metadata.get('kp_url'):
+            info_row.append(InlineKeyboardButton('🎬 KP', url=metadata['kp_url']))
+
+        if info_row:
+            buttons.append(info_row)
+
+    return InlineKeyboardMarkup(buttons)
 
 
-async def _format_film_with_details(film: 'Film', torrents: list) -> tuple[list[str], bytes | None]:
-    """Format film with detailed info from first torrent"""
+async def _format_film_with_details(session: AsyncSession, film: Film, torrents: list[Any]) -> Notification:
+    """Format film with detailed info from first torrent returning structured data"""
     first_torrent = torrents[0]
 
     try:
-        film_info, poster, _ = await get_torrent_info(first_torrent.link, f'/dl_{first_torrent.id}')
+        film_info, poster, _, poster_url, metadata = await get_torrent_info(first_torrent.link)
+
+        # Update film poster if available and missing
+        if poster_url and not film.poster:
+            await update_film_metadata(session, film.id, poster=poster_url)
 
         # Extract movie info lines
         movie_info_lines = _extract_movie_info_lines(film_info)
 
-        # Build message
-        message = '\n'.join(movie_info_lines)
-        message += '\n\n📀 Available options:\n'
-        message += _format_torrents_list(torrents, film)
+        # Build caption
+        # Title in bold (HTML)
+        safe_name = html.escape(film.name)
+        caption_lines = [f'🎬 <b>{safe_name}</b> ({film.year})']
 
-        # Split if needed
-        messages = _split_long_message(message)
+        # We should also escape movie_info_lines just in case they contain < or >
+        safe_info_lines = [html.escape(line) for line in movie_info_lines]
+        caption_lines.extend(safe_info_lines)
 
-        return messages, poster
+        caption = '\n'.join(caption_lines)
+
+        # Truncate caption if too long (Telegram limit 1024)
+        if len(caption) > 1000:
+            caption = caption[:997] + '...'
+
+        markup = _format_torrents_buttons(torrents, film, metadata)
+
+        return {
+            'type': 'photo' if (poster or poster_url) else 'text',
+            'media': poster or poster_url,
+            'caption': caption,
+            'reply_markup': markup,
+        }
 
     except (OSError, ValueError) as e:
-        # Fallback to simple format on error
         log.debug('Failed to get torrent info: %s', e)
-        return _format_film_simple(film, torrents), None
+        return _format_film_simple(film, torrents)
 
 
-def _format_film_simple(film: 'Film', torrents: list) -> list[str]:
+def _format_film_simple(film: Film, torrents: list[Any]) -> Notification:
     """Simple film format without detailed info"""
-    text = f'🎬 {film.name} ({film.year})\n\n📀 Available options:\n'
-    text += _format_torrents_list(torrents, film)
-    return [text.strip()]
+    safe_name = html.escape(film.name)
+    text = f'🎬 <b>{safe_name}</b> ({film.year})'
+    markup = _format_torrents_buttons(torrents, film)
+    return {
+        'type': 'text',
+        'media': None,
+        'caption': text,
+        'reply_markup': markup,
+    }
 
 
-async def format_films(films: Iterable['Film']) -> tuple[list[str], list[tuple[bytes, str]]]:
-    """Format films for telegram messages, returns messages and posters"""
-    messages = []
-    posters = []  # List of (poster_bytes, caption) tuples
+async def format_films(films: Iterable[Film]) -> list[Notification]:
+    """Format films for telegram messages, returns list of notification objects"""
+    notifications: list[Notification] = []
 
     async with get_async_session() as session:
         for film in films:
@@ -127,14 +163,7 @@ async def format_films(films: Iterable['Film']) -> tuple[list[str], list[tuple[b
                 continue
 
             # Format film with details or simple format
-            film_messages, poster = await _format_film_with_details(film, torrents)
-            messages.extend(film_messages)
+            notification = await _format_film_with_details(session, film, torrents)
+            notifications.append(notification)
 
-            # Add poster if available
-            if poster:
-                caption = f'🎬 {film.name} ({film.year})'
-                posters.append((poster, caption))
-
-    if not messages:
-        messages = ['Torrents list is empty']
-    return messages, posters
+    return notifications

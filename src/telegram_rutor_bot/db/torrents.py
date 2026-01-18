@@ -1,12 +1,13 @@
 """Torrent operations for managing downloads"""
 
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
-from sqlalchemy import select, update
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from .models import Torrent
+from .models import Film, Torrent
 
 __all__ = (
     'add_torrent',
@@ -64,7 +65,11 @@ async def add_torrent(
 
 async def get_torrent_by_id(session: AsyncSession, torrent_id: int) -> Torrent | None:
     """Get torrent by ID with film info"""
-    result = await session.execute(select(Torrent).options(selectinload(Torrent.film)).where(Torrent.id == torrent_id))
+    result = await session.execute(
+        select(Torrent)
+        .options(selectinload(Torrent.film).selectinload(Film.category_rel))
+        .where(Torrent.id == torrent_id)
+    )
     return result.scalar_one_or_none()
 
 
@@ -105,7 +110,7 @@ async def modify_torrent(session: AsyncSession, torrent_id: int, **kwargs: str |
     result = await session.execute(update(Torrent).where(Torrent.id == torrent_id).values(**update_data))
 
     await session.commit()
-    return result.rowcount > 0
+    return cast(CursorResult[Any], result).rowcount > 0
 
 
 async def get_recent_torrents(session: AsyncSession, days: int = 7, limit: int = 100) -> list[Torrent]:
@@ -127,4 +132,4 @@ async def mark_torrent_downloaded(session: AsyncSession, torrent_id: int) -> boo
     result = await session.execute(update(Torrent).where(Torrent.id == torrent_id).values(downloaded=True))
 
     await session.commit()
-    return result.rowcount > 0
+    return cast(CursorResult[Any], result).rowcount > 0

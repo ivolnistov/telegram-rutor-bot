@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rutor Bot Setup</title>
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zinc: {
+                            950: '#09090b',
+                            900: '#18181b',
+                            800: '#27272a',
+                            700: '#3f3f46',
+                            600: '#52525b',
+                            500: '#71717a',
+                            400: '#a1a1aa',
+                            300: '#d4d4d8',
+                            200: '#e4e4e7',
+                            100: '#f4f4f5',
+                            50: '#fafafa',
+                        },
+                        violet: {
+                            600: '#7c3aed',
+                            500: '#8b5cf6',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #09090b;
+            color: #f4f4f5;
+        }
+
+        .input-field {
+            width: 100%;
+            background-color: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            color: #f4f4f5;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .input-field:focus {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        .btn-primary {
+            width: 100%;
+            background-color: #7c3aed;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #6d28d9;
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #f4f4f5;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+    <!-- Background Effects -->
+    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px]">
+        </div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px]">
+        </div>
+    </div>
+
+    <div
+        class="relative z-10 w-full max-w-md bg-zinc-900/50 border border-zinc-800 rounded-xl shadow-2xl backdrop-blur-sm p-8">
+        <div class="flex items-center gap-3 mb-8">
+            <div
+                class="w-10 h-10 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-violet-600/20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="text-white">
+                    <path
+                        d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold">Setup Rutor Bot</h1>
+        </div>
+
+        <form id="setupForm" class="space-y-6">
+            <form id="setupForm" class="space-y-6">
+                <!-- System Health Check -->
+                <div class="space-y-4 border-b border-zinc-800 pb-6">
+                    <div class="section-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="text-emerald-400">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                        </svg>
+                        System Health
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div
+                            class="bg-zinc-800/30 rounded-lg p-3 border border-zinc-800/50 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="text-zinc-400">
+                                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                                    <line x1="4" y1="22" x2="4" y2="15" />
+                                </svg>
+                                <span class="text-sm font-medium text-zinc-300">Database</span>
+                            </div>
+                            <span id="status-db"
+                                class="text-xs font-bold px-2 py-0.5 rounded bg-zinc-700 text-zinc-400">Checking...</span>
+                        </div>
+                        <div
+                            class="bg-zinc-800/30 rounded-lg p-3 border border-zinc-800/50 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="text-zinc-400">
+                                    <path d="M18 6H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13l4-3.5L18 6Z" />
+                                    <path d="M12 13v9" />
+                                    <path d="M12 21v-9" />
+                                </svg>
+                                <span class="text-sm font-medium text-zinc-300">Redis</span>
+                            </div>
+                            <span id="status-redis"
+                                class="text-xs font-bold px-2 py-0.5 rounded bg-zinc-700 text-zinc-400">Checking...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Telegram Section -->
+                <div class="space-y-4">
+                    <div class="section-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="text-blue-400">
+                            <path
+                                d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-8.609 3.33c-2.068.8-4.133 1.598-5.724 2.21a405.15 405.15 0 0 1-2.863 1.137c-.825.45-.825 \
+2.924-.825 3.374V15h2l.06 6.13c0 .88.47 1.26 1.05 1.26.68 0 1.21-.49 1.48-.77l2.12-2.12L15 22.95c.5.21 1.03.22 1.5.03s.82-.57.99-1.06l4-17a2.25 2.25 0 0 0-.292-2.487z" />
+                        </svg>
+                        Telegram
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-400 mb-1">Bot Token</label>
+                        <input type="text" name="telegram_token" required
+                            placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" class="input-field">
+                    </div>
+
+                    <!-- Initial Admin User -->
+                    <div class="bg-zinc-800/30 rounded-lg p-4 border border-zinc-800/50 space-y-4">
+                        <div class="section-title text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="text-violet-400">
+                                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            Initial Admin User (Optional)
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-zinc-500 mb-1">Telegram ID</label>
+                                <input type="number" name="init_admin_id" placeholder="e.g. 12345678"
+                                    class="input-field text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-zinc-500 mb-1">Username</label>
+                                <input type="text" name="init_admin_username" placeholder="@username"
+                                    class="input-field text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-500 mb-1">Dashboard Password</label>
+                            <input type="password" name="init_admin_password" placeholder="Secure password"
+                                class="input-field text-sm">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-zinc-500 mb-1">Language</label>
+                                <select name="init_admin_language" class="input-field text-sm">
+                                    <option value="en">English (en)</option>
+                                    <option value="ru">Russian (ru)</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center pt-6">
+                                <input type="checkbox" id="init_admin_tfa" name="init_admin_tfa"
+                                    class="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-violet-600 focus:ring-violet-600 focus:ring-offset-zinc-900">
+                                <label for="init_admin_tfa" class="ml-2 text-sm text-zinc-300">Enable 2FA</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Torrent Client Section -->
+                <div class="space-y-4 border-t border-zinc-800 pt-6">
+                    <div class="section-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="text-green-400">
+                            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                            <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+                        </svg>
+                        Torrent Client
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-400 mb-1">Downloader</label>
+                        <select name="torrent_client" class="input-field">
+                            <option value="qbittorrent">qBittorrent</option>
+                            <option value="transmission">Transmission</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-400 mb-1">Host</label>
+                            <input type="text" name="torrent_host" value="localhost" class="input-field">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-400 mb-1">Port</label>
+                            <input type="number" name="torrent_port" value="8080" class="input-field">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-400 mb-1">Username</label>
+                            <input type="text" name="torrent_username" value="admin" class="input-field">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-400 mb-1">Password</label>
+                            <input type="password" name="torrent_password" value="adminadmin" class="input-field">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="error-message"
+                    class="hidden text-red-400 text-sm p-3 bg-red-400/10 border border-red-400/20 rounded-md"></div>
+
+                <button type="submit" class="btn-primary flex items-center justify-center gap-2">
+                    <span>Save & Restart</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14" />
+                        <path d="m12 5 7 7-7 7" />
+                    </svg>
+                </button>
+            </form>
+    </div>
+
+    <script>
+        // Initialize Application
+        const populateForm = (data) => {
+            if (!data || !data.current_values) return;
+
+            const v = data.current_values;
+            const envVars = data.env_vars || [];
+
+            // Helper to set value safely
+            const setVal = (name, val) => {
+                const el = document.querySelector(`[name="${name}"]`);
+                if (el && val !== undefined && val !== null) {
+                    el.value = val;
+                }
+            };
+
+            // Helper to handle Env Var blocking state
+            const updateBlockedState = (elName, isBlocked) => {
+                const el = document.querySelector(`[name="${elName}"]`);
+                if (!el) return;
+
+                if (isBlocked) {
+                    el.disabled = true;
+                    el.title = "Managed by Environment Variable";
+                    el.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    el.disabled = false;
+                    el.title = "";
+                    el.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+
+            setVal('telegram_token', v.telegram_token);
+            setVal('torrent_client', v.torrent_client);
+
+            const updateTorrentFields = () => {
+                const client = document.querySelector('[name="torrent_client"]').value;
+                const prefix = client === 'qbittorrent' ? 'qbittorrent' : 'transmission';
+
+                // Update Values
+                if (client === 'qbittorrent') {
+                    setVal('torrent_host', v.qbittorrent_host || 'localhost');
+                    setVal('torrent_port', v.qbittorrent_port || 8080);
+                    setVal('torrent_username', v.qbittorrent_username || 'admin');
+                    if (v.qbittorrent_password && v.qbittorrent_password !== '***') {
+                        setVal('torrent_password', v.qbittorrent_password);
+                    }
+                } else {
+                    setVal('torrent_host', v.transmission_host || 'localhost');
+                    setVal('torrent_port', v.transmission_port || 9091);
+                    setVal('torrent_username', v.transmission_username || '');
+                    if (v.transmission_password && v.transmission_password !== '***') {
+                        setVal('torrent_password', v.transmission_password);
+                    }
+                }
+
+                // Update Blocking
+                updateBlockedState('torrent_host', envVars.includes(`${prefix}_host`));
+                updateBlockedState('torrent_port', envVars.includes(`${prefix}_port`));
+                updateBlockedState('torrent_username', envVars.includes(`${prefix}_username`));
+                updateBlockedState('torrent_password', envVars.includes(`${prefix}_password`));
+            }
+
+            // Init Telegram blocking
+            updateBlockedState('telegram_token', envVars.includes('telegram_token'));
+            updateBlockedState('torrent_client', envVars.includes('torrent_client'));
+
+            // Init Torrent fields
+            updateTorrentFields();
+
+            // Listen for client change
+            const clientSelect = document.querySelector('[name="torrent_client"]');
+            clientSelect.addEventListener('change', updateTorrentFields);
+        };
+
+        const initApp = async () => {
+            // Health Check Logic
+            const updateHealth = async () => {
+                try {
+                    const res = await fetch('/api/health');
+                    const h = await res.json();
+
+                    const updateStatus = (id, status) => {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                        if (status === 'ok') {
+                            el.innerHTML = '<span class="inline-block w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>';
+                            el.className = 'flex items-center';
+                            el.title = 'Operational';
+                        } else {
+                            el.innerHTML = '<span class="inline-block w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>';
+                            el.className = 'flex items-center';
+                            el.title = 'Error';
+                        }
+                    };
+
+                    updateStatus('status-db', h.postgres);
+                    updateStatus('status-redis', h.redis);
+
+                } catch (e) {
+                    console.error('Health check error', e);
+                    ['status-db', 'status-redis'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            el.textContent = 'Unreachable';
+                            el.className = 'text-xs font-bold px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20';
+                        }
+                    });
+                }
+            };
+
+            updateHealth();
+            setInterval(updateHealth, 5000);
+
+            // Fetch Config
+            try {
+                const res = await fetch('/api/config');
+                if (res.status === 401 || res.status === 403) {
+                    // Already configured/Auth required
+                    console.log('API requires auth, assuming configured. Redirecting to login...');
+                    // Optional: Show message instead of redirect
+                    window.location.href = '/login';
+                    return;
+                }
+                const data = await res.json();
+                populateForm(data);
+            } catch (e) {
+                console.error("Failed to load config", e);
+                const errorDiv = document.getElementById('error-message');
+                errorDiv.textContent = "Failed to load configuration from server.";
+                errorDiv.classList.remove('hidden');
+            }
+        };
+
+        // Run initialization
+        initApp();
+
+        document.getElementById('setupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const errorDiv = document.getElementById('error-message');
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            errorDiv.classList.add('hidden');
+
+            // Construct Initial Users
+            const initialUsers = [];
+            const adminId = parseInt(form.init_admin_id.value);
+            if (!isNaN(adminId)) {
+                initialUsers.push({
+                    id: adminId,
+                    username: form.init_admin_username.value || undefined,
+                    password: form.init_admin_password.value || undefined,
+                    is_tfa_enabled: form.init_admin_tfa.checked,
+                    language: form.init_admin_language.value
+                });
+            }
+
+            const payload = {
+                telegram: {
+                    token: form.telegram_token.value,
+                    initial_users: initialUsers
+                },
+                torrent: {
+                    client: form.torrent_client.value,
+                    host: form.torrent_host.value,
+                    port: parseInt(form.torrent_port.value),
+                    username: form.torrent_username.value,
+                    password: form.torrent_password.value
+                }
+            };
+
+            try {
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Failed to save configuration');
+                }
+
+                // Success - Show Reloading UI
+                const container = document.querySelector('.relative.z-10');
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                        <div class="w-16 h-16 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-white mb-2">Configuration Saved</h2>
+                            <p class="text-zinc-400">Restarting services... please wait.</p>
+                        </div>
+                    </div>
+                `;
+
+                // Poll for health until back online, then redirect
+                const checkHealth = async () => {
+                    try {
+                        const r = await fetch('/api/health');
+                        if (r.ok) {
+                            window.location.href = '/';
+                        } else {
+                            setTimeout(checkHealth, 1000);
+                        }
+                    } catch (e) {
+                        setTimeout(checkHealth, 1000);
+                    }
+                };
+
+                // Give it a moment to actually start restarting
+                setTimeout(checkHealth, 3000);
+
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = 'Save & Restart';
+            }
+        });
+    </script>
+</body>
+
+</html>

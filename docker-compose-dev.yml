@@ -1,0 +1,145 @@
+services:
+  # --- Infrastructure (Always enabled) ---
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rutor
+      POSTGRES_PASSWORD: rutorpass
+      POSTGRES_DB: rutorbot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U rutor -d rutorbot" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432" # Exposed on 5433 for local dev
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    ports:
+      - "6380:6379" # Exposed on 6380 for local dev
+
+  qbittorrent:
+    build:
+      context: ./docker/qbittorrent
+      dockerfile: Dockerfile
+    container_name: qbittorrent_dev
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+      - WEBUI_PASSWORD=rutor_secret_pass
+      - DELETE_AFTER_RATIO=0
+    volumes:
+      - qbittorrent_config:/config
+      - qbittorrent_downloads:/downloads
+    ports:
+      - 8090:8080 # Exposed on 8090 for local dev
+      - 6881:6881
+      - 6881:6881/udp
+    restart: unless-stopped
+
+  # --- API (Backend) ---
+  # Profiles:
+  # - full: Everything
+  # - api: API + Infra
+  # - notaskiq: API + Infra (Alias for api context)
+  api:
+    build: .
+    profiles: [ "full", "api", "notaskiq" ]
+    entrypoint: []
+    # No "web" part, this is strictly the API
+    command: uv run uvicorn telegram_rutor_bot.web.app:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8088:8000"
+    environment:
+      RUTOR_BOT_DATABASE_URL: postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      RUTOR_BOT_REDIS_URL: redis://redis:6379/0
+      RUTOR_BOT_TORRENT_CLIENT: qbittorrent
+      RUTOR_BOT_QBITTORRENT_HOST: qbittorrent
+      RUTOR_BOT_QBITTORRENT_PORT: 8080
+      RUTOR_BOT_QBITTORRENT_USERNAME: admin
+      RUTOR_BOT_QBITTORRENT_PASSWORD: rutor_secret_pass
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - film_cache:/app/data/film_cache
+      - ./src:/app/src
+      - ./frontend/dist:/app/frontend/dist
+      - ./frontend/public:/app/frontend/public
+      - ./config.toml:/app/config.toml
+    restart: unless-stopped
+
+  # --- TaskIQ Services ---
+  # Profile: taskiq
+  scheduler:
+    build: .
+    profiles: [ "full", "taskiq" ]
+    restart: unless-stopped
+    command: [ "scheduler" ]
+    volumes:
+      - film_cache:/app/data/film_cache
+      - ./src:/app/src
+      - ./config.toml:/app/config.toml
+    environment:
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      - RUTOR_BOT_REDIS_URL=redis://redis:6379
+      - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_PORT=8080
+      - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
+      - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-rutor_secret_pass}
+      - RUTOR_BOT_PROXY=${PROXY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    profiles: [ "full", "taskiq" ]
+    restart: unless-stopped
+    command: [ "worker" ]
+    volumes:
+      - film_cache:/app/data/film_cache
+      - ./src:/app/src
+      - ./config.toml:/app/config.toml
+    environment:
+      - PYTHONUNBUFFERED=1
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      - RUTOR_BOT_REDIS_URL=redis://redis:6379
+      - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_PORT=8080
+      - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
+      - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-rutor_secret_pass}
+      - RUTOR_BOT_PROXY=${PROXY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  film_cache:
+  qbittorrent_config:
+  qbittorrent_downloads:

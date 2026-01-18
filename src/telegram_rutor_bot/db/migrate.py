@@ -3,8 +3,9 @@
 import logging
 from pathlib import Path
 
-from alembic import command
 from alembic.config import Config
+
+from alembic import command
 from telegram_rutor_bot.config import settings
 
 log = logging.getLogger(f'{settings.log_prefix}.migrate')

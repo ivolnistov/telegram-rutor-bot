@@ -72,7 +72,7 @@ async def get_kinopoisk_rating(kp_url: str) -> dict[str, str]:
     return {}
 
 
-async def get_imdb_poster(imdb_url: str) -> bytes | None:
+async def get_imdb_poster(imdb_url: str) -> tuple[bytes | None, str | None]:
     """Get poster from IMDB page"""
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
@@ -109,16 +109,14 @@ async def get_imdb_poster(imdb_url: str) -> bytes | None:
                     if '._V1_' in poster_url:
                         poster_url = poster_url.split('._V1_')[0] + '._V1_FMjpg_UX600_.jpg'
 
-                    # Download poster
-                    poster_response = await client.get(poster_url, headers=headers)
-                    poster_response.raise_for_status()
-                    return poster_response.content
+                    # Return URL without downloading
+                    return None, poster_url
 
     except (httpx.HTTPError, AttributeError, ValueError):
         # COMMENT: Silently ignore HTTP errors, parsing errors, and missing attributes
         pass
 
-    return None
+    return None, None
 
 
 async def get_movie_ratings(imdb_url: str | None = None, kp_url: str | None = None) -> tuple[str, str]:
