@@ -1,9 +1,17 @@
 """Telegram bot command handlers module"""
 
-from .commons import start, unknown
-from .search import search_add, search_delete, search_execute, search_list
+from .commons import (
+    add_user_cmd,
+    help_handler,
+    language_handler,
+    set_language_callback,
+    start,
+    unknown,
+)
+from .search import search_add, search_callback_handler, search_delete, search_execute, search_list
 from .subscribe import subscribe, subscriptions_list, unsubscribe
 from .torrents import (
+    callback_query_handler,
     download_torrent,
     torrent_download,
     torrent_info,
@@ -12,16 +20,18 @@ from .torrents import (
 )
 
 __all__ = [
-    # Torrents
+    'add_user_cmd',
+    'callback_query_handler',
     'download_torrent',
-    # Search
+    'help_handler',
+    'language_handler',
     'search_add',
+    'search_callback_handler',
     'search_delete',
     'search_execute',
     'search_list',
-    # Commons
+    'set_language_callback',
     'start',
-    # Subscribe
     'subscribe',
     'subscriptions_list',
     'torrent_download',

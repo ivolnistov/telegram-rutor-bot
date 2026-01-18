@@ -7,7 +7,7 @@ name = "telegram-rutor-bot"
 version = "0.1.0"
 description = "Telegram bot for monitoring rutor.info torrents"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "python-telegram-bot[socks]",
     "httpx[socks]>=0.27.0",
@@ -16,20 +16,26 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "sqlalchemy[asyncio]>=2.0.0",
     "aiosqlite>=0.19.0",
-    "psycopg2-binary>=2.9.0",
     "asyncpg>=0.29.0",
     "alembic>=1.13.0",
     "pydantic-settings>=2.0.0",
     "toml>=0.10.2",
     "taskiq>=0.11.0",
     "taskiq-redis>=1.0.0",
+    "fastapi>=0.109.0",
+    "uvicorn>=0.27.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.7",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "croniter>=6.0.0",
 ]
 
 [project.scripts]
 telegram-rutor-bot = "telegram_rutor_bot.main:main"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     # Code quality tools
     "ruff>=0.8.0",
     "mypy>=1.13.0",
@@ -48,6 +54,9 @@ dev-dependencies = [
     "pytest-xdist>=3.2.0",
     "factory-boy>=3.2.0",
     "faker>=18.0.0",
+    "types-python-jose>=3.5.0.20250531",
+    "types-passlib>=1.7.7.20250602",
+    "types-croniter>=6.0.0.20250809",
 ]
 
 [tool.ruff]
@@ -60,7 +69,7 @@ exclude = [
 ]
 line-length = 120
 indent-width = 4
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [
@@ -85,6 +94,7 @@ ignore = [
     "PLR2004", # Magic value used in comparison
     "E501", # Line too long (handled by formatter)
     "RUF001", # String contains ambiguous characters (Cyrillic)
+    "B008", # Do not perform function call in argument defaults (FastAPI Depends)
 ]
 
 [tool.ruff.lint.isort]
@@ -101,19 +111,9 @@ quote-style = "single"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.13"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
+python_version = "3.14"
+strict = true
+exclude = ["tests", "alembic"]
 plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
 
 # Ignore missing imports for third-party packages
@@ -150,6 +150,9 @@ disable = [
     "duplicate-code",
     "line-too-long",
     "too-many-positional-arguments",
+    "wrong-import-order",
+    "wrong-import-position",
+    "ungrouped-imports",
 ]
 
 [tool.pylint.FORMAT]

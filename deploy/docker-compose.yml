@@ -1,0 +1,169 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    entrypoint: []
+    command: uv run uvicorn src.telegram_rutor_bot.web.app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8088:8000"
+    environment:
+      RUTOR_BOT_TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
+      RUTOR_BOT_USERS_WHITE_LIST: ${USERS_WHITE_LIST}
+      RUTOR_BOT_DATABASE_URL: postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      RUTOR_BOT_REDIS_URL: redis://redis:6379/0
+      RUTOR_BOT_TORRENT_CLIENT: qbittorrent
+      RUTOR_BOT_QBITTORRENT_HOST: qbittorrent
+      RUTOR_BOT_QBITTORRENT_PORT: 8080
+      RUTOR_BOT_QBITTORRENT_USERNAME: admin
+      RUTOR_BOT_QBITTORRENT_PASSWORD: adminadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rutor
+      POSTGRES_PASSWORD: rutorpass
+      POSTGRES_DB: rutorbot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U rutor -d rutorbot" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    ports:
+      - "6380:6379"
+
+  qbittorrent:
+    build:
+      context: ./docker/qbittorrent
+      dockerfile: Dockerfile
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+      - WEBUI_PASSWORD=rutor_secret_pass
+      - DELETE_AFTER_RATIO=0
+    volumes:
+      - qbittorrent_config:/config
+      - qbittorrent_downloads:/downloads
+    ports:
+      - 8090:8080
+      - 6881:6881
+      - 6881:6881/udp
+    restart: unless-stopped
+
+  bot:
+    build: .
+    restart: unless-stopped
+    command: [ "bot" ]
+    volumes:
+      - film_cache:/app/data/film_cache
+    environment:
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      - RUTOR_BOT_REDIS_URL=redis://redis:6379
+      - RUTOR_BOT_TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_PORT=8080
+      - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
+      - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
+      - RUTOR_BOT_USERS_WHITE_LIST=${USERS_WHITE_LIST}
+      - RUTOR_BOT_PROXY=${PROXY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qbittorrent:
+        condition: service_started
+
+  scheduler:
+    build: .
+    restart: unless-stopped
+    command: [ "scheduler" ]
+    volumes:
+      - film_cache:/app/data/film_cache
+    environment:
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      - RUTOR_BOT_REDIS_URL=redis://redis:6379
+      - RUTOR_BOT_TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_PORT=8080
+      - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
+      - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
+      - RUTOR_BOT_USERS_WHITE_LIST=${USERS_WHITE_LIST}
+      - RUTOR_BOT_PROXY=${PROXY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: [ "worker" ]
+    volumes:
+      - film_cache:/app/data/film_cache
+    environment:
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      - RUTOR_BOT_REDIS_URL=redis://redis:6379
+      - RUTOR_BOT_TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
+      - RUTOR_BOT_QBITTORRENT_PORT=8080
+      - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
+      - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
+      - RUTOR_BOT_USERS_WHITE_LIST=${USERS_WHITE_LIST}
+      - RUTOR_BOT_PROXY=${PROXY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # You can scale workers if needed
+    # docker-compose up --scale worker=3
+
+  migrations:
+    build: .
+    entrypoint: []
+    command: [ "uv", "run", "alembic", "upgrade", "head" ]
+    environment:
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  film_cache:
+  qbittorrent_config:
+  qbittorrent_downloads:

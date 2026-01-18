@@ -13,9 +13,9 @@ log = logging.getLogger(f'{settings.log_prefix}.cache')
 class FilmInfoCache:
     """Persistent cache for film information using JSON files (Singleton)"""
 
-    _instance: 'FilmInfoCache | None' = None
+    _instance: FilmInfoCache | None = None
 
-    def __new__(cls, cache_dir: str | None = None) -> 'FilmInfoCache':
+    def __new__(cls, cache_dir: str | None = None) -> FilmInfoCache:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -29,11 +29,15 @@ class FilmInfoCache:
             # Default to a cache directory in the data folder
             # In Docker, this will be /app/data/film_cache (mounted as volume)
             # In local dev, this will be next to the database file
-            if settings.database_url and str(settings.database_url).startswith('postgresql://'):
+            if (
+                settings.database_url
+                and str(settings.database_url).startswith('postgresql://')
+                and Path('/app').exists()
+            ):
                 # Running in Docker with PostgreSQL
                 cache_dir = '/app/data/film_cache'
             else:
-                # Running locally with SQLite
+                # Running locally (SQLite or Postgres)
                 cache_dir = str(Path(settings.database_path).parent / 'film_cache')
 
         self.cache_dir = Path(cache_dir)

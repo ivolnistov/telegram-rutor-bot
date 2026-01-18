@@ -2,7 +2,7 @@
 # This version includes everything needed to run the bot in a single container
 # with SQLite database and in-memory task broker
 
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -1,14 +1,16 @@
 """Parser for rutor.info torrent site with Transmission integration."""
 
+from __future__ import annotations
+
 import locale
 import logging
 import os
 import re
-from collections.abc import Iterator
-from contextlib import contextmanager
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager, suppress
 from datetime import UTC, datetime
 from hashlib import blake2s
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urljoin
 
 import httpx
@@ -24,6 +26,7 @@ from telegram_rutor_bot.db import (
     get_torrent_by_id,
     get_torrent_by_magnet,
     modify_torrent,
+    update_film_metadata,
 )
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.utils.cache import FilmInfoCache
@@ -38,7 +41,7 @@ from .rating_parser import get_imdb_poster, get_movie_ratings
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from telegram_rutor_bot.db.models import Torrent
+    from telegram_rutor_bot.db.models import Film, Torrent
 
 log = logging.getLogger(f'{settings.log_prefix}.parser')
 KINOPOISK_RE = re.compile(r'https?://www\.kinopoisk\.ru')
@@ -96,7 +99,7 @@ def get_torrent_node(node: Tag) -> Tag | None:
         if not href:
             continue
         if href.startswith('/torrent'):
-            return anchor  # type: ignore[no-any-return]
+            return cast(Tag, anchor)
     return None
 
 
@@ -170,16 +173,19 @@ def _extract_torrent_data(lnk: Tag) -> dict[str, Any] | None:
 
 
 async def _process_torrent_item(
-    session: 'AsyncSession',
+    session: AsyncSession,
     torrent_data: dict[str, Any],
     film_cache: dict[str, int],
     new: list[int],
+    category_id: int | None = None,
 ) -> None:
     """Process a single torrent item"""
     # Get or create film
     film_id = film_cache.get(torrent_data['blake'])
     if not film_id:
-        film = await get_or_create_film(session, torrent_data['blake'], int(torrent_data['year']), torrent_data['name'])
+        film = await get_or_create_film(
+            session, torrent_data['blake'], int(torrent_data['year']), torrent_data['name'], category_id=category_id
+        )
         film_id = film.id
         film_cache[torrent_data['blake']] = film_id
         if film.id not in new:
@@ -210,8 +216,20 @@ async def _process_torrent_item(
             )
         await session.commit()
 
+    # Enrich film data if missing poster
+    # We do this after committing the torrent to ensure basic data is saved
+    # even if enrichment fails or is slow.
+    # We only enrich if we have the film object (i.e. it wasn't cached)
+    if 'film' in locals() and film and not film.poster:
+        await enrich_film_data(session, film, torrent_data['torrent_lnk'])
 
-async def parse_rutor(url: str, session: 'AsyncSession') -> list[int]:
+
+async def parse_rutor(
+    url: str,
+    session: AsyncSession,
+    category_id: int | None = None,
+    progress_callback: Callable[[int], Awaitable[None]] | None = None,
+) -> list[int]:
     """Parse rutor.info search results and save to database."""
     async with _get_client() as client:
         try:
@@ -230,10 +248,19 @@ async def parse_rutor(url: str, session: 'AsyncSession') -> list[int]:
         if not body:
             return []
 
-        for lnk in body.find_all('a'):
-            href = lnk.attrs.get('href', None)
-            if not href or not href.startswith('magnet'):
-                continue
+        links = [
+            lnk
+            for lnk in body.find_all('a')
+            if lnk.attrs.get('href', '') and lnk.attrs.get('href', '').startswith('magnet')
+        ]
+        total_links = len(links)
+
+        for i, lnk in enumerate(links):
+            # Report progress
+            if progress_callback and total_links > 0:
+                # Progress from 10% to 90%
+                progress = 10 + int((i / total_links) * 80)
+                await progress_callback(progress)
 
             # Extract torrent data
             torrent_data = _extract_torrent_data(lnk)
@@ -250,12 +277,38 @@ async def parse_rutor(url: str, session: 'AsyncSession') -> list[int]:
                 continue
 
             # Process torrent
-            await _process_torrent_item(session, torrent_data, film_cache, new)
+            await _process_torrent_item(session, torrent_data, film_cache, new, category_id)
 
     return new
 
 
-async def get_torrent_details(session: 'AsyncSession', torrent_id: int) -> dict:
+async def enrich_film_data(session: AsyncSession, film: Film, torrent_link: str) -> None:
+    """Fetch additional film data (poster, ratings) from torrent page."""
+    try:
+        # We pass a dummy download command as we only need metadata
+        _info, _poster, _images, poster_url, metadata = await get_torrent_info(torrent_link)
+        updates: dict[str, Any] = {}
+        if poster_url and not film.poster:
+            updates['poster'] = poster_url
+
+        # Update other metadata if available
+        if metadata:
+            if metadata.get('country'):
+                updates['country'] = metadata['country']
+            if metadata.get('genre'):
+                updates['genres'] = metadata['genre']
+            if metadata.get('year'):
+                with suppress(ValueError):
+                    updates['year'] = int(metadata['year'])
+
+        if updates:
+            await update_film_metadata(session, film.id, **updates)
+
+    except (ValueError, TypeError, AttributeError, ConnectionError) as e:
+        log.warning('Failed to enrich film %s: %s', film.name, e)
+
+
+async def get_torrent_details(session: AsyncSession, torrent_id: int) -> dict[str, Any]:
     """Get detailed torrent information from rutor page."""
     torrent = await get_torrent_by_id(session, torrent_id)
     if not torrent:
@@ -460,14 +513,17 @@ def _extract_description(lines: list[str], start_idx: int) -> str:
     return ' '.join(desc_lines)
 
 
-async def _extract_images(soup: BeautifulSoup, imdb_url: str | None) -> tuple[bytes | None, list[bytes]]:
+async def _extract_images(soup: BeautifulSoup, imdb_url: str | None) -> tuple[str | None, bytes | None, list[bytes]]:
     """Extract poster and screenshots from the page"""
+    poster_url = None
     poster = None
     images: list[bytes] = []
 
     # If no poster found on page, try to get from IMDB
     if imdb_url:
-        poster = await get_imdb_poster(imdb_url)
+        poster, poster_url_from_imdb = await get_imdb_poster(imdb_url)
+        if poster_url_from_imdb:
+            poster_url = poster_url_from_imdb
 
     # Try to extract poster and screenshots
     async with _get_client() as client:
@@ -490,13 +546,14 @@ async def _extract_images(soup: BeautifulSoup, imdb_url: str | None) -> tuple[by
                 # First large image or one with 'poster' in name is likely the poster
                 if poster is None and _is_poster_image(src, img_data, len(images)):
                     poster = img_data
+                    poster_url = src
                 else:
                     images.append(img_data)
             except (httpx.HTTPError, OSError, ValueError):
                 # Skip unavailable images (e.g., radikal.ru is down)
                 pass
 
-    return poster, images
+    return poster_url, poster, images
 
 
 def _is_poster_image(src: str, img_data: bytes, current_images_count: int) -> bool:
@@ -616,8 +673,10 @@ def _format_links_section(download_command: str, imdb_url: str | None, kp_url: s
     return message_parts
 
 
-async def get_torrent_info(torrent_link: str, download_command: str) -> tuple[str, bytes | None, list[bytes]]:
-    """Get torrent info from rutor page, including poster and images"""
+async def get_torrent_info(
+    torrent_link: str,
+) -> tuple[str, bytes | None, list[bytes], str | None, dict[str, Any]]:
+    """Get torrent info from rutor page, including poster, images and metadata"""
     # Use torrent_link as cache key
     cache = FilmInfoCache()
     cache_key = torrent_link
@@ -631,7 +690,9 @@ async def get_torrent_info(torrent_link: str, download_command: str) -> tuple[st
         poster = bytes.fromhex(poster_data) if poster_data else None
         images_data = cached_data.get('images', [])
         images = [bytes.fromhex(img) for img in images_data]
-        return message, poster, images
+        poster_url = cached_data.get('poster_url')
+        metadata = cached_data.get('metadata', {})
+        return message, poster, images, poster_url, metadata
 
     page_link = urljoin('http://www.rutor.info', torrent_link)
 
@@ -656,7 +717,7 @@ async def get_torrent_info(torrent_link: str, download_command: str) -> tuple[st
     imdb_rating, kp_rating = await get_movie_ratings(imdb_url, kp_url)
 
     # Extract poster and images
-    poster, images = await _extract_images(soup, imdb_url)
+    poster_url, poster, images = await _extract_images(soup, imdb_url)
 
     # Format message using helper functions
     message_parts = []
@@ -682,20 +743,28 @@ async def get_torrent_info(torrent_link: str, download_command: str) -> tuple[st
     # Description
     message_parts.extend(_format_description_section(result))
 
-    # Links
-    message_parts.extend(_format_links_section(download_command, imdb_url, kp_url, page_link))
-
     message = '\n'.join(message_parts)
+
+    # Metadata for enrichment
+    metadata = {
+        'country': result.get('country'),
+        'genre': result.get('genre'),
+        'year': result.get('year'),
+        'imdb_url': result.get('imdb_url'),
+        'kp_url': result.get('kp_url'),
+    }
 
     # Cache the result
     cache_data = {
         'message': message,
         'poster': poster.hex() if poster else None,
         'images': [img.hex() for img in images[:3]],  # Limit to 3 images
+        'poster_url': poster_url,
+        'metadata': metadata,
     }
     cache.set(cache_key, cache_data)
 
-    return message, poster, images[:3]  # Limit to 3 images
+    return message, poster, images[:3], poster_url, metadata
 
 
 def _extract_genre_from_details(soup: BeautifulSoup) -> tuple[str | None, str | None]:
@@ -758,7 +827,7 @@ def _determine_category(genre: str | None, rutor_category: str | None, torrent_n
     return category
 
 
-async def download_torrent(torrent: 'Torrent') -> dict[str, Any]:
+async def download_torrent(torrent: Torrent) -> dict[str, Any]:
     """Download torrent using configured torrent client"""
     category = None
 
@@ -784,10 +853,20 @@ async def download_torrent(torrent: 'Torrent') -> dict[str, Any]:
         # If we can't get genre, try to detect from torrent name
         category = detect_category_from_title(torrent.name)
 
+    # Determine download directory from category
+    download_dir = None
+    if torrent.film and torrent.film.category_rel and torrent.film.category_rel.folder:
+        download_dir = torrent.film.category_rel.folder
+
     # Download the torrent
     torrent_client = get_torrent_client()
     try:
         await torrent_client.connect()
-        return await torrent_client.add_torrent(torrent.magnet, category=category)
+        return await torrent_client.add_torrent(
+            torrent.magnet,
+            download_dir=download_dir,
+            category=category,
+            rename=torrent.name,
+        )
     finally:
         await torrent_client.disconnect()

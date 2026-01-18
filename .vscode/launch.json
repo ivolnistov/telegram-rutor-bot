@@ -1,0 +1,153 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Docker Dev: Full (API + TaskIQ + Infra)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "docker",
+            "runtimeArgs": [
+                "compose",
+                "-f",
+                "docker-compose-dev.yml",
+                "--profile",
+                "full",
+                "up"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Docker Dev: API (API + Infra)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "docker",
+            "runtimeArgs": [
+                "compose",
+                "-f",
+                "docker-compose-dev.yml",
+                "--profile",
+                "api",
+                "up"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Docker Dev: No TaskIQ (API + Infra)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "docker",
+            "runtimeArgs": [
+                "compose",
+                "-f",
+                "docker-compose-dev.yml",
+                "--profile",
+                "notaskiq",
+                "up"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Docker Dev: TaskIQ (TaskIQ + Infra)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "docker",
+            "runtimeArgs": [
+                "compose",
+                "-f",
+                "docker-compose-dev.yml",
+                "--profile",
+                "taskiq",
+                "up"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Bot",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/telegram_rutor_bot/main.py",
+            "args": [
+                "bot"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "RUTOR_BOT_RUN_MIGRATIONS": "true"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Scheduler",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/telegram_rutor_bot/main.py",
+            "args": [
+                "scheduler"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Worker",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/telegram_rutor_bot/main.py",
+            "args": [
+                "worker"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Frontend (Vite)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "dev",
+                "--",
+                "--port",
+                "5174"
+            ],
+            "cwd": "${workspaceFolder}/frontend",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Backend Web API",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "src.telegram_rutor_bot.web.app:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8088",
+                "--reload"
+            ],
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

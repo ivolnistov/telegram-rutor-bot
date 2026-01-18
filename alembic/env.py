@@ -1,16 +1,19 @@
-from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
-from alembic import context
+import asyncio
 
 # Import your settings and models
 import sys
-from os.path import dirname, abspath, join
+from logging.config import fileConfig
+from os.path import abspath, dirname, join
+
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import create_async_engine
+
+from alembic import context
+
 sys.path.insert(0, join(dirname(dirname(abspath(__file__))), 'src'))
 
-from telegram_rutor_bot import settings
+from telegram_rutor_bot.config import settings
 from telegram_rutor_bot.db.models import Base
 
 # this is the Alembic Config object, which provides
@@ -18,13 +21,12 @@ from telegram_rutor_bot.db.models import Base
 config = context.config
 
 # Set the SQLAlchemy URL from settings
-# Check for database_url attribute (PostgreSQL)
 if hasattr(settings, 'database_url') and settings.database_url:
-    # Use PostgreSQL URL for production
-    config.set_main_option('sqlalchemy.url', settings.database_url)
+    # Use PostgreSQL URL
+    config.set_main_option('sqlalchemy.url', str(settings.database_url).replace('postgresql://', 'postgresql+asyncpg://'))
 else:
     # Use SQLite for local development
-    config.set_main_option('sqlalchemy.url', f'sqlite:///{settings.DATABASE}')
+    config.set_main_option('sqlalchemy.url', f'sqlite+aiosqlite:///{settings.database_path}')
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -34,12 +36,6 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -65,26 +61,37 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
+def do_run_migrations(connection: Connection) -> None:
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        render_as_batch=True,
+    )
 
-    In this scenario we need to create an Engine
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+async def run_async_migrations() -> None:
+    """In this scenario we need to create an Engine
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+
+    connectable = create_async_engine(
+        config.get_main_option("sqlalchemy.url"),
         poolclass=pool.NullPool,
     )
 
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
 
-        with context.begin_transaction():
-            context.run_migrations()
+    await connectable.dispose()
+
+
+def run_migrations_online() -> None:
+    """Run migrations in 'online' mode."""
+    asyncio.run(run_async_migrations())
 
 
 if context.is_offline_mode():

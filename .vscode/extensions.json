@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "ms-python.mypy",
+        "tamasfe.even-better-toml",
+        "ms-azuretools.vscode-docker",
+        "dbaeumer.vscode-eslint"
+    ]
+}

@@ -9,6 +9,7 @@ __all__ = (
     'get_or_create_user_by_chat_id',
     'get_user',
     'get_user_by_chat',
+    'grant_access',
     'update_user_info',
 )
 
@@ -65,5 +66,32 @@ async def update_user_info(
     if username is not None:
         user.username = username
 
+    await session.commit()
+    return True
+
+
+async def grant_access(session: AsyncSession, chat_id: int) -> bool:
+    """Grant access to a user by chat ID"""
+    user = await get_user_by_chat(session, chat_id)
+    if not user:
+        user = await get_or_create_user_by_chat_id(session, chat_id)
+
+    user.is_authorized = True
+    await session.commit()
+    return True
+
+
+async def get_all_users(session: AsyncSession) -> list[User]:
+    """Get all users ordered by name or username"""
+    result = await session.execute(select(User).order_by(User.name, User.username))
+    return list(result.scalars().all())
+
+
+async def set_user_language(session: AsyncSession, chat_id: int, language: str) -> bool:
+    """Set user language preference"""
+    user = await get_user_by_chat(session, chat_id)
+    if not user:
+        return False
+    user.language = language
     await session.commit()
     return True

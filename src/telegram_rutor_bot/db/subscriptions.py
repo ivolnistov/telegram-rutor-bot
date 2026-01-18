@@ -1,6 +1,8 @@
 """Subscription operations for search notifications"""
 
-from sqlalchemy import and_, delete, select
+from typing import Any, cast
+
+from sqlalchemy import CursorResult, and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import Search, User, subscribes_table
@@ -52,7 +54,7 @@ async def unsubscribe(session: AsyncSession, search_id: int, user_id: int) -> bo
         )
     )
     await session.commit()
-    return result.rowcount > 0
+    return cast(CursorResult[Any], result).rowcount > 0
 
 
 async def get_subscriptions(session: AsyncSession, user_id: int) -> list[Search]:

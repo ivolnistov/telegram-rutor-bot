@@ -33,7 +33,14 @@ class TorrentClient(ABC):
 
     @abstractmethod
     async def add_torrent(
-        self, magnet_link: str, download_dir: str | None = None, category: str | None = None
+        self,
+        magnet_link: str,
+        download_dir: str | None = None,
+        category: str | None = None,
+        rename: str | None = None,
+        ratio_limit: float | None = None,
+        seed_time_limit: int | None = None,
+        inactive_seeding_time_limit: int | None = None,
     ) -> dict[str, Any]:
         """Add a torrent by magnet link
 
@@ -41,6 +48,10 @@ class TorrentClient(ABC):
             magnet_link: Magnet link to add
             download_dir: Optional download directory
             category: Optional category for organizing torrents
+            rename: Optional name to rename the torrent to
+            ratio_limit: Ratio limit to stop seeding
+            seed_time_limit: Time limit to stop seeding (minutes)
+            inactive_seeding_time_limit: Inactive time limit to stop seeding (minutes)
 
         Returns:
             Dictionary with torrent info (id, name, etc.)
@@ -98,3 +109,11 @@ class TorrentClient(ABC):
         Returns:
             True if successful, False otherwise
         """
+
+    @abstractmethod
+    async def get_app_preferences(self) -> dict[str, Any]:
+        """Get application preferences (qBittorrent specific)"""
+
+    @abstractmethod
+    async def set_app_preferences(self, prefs: dict[str, Any]) -> None:
+        """Set application preferences (qBittorrent specific)"""

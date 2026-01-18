@@ -1,0 +1,54 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Bot",
+            "type": "shell",
+            "command": "uv run telegram-rutor-bot bot",
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "options": {
+                "env": {
+                    "RUTOR_BOT_RUN_MIGRATIONS": "true"
+                }
+            }
+        },
+        {
+            "label": "Run Scheduler",
+            "type": "shell",
+            "command": "uv run telegram-rutor-bot scheduler",
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Run Worker",
+            "type": "shell",
+            "command": "uv run telegram-rutor-bot worker",
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Docker Up (Infra)",
+            "type": "shell",
+            "command": "docker compose up -d postgres redis qbittorrent",
+            "group": "build"
+        },
+        {
+            "label": "Run Backend (Hybrid)",
+            "type": "shell",
+            "command": "uv run uvicorn src.telegram_rutor_bot.web.app:app --reload --port 8088 --host 0.0.0.0",
+            "dependsOn": [
+                "Docker Up (Infra)"
+            ]
+        }
+    ]
+}

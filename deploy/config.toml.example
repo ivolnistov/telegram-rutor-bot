@@ -1,0 +1,29 @@
+# Telegram Rutor Bot Configuration
+# Copy this file to config.toml and fill in your values
+
+# Telegram bot settings
+telegram_token = "YOUR-TELEGRAM-BOT-TOKEN"
+unauthorized_message = "Unauthorized user, please contact my master"
+
+# qBittorrent client settings
+qbittorrent_host = "localhost"
+qbittorrent_port = 8080
+qbittorrent_username = "admin"
+qbittorrent_password = "adminadmin"  # gitleaks:allow
+
+# Proxy settings (optional)
+# proxy = "socks5://localhost:1080"
+
+# Logging settings
+log_prefix = "rutorbot"
+log_level = "INFO"  # Can be: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+# Database settings
+database_path = "var/rutor.db"  # Relative to project root
+
+# Parser settings
+timeout = 60  # Request timeout in seconds
+size_limit = 0  # Torrent size limit in bytes (0 = unlimited)
+
+# TaskIQ settings (optional)
+# redis_url = "redis://redis:6379"  # Redis URL for multi-container setup
