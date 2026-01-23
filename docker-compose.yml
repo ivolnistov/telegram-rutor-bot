@@ -12,7 +12,6 @@ services:
       RUTOR_BOT_QBITTORRENT_HOST: qbittorrent
       RUTOR_BOT_QBITTORRENT_PORT: 8080
       RUTOR_BOT_QBITTORRENT_USERNAME: admin
-      RUTOR_BOT_QBITTORRENT_PASSWORD: adminadmin
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,7 +88,6 @@ services:
       - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
       - RUTOR_BOT_QBITTORRENT_PORT=8080
       - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
-      - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
       - RUTOR_BOT_PROXY=${PROXY:-}
     depends_on:
       postgres:
@@ -113,7 +111,6 @@ services:
       - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
       - RUTOR_BOT_QBITTORRENT_PORT=8080
       - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
-      - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
       - RUTOR_BOT_PROXY=${PROXY:-}
     depends_on:
       postgres:
@@ -135,7 +132,6 @@ services:
       - RUTOR_BOT_QBITTORRENT_HOST=qbittorrent
       - RUTOR_BOT_QBITTORRENT_PORT=8080
       - RUTOR_BOT_QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
-      - RUTOR_BOT_QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminadmin}
       - RUTOR_BOT_PROXY=${PROXY:-}
     depends_on:
       postgres:
