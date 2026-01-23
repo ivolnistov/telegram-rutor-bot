@@ -1,3 +1,12 @@
+# Stage 1: Build Frontend
+FROM node:20-slim AS frontend-build
+WORKDIR /app
+COPY frontend/package.json ./
+RUN npm install
+COPY frontend ./
+RUN npm run build
+
+# Stage 2: Runtime
 FROM python:3.14-slim
 
 # Install uv
@@ -10,7 +19,12 @@ RUN apt-get update &&\
     locale-gen &&\
     mkdir /app && mkdir /app/var
 ENV LC_ALL "en_US.UTF-8"
+
+# Copy python app
 COPY ./ /app
+# Copy built frontend assets
+COPY --from=frontend-build /app/dist /app/frontend/dist
+
 RUN cd /app && uv sync
 VOLUME [ "/app/var" ]
 WORKDIR "/app"
