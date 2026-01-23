@@ -68,7 +68,7 @@ services:
       - DELETE_AFTER_RATIO=0
     volumes:
       - qbittorrent_config:/config
-      - qbittorrent_downloads:/downloads
+      - /srv/dev-disk-by-uuid-e79ced95-0355-4a3f-a8f9-ba4bf5e2a442/Plex:/downloads
     ports:
       - 8090:8080
       - 6881:6881
