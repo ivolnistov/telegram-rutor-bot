@@ -68,7 +68,7 @@ services:
       - DELETE_AFTER_RATIO=0
     volumes:
       - qbittorrent_config:/config
-      - qbittorrent_downloads:/downloads
+      - ${DOWNLOADS_PATH:-qbittorrent_downloads}:/downloads
     ports:
       - 8090:8080
       - 6881:6881
