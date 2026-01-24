@@ -435,6 +435,38 @@ async def delete_download(torrent_hash: str) -> dict[str, str]:
         raise HTTPException(status_code=500, detail=f'Failed to delete download: {e}') from e
 
 
+@api_router.post('/api/downloads/{torrent_hash}/pause', dependencies=[Depends(get_current_admin_user)])
+async def pause_download(torrent_hash: str) -> dict[str, str]:
+    """Pause a torrent"""
+    try:
+        client = get_torrent_client()
+        await client.connect()
+        try:
+            await client.pause_torrent(torrent_hash)
+            return {'status': 'ok', 'hash': torrent_hash}
+        finally:
+            await client.disconnect()
+    except Exception as e:
+        log.error('Failed to pause download %s: %s', torrent_hash, e)
+        raise HTTPException(status_code=500, detail=f'Failed to pause download: {e}') from e
+
+
+@api_router.post('/api/downloads/{torrent_hash}/resume', dependencies=[Depends(get_current_admin_user)])
+async def resume_download(torrent_hash: str) -> dict[str, str]:
+    """Resume a torrent"""
+    try:
+        client = get_torrent_client()
+        await client.connect()
+        try:
+            await client.resume_torrent(torrent_hash)
+            return {'status': 'ok', 'hash': torrent_hash}
+        finally:
+            await client.disconnect()
+    except Exception as e:
+        log.error('Failed to resume download %s: %s', torrent_hash, e)
+        raise HTTPException(status_code=500, detail=f'Failed to resume download: {e}') from e
+
+
 @app.get('/api/health')
 async def health_check() -> dict[str, str]:
     """Health check endpoint."""
