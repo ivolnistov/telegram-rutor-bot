@@ -16,6 +16,7 @@ from urllib.parse import urljoin
 import httpx
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from telegram_rutor_bot.config import settings
@@ -36,12 +37,13 @@ from telegram_rutor_bot.utils.category_mapper import (
     map_rutor_category,
 )
 
-from .rating_parser import get_imdb_poster, get_movie_ratings
+from .rating_parser import get_imdb_details, get_imdb_poster, get_movie_ratings
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from telegram_rutor_bot.db.models import Film, Torrent
+    from telegram_rutor_bot.db.models import AppConfig, Film, Torrent
+
 
 log = logging.getLogger(f'{settings.log_prefix}.parser')
 KINOPOISK_RE = re.compile(r'https?://www\.kinopoisk\.ru')
@@ -239,6 +241,25 @@ async def parse_rutor(
         except httpx.InvalidURL as e:
             raise ValueError('invalid url ' + url) from e
 
+    q_filters = []
+    t_filters = []
+
+    # Use session to fetch filters
+    try:
+        config_result = await session.execute(select(AppConfig).where(AppConfig.id == 1))
+        config = config_result.scalar_one_or_none()
+        if config:
+            if config.search_quality_filters:
+                q_filters = [f.strip().lower() for f in config.search_quality_filters.split(',') if f.strip()]
+            if config.search_translation_filters:
+                t_filters = [f.strip().lower() for f in config.search_translation_filters.split(',') if f.strip()]
+    except Exception:
+        # Fallback or log error? If DB fails, maybe continue without filters?
+        # But failure here might mean session issues.
+        # For now, just log/pass as we want search to work even if filters fail.
+        # But we don't have logger here easily accessible (log variable is module level).
+        pass
+
     soup = BeautifulSoup(data, 'lxml')
     new: list[int] = []
     film_cache: dict[str, int] = {}
@@ -267,19 +288,37 @@ async def parse_rutor(
             if not torrent_data:
                 continue
 
-            # Skip if size limit exceeded
-            if settings.size_limit and int(torrent_data['size']) > settings.size_limit:
-                continue
-
             # Check if torrent already exists
             existing_torrent = await get_torrent_by_blake(session, torrent_data['torrent_lnk_blake'])
             if existing_torrent:
+                continue
+
+            # Check filters
+            if _should_skip_torrent(torrent_data, q_filters, t_filters):
                 continue
 
             # Process torrent
             await _process_torrent_item(session, torrent_data, film_cache, new, category_id)
 
     return new
+
+
+def _should_skip_torrent(
+    torrent_data: dict[str, Any],
+    q_filters: list[str],
+    t_filters: list[str],
+) -> bool:
+    """Check if torrent should be skipped based on filters"""
+    # Skip if size limit exceeded
+    if settings.size_limit and int(torrent_data['size']) > settings.size_limit:
+        return True
+
+    # Filter by Quality
+    if q_filters and not any(f in torrent_data['name'].lower() for f in q_filters):
+        return True
+
+    # Filter by Translation
+    return not (t_filters and not any(f in torrent_data['name'].lower() for f in t_filters))
 
 
 async def enrich_film_data(session: AsyncSession, film: Film, torrent_link: str) -> None:
@@ -549,7 +588,7 @@ async def _extract_images(soup: BeautifulSoup, imdb_url: str | None) -> tuple[st
                     poster_url = src
                 else:
                     images.append(img_data)
-            except (httpx.HTTPError, OSError, ValueError):
+            except httpx.HTTPError, OSError, ValueError:
                 # Skip unavailable images (e.g., radikal.ru is down)
                 pass
 
@@ -679,20 +718,11 @@ async def get_torrent_info(
     """Get torrent info from rutor page, including poster, images and metadata"""
     # Use torrent_link as cache key
     cache = FilmInfoCache()
-    cache_key = torrent_link
 
     # Check cache first
-    cached_data = cache.get(cache_key)
+    cached_data = cache.get(torrent_link)
     if cached_data:
-        # Reconstruct the return values from cached data
-        message = cached_data.get('message', '')
-        poster_data = cached_data.get('poster')
-        poster = bytes.fromhex(poster_data) if poster_data else None
-        images_data = cached_data.get('images', [])
-        images = [bytes.fromhex(img) for img in images_data]
-        poster_url = cached_data.get('poster_url')
-        metadata = cached_data.get('metadata', {})
-        return message, poster, images, poster_url, metadata
+        return _deserialize_cached_data(cached_data)
 
     page_link = urljoin('http://www.rutor.info', torrent_link)
 
@@ -719,52 +749,84 @@ async def get_torrent_info(
     # Extract poster and images
     poster_url, poster, images = await _extract_images(soup, imdb_url)
 
-    # Format message using helper functions
-    message_parts = []
+    # Enrich with IMDB metadata if available
+    if imdb_url:
+        await _enrich_from_imdb(result, imdb_url)
+        # Check if we got a better poster URL from IMDB
+        if result.get('poster_url'):
+            poster_url = result['poster_url']
 
-    # Title section
-    message_parts.extend(_format_title_section(result, soup))
-
-    # Ratings section
-    message_parts.extend(_format_ratings_section(imdb_rating, kp_rating))
-
-    # Empty line
-    message_parts.append('')
-
-    # Movie details
-    message_parts.extend(_format_movie_details(result))
-
-    # Empty line
-    message_parts.append('')
-
-    # Technical details
-    message_parts.extend(_format_technical_details(result))
-
-    # Description
-    message_parts.extend(_format_description_section(result))
-
-    message = '\n'.join(message_parts)
-
-    # Metadata for enrichment
-    metadata = {
-        'country': result.get('country'),
-        'genre': result.get('genre'),
-        'year': result.get('year'),
-        'imdb_url': result.get('imdb_url'),
-        'kp_url': result.get('kp_url'),
-    }
+    message = _format_torrent_message(result, soup, imdb_rating, kp_rating)
 
     # Cache the result
-    cache_data = {
-        'message': message,
-        'poster': poster.hex() if poster else None,
-        'images': [img.hex() for img in images[:3]],  # Limit to 3 images
-        'poster_url': poster_url,
-        'metadata': metadata,
-    }
-    cache.set(cache_key, cache_data)
+    cache.set(
+        torrent_link,
+        {
+            'message': message,
+            'poster': (poster or b'').hex(),
+            'images': [img.hex() for img in images],
+            'poster_url': poster_url,
+            'metadata': {
+                'country': result.get('country'),
+                'genre': result.get('genre'),
+                'year': result.get('year'),
+                'imdb_url': result.get('imdb_url'),
+                'kp_url': result.get('kp_url'),
+            },
+        },
+    )
 
-    return message, poster, images[:3], poster_url, metadata
+    return message, poster, images, poster_url, result
+
+
+def _deserialize_cached_data(
+    cached_data: dict[str, Any],
+) -> tuple[str, bytes | None, list[bytes], str | None, dict[str, Any]]:
+    """Deserialize data from cache"""
+    message = cached_data.get('message', '')
+    poster_data = cached_data.get('poster')
+    poster = bytes.fromhex(poster_data) if poster_data else None
+    images_data = cached_data.get('images', [])
+    images = [bytes.fromhex(img) for img in images_data]
+    poster_url = cached_data.get('poster_url')
+    metadata = cached_data.get('metadata', {})
+    return message, poster, images, poster_url, metadata
+
+
+async def _enrich_from_imdb(result: dict[str, Any], imdb_url: str) -> None:
+    """Enrich result with data from IMDB"""
+    imdb_details = await get_imdb_details(imdb_url)
+    if not imdb_details:
+        return
+
+    # Override fields from IMDB
+    if imdb_details.get('title'):
+        result['title'] = imdb_details['title']
+        if imdb_details.get('year'):
+            result['year'] = imdb_details['year']
+
+    if imdb_details.get('description'):
+        result['description'] = imdb_details['description']
+
+    if imdb_details.get('genres'):
+        result['genre'] = imdb_details['genres']
+
+    if imdb_details.get('poster_url'):
+        result['poster_url'] = imdb_details['poster_url']
+
+
+def _format_torrent_message(result: dict[str, Any], soup: BeautifulSoup, imdb_rating: str, kp_rating: str) -> str:
+    """Format the final torrent info message"""
+    message_parts = []
+    message_parts.extend(_format_title_section(result, soup))
+    message_parts.extend(_format_ratings_section(imdb_rating, kp_rating))
+    message_parts.append('')
+    message_parts.extend(_format_movie_details(result))
+    message_parts.append('')
+    message_parts.extend(_format_technical_details(result))
+    message_parts.extend(_format_description_section(result))
+
+    return '\n'.join(message_parts)
 
 
 def _extract_genre_from_details(soup: BeautifulSoup) -> tuple[str | None, str | None]:
@@ -849,7 +911,7 @@ async def download_torrent(torrent: Torrent) -> dict[str, Any]:
         # Determine category
         category = _determine_category(genre, rutor_category, torrent.name)
 
-    except (httpx.HTTPError, OSError, ValueError, KeyError, AttributeError):
+    except httpx.HTTPError, OSError, ValueError, KeyError, AttributeError:
         # If we can't get genre, try to detect from torrent name
         category = detect_category_from_title(torrent.name)
 

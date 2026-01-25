@@ -19,6 +19,7 @@ __all__ = (
     'get_torrents_by_film',
     'mark_torrent_downloaded',
     'modify_torrent',
+    'search_torrents',
 )
 
 
@@ -133,3 +134,15 @@ async def mark_torrent_downloaded(session: AsyncSession, torrent_id: int) -> boo
 
     await session.commit()
     return cast(CursorResult[Any], result).rowcount > 0
+
+
+async def search_torrents(session: AsyncSession, query: str, limit: int = 50) -> list[Torrent]:
+    """Search torrents by name"""
+    result = await session.execute(
+        select(Torrent)
+        .options(selectinload(Torrent.film))
+        .where(Torrent.name.ilike(f'%{query}%'))
+        .order_by(Torrent.created.desc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())

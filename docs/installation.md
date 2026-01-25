@@ -78,6 +78,7 @@ uv run alembic upgrade head
 ```
 
 ### 7. Run the Bot
+
 ```bash
 # Run all components
 ./run_local.sh all
@@ -93,16 +94,21 @@ uv run python -m telegram_rutor_bot worker    # Worker
 This mode allows you to develop the React/Vite frontend and FastAPI backend locally while running keeping infrastructure (Database, Redis, qBittorrent) in Docker.
 
 ### 1. Start Infrastructure
+
 Run the infrastructure services with exposed ports for local access:
+
 ```bash
 docker compose up -d postgres redis qbittorrent
 ```
+
 *Note: We use specific ports to avoid conflicts with local services:*
-*   PostgreSQL: mapped to **5433** (internal 5432)
-*   Redis: mapped to **6380** (internal 6379)
-*   qBittorrent: mapped to **8090** (internal 8080)
+
+- PostgreSQL: mapped to **5433** (internal 5432)
+- Redis: mapped to **6380** (internal 6379)
+- qBittorrent: mapped to **8090** (internal 8080)
 
 ### 2. Configure & Start Backend
+
 Run the backend with environment variables pointing to the Docker services:
 
 ```bash
@@ -119,10 +125,12 @@ uv run alembic upgrade head
 # Run Backend
 uv run uvicorn src.telegram_rutor_bot.web.app:app --reload --port 8088 --host 0.0.0.0
 ```
-*   API Docs: http://localhost:8088/docs
-*   Health Check: http://localhost:8088/api/health
+
+- API Docs: <http://localhost:8088/docs>
+- Health Check: <http://localhost:8088/api/health>
 
 ### 3. Start Frontend
+
 The frontend proxies API requests to port 8088.
 
 ```bash
@@ -130,13 +138,15 @@ cd frontend
 npm install
 npm run dev
 ```
-*   App: http://localhost:5173/
+
+- App: <http://localhost:5173/>
 
 ## Docker Installation
 
 ### 1. Prerequisites
 
 Ensure you have:
+
 - Docker 20.10+
 - Docker Compose 2.0+
 

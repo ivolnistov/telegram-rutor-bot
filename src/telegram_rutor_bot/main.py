@@ -59,6 +59,8 @@ async def run_bot() -> None:
     application.add_handler(CommandHandler('add_search', h.search_add))
     application.add_handler(CommandHandler('list_search', h.search_list))
     application.add_handler(CommandHandler('list_subscriptions', h.subscriptions_list))
+    application.add_handler(CommandHandler('downloads', h.torrent_downloads))
+    application.add_handler(CommandHandler('recommend', h.torrent_recommend))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/dl_\d+)$'), h.torrent_download))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/in_\d+)$'), h.torrent_info))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/ds_\d+)$'), h.search_delete))

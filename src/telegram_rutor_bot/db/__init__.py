@@ -4,7 +4,14 @@
 from .database import get_async_db, get_async_session, init_db
 
 # Film operations
-from .films import get_films, get_films_by_ids, get_or_create_film, search_films, update_film_metadata
+from .films import (
+    get_films,
+    get_films_by_ids,
+    get_or_create_film,
+    get_recommendations,
+    search_films,
+    update_film_metadata,
+)
 from .models import Base, Film, Search, Torrent, User
 
 # Search operations
@@ -38,6 +45,7 @@ from .torrents import (
     get_torrents_by_film,
     mark_torrent_downloaded,
     modify_torrent,
+    search_torrents,
 )
 
 # User operations
@@ -71,6 +79,7 @@ __all__ = [
     'get_or_create_film',
     'get_or_create_user_by_chat_id',
     'get_recent_torrents',
+    'get_recommendations',
     'get_search',
     'get_search_subscribers',
     'get_searches',
@@ -90,6 +99,7 @@ __all__ = [
     'mark_torrent_downloaded',
     'modify_torrent',
     'search_films',
+    'search_torrents',
     'set_user_language',
     'subscribe',
     'unsubscribe',

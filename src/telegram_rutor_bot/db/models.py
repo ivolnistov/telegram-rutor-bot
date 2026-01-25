@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TypedDict
 
 from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -32,15 +33,20 @@ class Film(Base):
     ru_name: Mapped[str | None] = mapped_column(String, nullable=True)
     poster: Mapped[str | None] = mapped_column(String, nullable=True)
     country: Mapped[str | None] = mapped_column(String, nullable=True)
-    genres: Mapped[str | None] = mapped_column(String, nullable=True)
     rating: Mapped[str | None] = mapped_column(String, nullable=True)
+    user_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     category_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('categories.id'), nullable=True)
+    tmdb_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tmdb_media_type: Mapped[str | None] = mapped_column(String, default='movie', nullable=True)
+    genres: Mapped[str | None] = mapped_column(String, nullable=True)  # Comma-separated list
+    monitored: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_search: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     torrents: Mapped[list[Torrent]] = relationship('Torrent', back_populates='film')
     category_rel: Mapped[Category | None] = relationship('Category')
 
-    def __str__(self) -> str:
-        return self.name
+
+# ... (skipping Torrent, User, Category, Search, TaskExecution models) ...
 
 
 class Torrent(Base):
@@ -187,6 +193,31 @@ class TaskExecution(Base):
     search: Mapped[Search] = relationship('Search')
 
 
+class AppConfigUpdate(TypedDict, total=False):
+    """TypedDict for AppConfig updates."""
+
+    is_configured: bool
+    telegram_token: str | None
+    unauthorized_message: str | None
+    torrent_client: str
+    qbittorrent_host: str
+    qbittorrent_port: int
+    qbittorrent_username: str
+    qbittorrent_password: str | None
+    transmission_host: str
+    transmission_port: int
+    transmission_username: str | None
+    transmission_password: str | None
+    proxy: str | None
+    tmdb_api_key: str | None
+    tmdb_session_id: str | None
+    search_quality_filters: str | None
+    search_translation_filters: str | None
+    seed_ratio_limit: float
+    seed_time_limit: int
+    inactive_seeding_time_limit: int
+
+
 class AppConfig(Base):
     """Application configuration model."""
 
@@ -218,6 +249,12 @@ class AppConfig(Base):
 
     # Secret
     proxy: Mapped[str | None] = mapped_column(String, nullable=True)
+    tmdb_api_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    tmdb_session_id: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Search Filters
+    search_quality_filters: Mapped[str | None] = mapped_column(String, nullable=True)
+    search_translation_filters: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Seed limits
     seed_ratio_limit: Mapped[float] = mapped_column(Float, default=1.0)

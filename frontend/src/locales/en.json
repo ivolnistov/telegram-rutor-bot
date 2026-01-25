@@ -16,6 +16,19 @@
         "close": "Close",
         "unknown": "Unknown"
     },
+    "discovery": {
+        "title": "Trending Now",
+        "subtitle": "Popular movies and TV shows this week",
+        "movies": "Movies",
+        "tv_shows": "TV Shows",
+        "search_placeholder": "Search TMDB...",
+        "url_copied": "Search URL copied to clipboard!",
+        "copy_search_url": "Subscribe",
+        "no_overview": "No overview available.",
+        "your_rating": "Your Rating",
+        "rated": "Rating saved!",
+        "recommendations": "Similar Movies"
+    },
     "sidebar": {
         "dashboard": "Dashboard",
         "searches": "Searches",
@@ -25,6 +38,7 @@
         "categories": "Categories",
         "tasks": "Tasks",
         "settings": "Settings",
+        "discovery": "Discovery",
         "logout": "Logout"
     },
     "auth": {
@@ -59,7 +73,8 @@
         "no_films": "No films found matching your search.",
         "downloads_modal": "Downloads: {{title}}",
         "download_started": "Download started successfully",
-        "download_failed": "Failed to start download"
+        "download_failed": "Failed to start download",
+        "rating_updated": "Rating updated"
     },
     "tasks": {
         "title": "Task History",
@@ -100,6 +115,12 @@
         "seed_time_limit_desc": "Maximum seeding time in minutes. 0 = No time limit.",
         "inactive_seeding_time_limit_desc": "Stop seeding if inactive for this many minutes. 0 = Disable check.",
         "telegram_token_placeholder": "123456:ABC-DEF...",
+        "tmdb_api_key": "TMDB API Key",
+        "tmdb_api_key_hint": "API Key (v3 auth) from themoviedb.org",
+        "tmdb_api_key_placeholder": "Enter TMDB API Key",
+        "tmdb_session_id": "TMDB Session ID",
+        "tmdb_session_id_hint": "Session ID for ratings and recommendations",
+        "tmdb_session_id_placeholder": "Enter TMDB Session ID",
         "clients": {
             "qbittorrent": "qBittorrent",
             "transmission": "Transmission"
@@ -107,7 +128,10 @@
         "downloads": "Download Settings",
         "seed_ratio_limit": "Seed Ratio Limit",
         "seed_time_limit": "Seed Time Limit (min)",
-        "inactive_seeding_time_limit": "Inactive Timeout (min)"
+        "inactive_seeding_time_limit": "Inactive Timeout (min)",
+        "seed_limit_action": "Action when limits reached",
+        "action_pause": "Pause torrent",
+        "action_remove": "Remove torrent"
     },
     "users": {
         "title": "Manage Users",

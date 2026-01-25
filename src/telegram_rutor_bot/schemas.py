@@ -69,8 +69,8 @@ class SearchResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class FilmResponse(BaseModel):
-    """Film response model"""
+class FilmSummaryResponse(BaseModel):
+    """Film summary response model (no torrents)"""
 
     id: int
     blake: str
@@ -79,8 +79,8 @@ class FilmResponse(BaseModel):
     ru_name: str | None
     poster: str | None
     rating: str | None
+    user_rating: int | None = None
     category_id: int | None
-    torrents: list[TorrentResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -101,9 +101,15 @@ class TorrentResponse(BaseModel):
     seeds: int | None
     date: datetime | None
 
-    # film: FilmResponse | None = None
+    film: FilmSummaryResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class FilmResponse(FilmSummaryResponse):
+    """Film response model (with torrents)"""
+
+    torrents: list[TorrentResponse] = []
 
 
 class TaskExecutionResponse(BaseModel):

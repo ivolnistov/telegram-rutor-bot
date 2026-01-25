@@ -5,6 +5,7 @@ This guide describes how to run the Telegram Rutor Bot in a single container, su
 ## Overview
 
 The single-container deployment includes:
+
 - Telegram bot
 - TaskIQ scheduler and worker (using in-memory broker)
 - SQLite database (file-based)
@@ -68,7 +69,7 @@ docker-compose -f docker-compose.single.yml logs -f
 All settings can be configured via environment variables with the `RUTOR_BOT_` prefix:
 
 | Variable | Description | Default |
-|----------|-------------|---------|
+| --- | --- | --- |
 | `RUTOR_BOT_TELEGRAM_TOKEN` | Telegram bot token | Required |
 | `RUTOR_BOT_QBITTORRENT_HOST` | qBittorrent Web UI host | `localhost` |
 | `RUTOR_BOT_QBITTORRENT_PORT` | qBittorrent Web UI port | `8080` |
@@ -95,6 +96,7 @@ network_mode: host
 #### Bridge Network (default)
 
 The bot runs in an isolated network. Make sure to use proper hostnames:
+
 - Use `host.docker.internal` for the Docker host (macOS/Windows)
 - Use actual IP addresses for Linux
 
@@ -115,6 +117,7 @@ For development or testing, you can run the single-container mode locally:
 ```
 
 This script will:
+
 1. Create a virtual environment
 2. Install dependencies
 3. Run database migrations
@@ -125,6 +128,7 @@ This script will:
 ### Health Check
 
 The container includes a health check that verifies:
+
 - Database file exists
 - Application is responsive
 
@@ -188,6 +192,7 @@ docker-compose -f docker-compose.single.yml up -d
 ## Limitations
 
 The single-container deployment:
+
 - Uses SQLite (not suitable for high load)
 - Uses in-memory task broker (tasks don't survive restarts)
 - All components run in one process (less fault-tolerant)

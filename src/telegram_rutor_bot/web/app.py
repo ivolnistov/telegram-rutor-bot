@@ -15,6 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import joinedload
 
+# Import discovery routes
+from telegram_rutor_bot.api.routes import discovery
 from telegram_rutor_bot.config import settings
 from telegram_rutor_bot.config_listener import config_listener_task, refresh_settings_from_db
 from telegram_rutor_bot.db import (
@@ -34,6 +36,7 @@ from telegram_rutor_bot.db import (
     get_user,
     init_db,
     search_films,
+    search_torrents,
     subscribe,
     unsubscribe,
     update_category,
@@ -243,9 +246,11 @@ async def remove_search_subscriber(search_id: int, user_id: int) -> StatusRespon
 
 
 @api_router.get('/api/torrents', response_model=list[TorrentResponse], dependencies=[Depends(get_current_admin_user)])
-async def list_torrents(limit: int = 50) -> list[Torrent]:
+async def list_torrents(q: str | None = None, limit: int = 50) -> list[Torrent]:
     """List recent torrents."""
     async with get_async_session() as session:
+        if q:
+            return await search_torrents(session, q, limit=limit)
         return await get_recent_torrents(session, limit=limit)
 
 
@@ -293,6 +298,26 @@ async def list_films(q: str | None = None, category_id: int | None = None, limit
         if q:
             return await search_films(session, q, limit=limit, category_id=category_id)
         return await get_films(session, limit=limit, category_id=category_id)
+
+
+@api_router.put('/api/films/{film_id}', response_model=StatusResponse, dependencies=[Depends(get_current_admin_user)])
+async def update_film(
+    film_id: int,
+    user_rating: Annotated[int | None, Form()] = None,
+) -> StatusResponse:
+    """Update a film."""
+    async with get_async_session() as session:
+        # Check if film exists
+        stmt = select(Film).where(Film.id == film_id)
+        film = (await session.execute(stmt)).scalars().first()
+        if not film:
+            raise HTTPException(status_code=404, detail='Film not found')
+
+        if user_rating is not None:
+            film.user_rating = user_rating
+
+        await session.commit()
+        return StatusResponse(status='ok')
 
 
 @api_router.get('/api/users', response_model=list[UserResponse], dependencies=[Depends(get_current_admin_user)])
@@ -511,6 +536,7 @@ async def health_check() -> dict[str, str]:
 # Mount routers unconditionally (Protected by Auth Dependencies)
 app.include_router(auth.router)
 app.include_router(api_router)
+app.include_router(discovery.router)
 
 # Always mount config API to allow checks and re-configuration (if auth permits)
 app.include_router(config_api.router)

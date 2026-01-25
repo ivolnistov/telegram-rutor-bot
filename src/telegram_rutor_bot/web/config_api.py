@@ -2,15 +2,17 @@
 
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 
+from telegram_rutor_bot.clients.tmdb import TmdbClient
 from telegram_rutor_bot.config import settings
 from telegram_rutor_bot.db import get_async_session, get_or_create_user_by_chat_id
 from telegram_rutor_bot.db.config_ops import get_db_config, update_db_config
+from telegram_rutor_bot.db.models import AppConfigUpdate
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.web.auth import get_current_admin_if_configured
 
@@ -60,9 +62,12 @@ class ConfigSetupRequest(BaseModel):
 
     telegram: TelegramConfig
     torrent: TorrentConfig
+    tmdb_api_key: str | None = None
+    tmdb_session_id: str | None = None
     seed_ratio_limit: float = 1.0
     seed_time_limit: int = 2880
     inactive_seeding_time_limit: int = 0
+    seed_limit_action: int = 0  # 0 = Pause, 1 = Remove
 
 
 @router.get('', response_model=ConfigCheckResponse, dependencies=[Depends(get_current_admin_if_configured)])
@@ -78,9 +83,10 @@ async def get_config() -> ConfigCheckResponse:
         'qbittorrent_host': db_config.qbittorrent_host,
         'qbittorrent_port': db_config.qbittorrent_port,
         'qbittorrent_username': db_config.qbittorrent_username,
-        'transmission_host': db_config.transmission_host,
         'transmission_port': db_config.transmission_port,
         'transmission_username': db_config.transmission_username,
+        'tmdb_api_key': db_config.tmdb_api_key,
+        'tmdb_session_id': db_config.tmdb_session_id,
     }
 
     # Fetch live limits from qBittorrent
@@ -94,6 +100,7 @@ async def get_config() -> ConfigCheckResponse:
         current_vals['seed_ratio_limit'] = float(prefs.get('max_ratio', -1))
         current_vals['seed_time_limit'] = int(prefs.get('max_seeding_time', -1))
         current_vals['inactive_seeding_time_limit'] = int(prefs.get('max_inactive_seeding_time', -1))
+        current_vals['seed_limit_action'] = int(prefs.get('max_ratio_act', 0))
         await client.disconnect()
     except Exception as e:
         log.warning('Failed to fetch qBittorrent preferences: %s', e)
@@ -101,6 +108,7 @@ async def get_config() -> ConfigCheckResponse:
         current_vals['seed_ratio_limit'] = -1
         current_vals['seed_time_limit'] = -1
         current_vals['inactive_seeding_time_limit'] = -1
+        current_vals['seed_limit_action'] = 0
 
     # Store raw passwords to check against env, then mask
     q_pass = db_config.qbittorrent_password
@@ -156,9 +164,16 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:
         }
     )
 
+    if config.tmdb_api_key:
+        updates['tmdb_api_key'] = config.tmdb_api_key
+    if config.tmdb_session_id:
+        updates['tmdb_session_id'] = config.tmdb_session_id
+
     # Save to DB
     async with get_async_session() as session:
-        await update_db_config(session, **updates)
+        # Cast to AppConfigUpdate to satisfy mypy
+        config_updates = cast(AppConfigUpdate, updates)
+        await update_db_config(session, **config_updates)
 
         # Init Users
         if config.telegram.initial_users:
@@ -180,7 +195,7 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:
             await session.commit()
 
     # Trigger Reload (In-process)
-    settings.refresh(**updates)
+    settings.refresh(**cast(AppConfigUpdate, updates))
 
     # Save preferences to qBittorrent
     try:
@@ -191,9 +206,7 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:
             'max_ratio': config.seed_ratio_limit,
             'max_seeding_time': config.seed_time_limit,
             'max_inactive_seeding_time': config.inactive_seeding_time_limit,
-            # Ensure action is set if needed, but user might want to manage it manually?
-            # User asked "manage these settings".
-            # For now just limits.
+            'max_ratio_act': config.seed_limit_action,
         }
         await client.set_app_preferences(prefs)
         await client.disconnect()
@@ -202,7 +215,7 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:
         # We don't fail the request, but logging is important
 
     # Trigger Reload (In-process)
-    settings.refresh(**updates)
+    settings.refresh(**cast(AppConfigUpdate, updates))
 
     # Trigger Reload (Cluster)
     if settings.redis_url:
@@ -214,3 +227,83 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:
             log.error('Failed to publish config reload: %s', e)
 
     return ConfigCheckResponse(configured=True)
+
+
+class TmdbAuthResponse(BaseModel):
+    auth_url: str
+
+
+class TmdbSessionRequest(BaseModel):
+    request_token: str
+
+
+@router.get('/tmdb/auth-url', response_model=TmdbAuthResponse, dependencies=[Depends(get_current_admin_if_configured)])
+async def get_tmdb_auth_url(redirect_to: str) -> TmdbAuthResponse:
+    """Get TMDB authentication URL."""
+    tmdb = TmdbClient()
+
+    token = await tmdb.create_request_token()
+    if not token:
+        # If API key is missing or invalid
+        raise HTTPException(status_code=500, detail='Failed to create request token (Check API Key)')
+
+    return TmdbAuthResponse(auth_url=f'https://www.themoviedb.org/authenticate/{token}?redirect_to={redirect_to}')
+
+
+@router.post(
+    '/tmdb/session', response_model=ConfigCheckResponse, dependencies=[Depends(get_current_admin_if_configured)]
+)
+async def create_tmdb_session(request: TmdbSessionRequest) -> ConfigCheckResponse:
+    """Create TMDB session from approved token."""
+    tmdb = TmdbClient()
+
+    session_id = await tmdb.create_session_id(request.request_token)
+    if not session_id:
+        raise HTTPException(status_code=400, detail='Failed to create session ID')
+
+    # Update DB
+    async with get_async_session() as session:
+        # Cast to AppConfigUpdate to satisfy mypy
+        config_updates = cast(AppConfigUpdate, {'tmdb_session_id': session_id})
+        await update_db_config(session, **config_updates)
+
+    # Trigger Reloads
+    settings.refresh(tmdb_session_id=session_id)
+
+    if settings.redis_url:
+        try:
+            redis = Redis.from_url(settings.redis_url)
+            await redis.publish('config_reload', 'reload')
+            await redis.close()
+        except Exception:
+            pass
+
+    return await get_config()
+
+
+class SearchFilters(BaseModel):
+    quality: str | None = None
+    translation: str | None = None
+
+
+@router.get('/filters', dependencies=[Depends(get_current_admin_if_configured)])
+async def get_filters() -> SearchFilters:
+    """Get search filters."""
+    async with get_async_session() as session:
+        config = await get_db_config(session)
+        return SearchFilters(
+            quality=config.search_quality_filters,
+            translation=config.search_translation_filters,
+        )
+
+
+@router.post('/filters', dependencies=[Depends(get_current_admin_if_configured)])
+async def update_filters(filters: SearchFilters) -> dict[str, str]:
+    """Update search filters."""
+    async with get_async_session() as session:
+        await update_db_config(
+            session,
+            search_quality_filters=filters.quality,
+            search_translation_filters=filters.translation,
+        )
+    return {'status': 'success'}

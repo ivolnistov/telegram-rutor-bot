@@ -81,6 +81,7 @@ services:
     volumes:
       - film_cache:/app/data/film_cache
       - ./src:/app/src
+      - /app/.venv
       - ./frontend/dist:/app/frontend/dist
       - ./frontend/public:/app/frontend/public
       - ./config.toml:/app/config.toml
@@ -96,6 +97,7 @@ services:
     volumes:
       - film_cache:/app/data/film_cache
       - ./src:/app/src
+      - /app/.venv
       - ./config.toml:/app/config.toml
     environment:
       - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
@@ -120,6 +122,7 @@ services:
     volumes:
       - film_cache:/app/data/film_cache
       - ./src:/app/src
+      - /app/.venv
       - ./config.toml:/app/config.toml
     environment:
       - PYTHONUNBUFFERED=1

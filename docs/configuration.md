@@ -1,6 +1,7 @@
 # Configuration Guide
 
 The bot uses a hybrid configuration system:
+
 ## Configuration Priority
 
 Configuration values are loaded in the following order (later sources override earlier ones):
@@ -13,8 +14,9 @@ Configuration values are loaded in the following order (later sources override e
 
 ## Web UI Setup (Recommended)
 
-When you first run the bot, access the web interface (default: http://localhost:8080 or http://localhost:8088 in hybrid mode) to complete the **Setup Wizard**.
+When you first run the bot, access the web interface (default: <http://localhost:8080> or <http://localhost:8088> in hybrid mode) to complete the **Setup Wizard**.
 This will configure:
+
 - Telegram Token
 - Torrent Client
 - Proxy settings
@@ -29,18 +31,19 @@ Manual configuration via `config.toml` or environment variables is useful for he
 ### Telegram Settings
 
 | Option | Type | Required | Description | Default |
-|--------|------|----------|-------------|---------|
+| --- | --- | --- | --- | --- |
 | `telegram_token` | string | **Yes** | Bot token (set via Wizard or Env) | - |
 | `unauthorized_message` | string | No | Message shown to unauthorized users | "Unauthorized user..." |
 
 ### Network Settings (Hybrid)
 
 | Option | Type | Required | Description | Default |
-|--------|------|----------|-------------|---------|
+| --- | --- | --- | --- | --- |
 | `proxy` | string | No | Proxy URL (set via Wizard or Env) | - |
 | `timeout` | integer | No | Request timeout in seconds | 60 |
 
 Example:
+
 ```toml
 telegram_token = "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
 proxy = "socks5://localhost:1080"
@@ -132,6 +135,7 @@ The bot validates configuration on startup. Common validation errors:
 2. **Use strong passwords**: For torrent clients and database
 3. **Secure proxy**: If using proxy, ensure it's trusted and secure
 4. **File permissions**: Restrict access to configuration files:
+
    ```bash
    chmod 600 config.toml
    chmod 600 .env
