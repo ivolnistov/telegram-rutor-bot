@@ -48,6 +48,9 @@ def upgrade() -> None:
     sa.Column('seed_ratio_limit', sa.Float(), nullable=False),
     sa.Column('seed_time_limit', sa.Integer(), nullable=False),
     sa.Column('inactive_seeding_time_limit', sa.Integer(), nullable=False),
+    sa.Column('tmdb_api_key', sa.String(), nullable=True),
+    sa.Column('search_quality_filters', sa.String(), nullable=True),
+    sa.Column('search_translation_filters', sa.String(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('users',
@@ -73,6 +76,11 @@ def upgrade() -> None:
     sa.Column('genres', sa.String(), nullable=True),
     sa.Column('rating', sa.String(), nullable=True),
     sa.Column('category_id', sa.Integer(), nullable=True),
+    sa.Column('tmdb_id', sa.Integer(), nullable=True),
+    sa.Column('tmdb_media_type', sa.String(), nullable=True),
+    sa.Column('user_rating', sa.Integer(), nullable=True),
+    sa.Column('monitored', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+    sa.Column('last_search', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

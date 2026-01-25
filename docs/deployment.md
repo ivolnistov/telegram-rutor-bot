@@ -3,6 +3,7 @@
 ## Overview
 
 The bot supports multiple deployment scenarios:
+
 - **Development**: Local SQLite with in-memory task queue
 - **Single Container**: Docker with SQLite and in-memory queue (recommended for personal use)
 - **Multi-Container**: Docker Compose with PostgreSQL and Redis (recommended for production)
@@ -10,6 +11,7 @@ The bot supports multiple deployment scenarios:
 ### Choosing Deployment Mode
 
 **Use Single Container Mode when:**
+
 - Personal or small team use
 - Running on a single server or VPS
 - Have low traffic (< 100 users)
@@ -17,6 +19,7 @@ The bot supports multiple deployment scenarios:
 - Don't need high availability
 
 **Use Multi-Container Mode when:**
+
 - Deploying to production with many users
 - Need high availability and fault tolerance
 - Have many users or searches (> 100)
@@ -27,29 +30,34 @@ The bot supports multiple deployment scenarios:
 ## Development Deployment
 
 ### Prerequisites
+
 - Python 3.13+
 - Transmission or qBittorrent installed locally
 
 ### Steps
 
 1. Install dependencies:
+
 ```bash
 uv sync
 ```
 
-2. Configure `config.toml`:
+1. Configure `config.toml`:
+
 ```toml
 telegram_token = "your-token"
 qbittorrent_host = "qbittorrent"
 database_path = "var/rutor.db"
 ```
 
-3. Run migrations:
+1. Run migrations:
+
 ```bash
 uv run alembic upgrade head
 ```
 
-4. Start services:
+1. Start services:
+
 ```bash
 # All services in one terminal
 ./run_single.sh
@@ -65,6 +73,7 @@ uv run telegram-rutor-bot worker    # TaskIQ worker
 Ideal for personal use or small deployments. All components run in a single container.
 
 ### Prerequisites
+
 - Docker 20.10+
 - Docker Compose 2.0+
 - Access to torrent client (Transmission or qBittorrent)
@@ -72,6 +81,7 @@ Ideal for personal use or small deployments. All components run in a single cont
 ### Quick Start
 
 1. Create `.env`:
+
 ```bash
 # Required
 TELEGRAM_TOKEN=your-bot-token
@@ -89,17 +99,20 @@ QBITTORRENT_PASSWORD=adminadmin
 # PROXY=socks5://localhost:1080
 ```
 
-2. Deploy:
+1. Deploy:
+
 ```bash
 docker-compose -f docker-compose.single.yml up -d
 ```
 
-3. Check logs:
+1. Check logs:
+
 ```bash
 docker-compose -f docker-compose.single.yml logs -f
 ```
 
 ### Architecture
+
 - **Database**: SQLite (file-based, in Docker volume)
 - **Task Queue**: In-memory (using Python multiprocessing)
 - **Process Management**: All components in single Python process
@@ -128,7 +141,7 @@ Full-featured deployment with high availability.
 
 ### Architecture
 
-```
+```text
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │   Bot       │     │  Scheduler  │     │  Workers    │
 └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
@@ -143,6 +156,7 @@ Full-featured deployment with high availability.
 ```
 
 ### Prerequisites
+
 - Docker 20.10+
 - Docker Compose 2.0+
 - Domain/VPS for hosting
@@ -150,6 +164,7 @@ Full-featured deployment with high availability.
 ### Configuration
 
 1. Create production `.env`:
+
 ```bash
 # Telegram
 TELEGRAM_TOKEN=your-production-token
@@ -166,7 +181,8 @@ TRANSMISSION_PASSWORD=secure_password
 PROXY=socks5://proxy:1080
 ```
 
-2. Create `docker-compose.override.yml` for customization:
+1. Create `docker-compose.override.yml` for customization:
+
 ```yaml
 version: '3.8'
 
@@ -187,7 +203,8 @@ services:
       - "51413:51413/udp"
 ```
 
-3. Deploy:
+1. Deploy:
+
 ```bash
 docker-compose up -d
 ```
@@ -206,13 +223,14 @@ docker-compose up -d --scale worker=3
 
 1. Create a Droplet (2GB RAM minimum)
 2. Install Docker:
+
 ```bash
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
 ```
 
-3. Clone repository and configure
-4. Run Docker Compose
+1. Clone repository and configure
+2. Run Docker Compose
 
 ### AWS EC2
 
@@ -278,6 +296,7 @@ healthcheck:
 ### Logging
 
 View logs:
+
 ```bash
 # All services
 docker-compose logs -f
@@ -309,6 +328,7 @@ services:
 ### Database Backup
 
 #### PostgreSQL
+
 ```bash
 # Backup
 docker-compose exec postgres pg_dump -U rutor rutorbot > backup.sql
@@ -318,6 +338,7 @@ docker-compose exec -T postgres psql -U rutor rutorbot < backup.sql
 ```
 
 #### SQLite
+
 ```bash
 # Backup
 cp var/rutor.db var/rutor.db.backup
@@ -344,12 +365,14 @@ docker-compose up -d
 ### Zero-Downtime Update
 
 1. Pull latest changes:
+
 ```bash
 git pull
 docker-compose build
 ```
 
-2. Update services one by one:
+1. Update services one by one:
+
 ```bash
 # Update workers first
 docker-compose up -d worker
@@ -474,6 +497,7 @@ services:
 ### 4. Non-Root User
 
 Already implemented in Dockerfile:
+
 ```dockerfile
 USER appuser
 ```

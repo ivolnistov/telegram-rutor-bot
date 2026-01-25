@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Unpack
 
 from pydantic import Field, field_validator
 from pydantic_settings import (
@@ -13,6 +13,9 @@ from pydantic_settings import (
     SettingsConfigDict,
     TomlConfigSettingsSource,
 )
+
+if TYPE_CHECKING:
+    from telegram_rutor_bot.db.models import AppConfigUpdate
 
 
 class Settings(BaseSettings):
@@ -81,6 +84,11 @@ class Settings(BaseSettings):
     redis_url: str | None = Field(default=None, description='Redis URL for TaskIQ broker (e.g., redis://host:6379)')
     secret_key: str = Field(default='rutor-bot-secret-key-change-me', description='Secret key for JWT')
 
+    # TMDB settings
+    tmdb_api_key: str | None = Field(default=None, description='TMDB API Key')
+    tmdb_session_id: str | None = Field(default=None, description='TMDB Session ID')
+    tmdb_language: str = Field(default='ru-RU', description='Language for TMDB results')
+
     # Genre to category mapping
     genre_mapping: dict[str, list[str]] = Field(
         default_factory=lambda: {
@@ -118,7 +126,7 @@ class Settings(BaseSettings):
             return getattr(logging, v.upper(), logging.INFO)
         return v
 
-    def refresh(self, **data: Any) -> None:  # noqa: ANN401
+    def refresh(self, **data: Unpack[AppConfigUpdate]) -> None:
         """Update settings in-place from dictionary."""
         # Filter valid keys to avoid errors
         model_fields = self.model_fields.keys()

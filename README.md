@@ -29,6 +29,7 @@ For high-availability production deployments. See [Deployment Guide](docs/deploy
 ### Local Development
 
 1. Install dependencies:
+
 ```bash
 # Using uv (recommended)
 uv sync
@@ -38,18 +39,20 @@ uv sync
 
 For full-stack development with React/Vite and FastAPI:
 
-1.  **Start Infra:** `docker compose up -d postgres redis qbittorrent`
-2.  **Run Backend:** See [Installation Guide](docs/installation.md#frontend--backend-development-hybrid-mode).
-3.  **Run Frontend:** `cd frontend && npm run dev`
+1. **Start Infra:** `docker compose up -d postgres redis qbittorrent`
+2. **Run Backend:** See [Installation Guide](docs/installation.md#frontend--backend-development-hybrid-mode).
+3. **Run Frontend:** `cd frontend && npm run dev`
 
 See [Installation Guide](docs/installation.md) for full details.
 
-2. Apply database migrations:
+1. Apply database migrations:
+
 ```bash
 uv run alembic upgrade head
 ```
 
-3. Run the bot:
+1. Run the bot:
+
 ```bash
 uv run python -m telegram_rutor_bot
 ```
@@ -74,15 +77,15 @@ uv run python -m telegram_rutor_bot
 ### Main Settings
 
 | Parameter | Description | Required | Default |
-|-----------|-------------|----------|---------|
+| :--- | :--- | :--- | :--- |
 | `telegram_token` | Telegram bot token | Yes | - |
-| `qbittorrent_host` | qBittorrent Web UI host | No | localhost |
-| `qbittorrent_port` | qBittorrent Web UI port | No | 8080 |
-| `qbittorrent_username` | qBittorrent username | No | admin |
-| `qbittorrent_password` | qBittorrent password | No | adminadmin |
+| `qbittorrent_host` | qBittorrent Web UI host | No | `localhost` |
+| `qbittorrent_port` | qBittorrent Web UI port | No | `8080` |
+| `qbittorrent_username` | qBittorrent username | No | `admin` |
+| `qbittorrent_password` | qBittorrent password | No | `adminadmin` |
 | `proxy` | Proxy for accessing rutor.info | No | - |
-| `log_level` | Logging level | No | INFO |
-| `database_path` | SQLite database path | No | var/rutor.db |
+| `log_level` | Logging level | No | `INFO` |
+| `database_path` | SQLite database path | No | `var/rutor.db` |
 | `database_url` | PostgreSQL URL | No | - |
 
 ### Environment Variables
@@ -112,6 +115,7 @@ docker-compose up -d
 ```
 
 This starts:
+
 - PostgreSQL database
 - Redis for task queue
 - Bot service
@@ -159,7 +163,7 @@ qbittorrent:
 
 ### Project Structure
 
-```
+```text
 telegram-rutor-bot/
 ├── src/telegram_rutor_bot/
 │   ├── config.py           # Configuration management
@@ -234,9 +238,11 @@ uv run alembic downgrade -1
 ### Access Issues with rutor.info
 
 1. Configure proxy in settings:
+
    ```toml
    proxy = "socks5://localhost:1080"
    ```
+
 2. Verify proxy server availability
 
 ## Contributing
