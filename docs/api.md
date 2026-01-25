@@ -5,6 +5,7 @@
 ### User Commands
 
 #### `/start`
+
 Initialize bot interaction and verify user authorization.
 
 **Usage**: `/start`
@@ -12,6 +13,7 @@ Initialize bot interaction and verify user authorization.
 **Response**: Welcome message if authorized, unauthorized message otherwise.
 
 #### `/search <query>`
+
 Search for torrents on rutor.info.
 
 **Usage**: `/search The Matrix 2021`
@@ -19,6 +21,7 @@ Search for torrents on rutor.info.
 **Response**: List of found torrents with inline commands.
 
 #### `/list`
+
 Show the 20 most recent torrents in the database.
 
 **Usage**: `/list`
@@ -26,6 +29,7 @@ Show the 20 most recent torrents in the database.
 **Response**: Formatted list of torrents with metadata.
 
 #### `/add <url>`
+
 Add a new search subscription.
 
 **Usage**: `/add http://rutor.info/search/0/0/100/0/matrix`
@@ -33,6 +37,7 @@ Add a new search subscription.
 **Response**: Confirmation with search ID.
 
 #### `/all`
+
 Display all your search subscriptions.
 
 **Usage**: `/all`
@@ -40,6 +45,7 @@ Display all your search subscriptions.
 **Response**: List of all searches with their schedules.
 
 #### `/del <id>`
+
 Delete a search subscription.
 
 **Usage**: `/del 5`
@@ -47,6 +53,7 @@ Delete a search subscription.
 **Response**: Confirmation of deletion.
 
 #### `/now <id>`
+
 Execute a search immediately.
 
 **Usage**: `/now 5`
@@ -54,6 +61,7 @@ Execute a search immediately.
 **Response**: Search results or "no new torrents" message.
 
 #### `/subscriptions`
+
 List all your active subscriptions.
 
 **Usage**: `/subscriptions`
@@ -65,6 +73,7 @@ List all your active subscriptions.
 These commands are generated dynamically based on torrent/search IDs:
 
 #### `/dl_<id>`
+
 Download a torrent to the configured client.
 
 **Usage**: `/dl_12345`
@@ -72,16 +81,19 @@ Download a torrent to the configured client.
 **Response**: Confirmation message with torrent name.
 
 #### `/in_<id>`
+
 Get detailed information about a torrent including poster and screenshots.
 
 **Usage**: `/in_12345`
 
 **Response**:
+
 - Torrent details (description, quality, etc.)
 - Poster image (if available)
 - Screenshots (up to 3)
 
 #### `/subscribe_<id>`
+
 Subscribe to notifications for a search.
 
 **Usage**: `/subscribe_5`
@@ -89,6 +101,7 @@ Subscribe to notifications for a search.
 **Response**: Subscription confirmation.
 
 #### `/unsubscribe_<id>`
+
 Unsubscribe from search notifications.
 
 **Usage**: `/unsubscribe_5`
@@ -185,6 +198,7 @@ await client.disconnect()
 ### Response Format
 
 #### Add Torrent Response
+
 ```json
 {
     "id": "torrent_id",
@@ -194,6 +208,7 @@ await client.disconnect()
 ```
 
 #### Torrent Info Response
+
 ```json
 {
     "id": "torrent_id",

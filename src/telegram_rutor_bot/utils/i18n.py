@@ -1,6 +1,6 @@
 """Internationalization utilities."""
 
-from typing import Final
+from typing import Any, Final
 
 DEFAULT_LANGUAGE: Final[str] = 'en'
 SUPPORTED_LANGUAGES: Final[set[str]] = {'en', 'ru'}
@@ -113,7 +113,7 @@ TRANSLATIONS = {
 }
 
 
-def get_text(key: str, lang: str = DEFAULT_LANGUAGE, **kwargs: object) -> str:
+def get_text(key: str, lang: str = DEFAULT_LANGUAGE, **kwargs: Any) -> str:  # noqa: ANN401
     """Get translated text for a key."""
     lang_dict = TRANSLATIONS.get(lang, TRANSLATIONS[DEFAULT_LANGUAGE])
     text = lang_dict.get(key, TRANSLATIONS[DEFAULT_LANGUAGE].get(key, key))

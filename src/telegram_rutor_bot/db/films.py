@@ -1,6 +1,6 @@
 """Film operations for movie metadata"""
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import text
@@ -11,6 +11,7 @@ __all__ = (
     'get_films',
     'get_films_by_ids',
     'get_or_create_film',
+    'get_recommendations',
     'search_films',
     'update_film_metadata',
 )
@@ -100,6 +101,21 @@ async def get_films_by_ids(session: AsyncSession, film_ids: list[int]) -> list[F
     return list(result.scalars().all())
 
 
+async def get_recommendations(session: AsyncSession, limit: int = 5) -> list[Film]:
+    """Get film recommendations (random rated films)"""
+    """Get film recommendations (random rated films)"""
+
+    stmt = (
+        select(Film)
+        .options(selectinload(Film.torrents))
+        .where(Film.rating.is_not(None))
+        .order_by(func.random())
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def search_films(
     session: AsyncSession, query: str, limit: int = 20, category_id: int | None = None
 ) -> list[Film]:
@@ -129,6 +145,8 @@ async def update_film_metadata(
     rating: float | None = None,
     country: str | None = None,
     genres: str | None = None,
+    tmdb_id: int | None = None,
+    tmdb_media_type: str | None = None,
 ) -> bool:
     """Update film metadata"""
     result = await session.execute(select(Film).where(Film.id == film_id))
@@ -137,6 +155,10 @@ async def update_film_metadata(
     if not film:
         return False
 
+    if tmdb_id is not None:
+        film.tmdb_id = tmdb_id
+    if tmdb_media_type is not None:
+        film.tmdb_media_type = tmdb_media_type
     if year is not None:
         film.year = year
     if name is not None:
@@ -154,3 +176,10 @@ async def update_film_metadata(
 
     await session.commit()
     return True
+
+
+async def get_unlinked_films(session: AsyncSession, limit: int = 100) -> list[Film]:
+    """Get films that lack TMDB link"""
+    # Assuming unlinked means tmdb_id is NULL
+    result = await session.execute(select(Film).where(Film.tmdb_id.is_(None)).limit(limit))
+    return list(result.scalars().all())

@@ -49,6 +49,11 @@ async def refresh_settings_from_db() -> None:
             updates['seed_time_limit'] = db_config.seed_time_limit
             updates['inactive_seeding_time_limit'] = db_config.inactive_seeding_time_limit
 
+            if db_config.tmdb_api_key:
+                updates['tmdb_api_key'] = db_config.tmdb_api_key
+            if db_config.tmdb_session_id:
+                updates['tmdb_session_id'] = db_config.tmdb_session_id
+
             # Respect Env Vars (Locking)
             # Pydantic Settings usually handles this priority (Env > File).
             # But here we are overwriting manually.

@@ -14,8 +14,10 @@ from .torrents import (
     callback_query_handler,
     download_torrent,
     torrent_download,
+    torrent_downloads,
     torrent_info,
     torrent_list,
+    torrent_recommend,
     torrent_search,
 )
 
@@ -35,8 +37,10 @@ __all__ = [
     'subscribe',
     'subscriptions_list',
     'torrent_download',
+    'torrent_downloads',
     'torrent_info',
     'torrent_list',
+    'torrent_recommend',
     'torrent_search',
     'unknown',
     'unsubscribe',
