@@ -3,10 +3,10 @@ name: Release
 on:
   push:
     branches:
-      - main
+      - release
     paths-ignore:
-      - 'docs/**'
-      - '*.md'
+      - "docs/**"
+      - "*.md"
 
 permissions:
   contents: write
