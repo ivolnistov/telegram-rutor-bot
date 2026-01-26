@@ -8,7 +8,8 @@ from sqlalchemy.orm import selectinload
 
 from telegram_rutor_bot.clients.tmdb import TmdbClient
 from telegram_rutor_bot.db.database import get_async_db
-from telegram_rutor_bot.db.models import Film, Torrent, User
+from telegram_rutor_bot.db.models import Film, User
+from telegram_rutor_bot.schemas import TorrentResponse
 from telegram_rutor_bot.services.matcher import TmdbMatcher
 from telegram_rutor_bot.services.monitor import WatchlistMonitor
 from telegram_rutor_bot.web.auth import get_current_user
@@ -189,13 +190,13 @@ async def get_rated(
     return await _enrich_with_library_status(results, db)
 
 
-@router.get('/{media_type}/{media_id}/torrents')
+@router.get('/{media_type}/{media_id}/torrents', response_model=list[TorrentResponse])
 async def get_media_torrents(
     media_type: str,
     media_id: int,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
-) -> list[Torrent]:
+) -> list[TorrentResponse]:
     """Get torrents linked to a movie or TV show"""
     # Find the film by TMDB ID
     stmt = select(Film).options(selectinload(Film.torrents)).where(Film.tmdb_id == media_id)
@@ -205,9 +206,5 @@ async def get_media_torrents(
     if not film:
         return []
 
-    # Return torrents
-    # We map to TorrentResponse. Note: film field in TorrentResponse might be recursive if we populate it here,
-    # but Film.torrents -> Torrent.film (back_populates).
-    # Since we loaded Film.torrents, each torrent has torrent.film populated as this film object.
-    # Pydantic should handle the cycle if configured, or we just return list.
-    return film.torrents
+    # Convert SQLAlchemy Torrent to Pydantic TorrentResponse
+    return [TorrentResponse.model_validate(t) for t in film.torrents]
