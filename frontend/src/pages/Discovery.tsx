@@ -171,7 +171,7 @@ const MediaModal = ({
               <div className="flex items-center gap-2 text-amber-400">
                 <Star className="size-4 fill-amber-400" />
                 <span className="font-bold">
-                  {media.vote_average.toFixed(1)}
+                  {(media.vote_average ?? 0).toFixed(1)}
                 </span>
               </div>
               {inLibrary && (
@@ -530,7 +530,7 @@ const DiscoveryPage = () => {
                 <div className="flex items-center gap-2 mt-1">
                   <Star className="size-3 fill-amber-400 text-amber-400" />
                   <span className="text-xs text-zinc-300">
-                    {media.vote_average.toFixed(1)}
+                    {(media.vote_average ?? 0).toFixed(1)}
                   </span>
                   <span className="text-xs text-zinc-500">•</span>
                   <span className="text-xs text-zinc-400">
