@@ -246,12 +246,14 @@ async def remove_search_subscriber(search_id: int, user_id: int) -> StatusRespon
 
 
 @api_router.get('/api/torrents', response_model=list[TorrentResponse], dependencies=[Depends(get_current_admin_user)])
-async def list_torrents(q: str | None = None, limit: int = 50) -> list[Torrent]:
+async def list_torrents(q: str | None = None, limit: int = 50) -> list[TorrentResponse]:
     """List recent torrents."""
     async with get_async_session() as session:
         if q:
-            return await search_torrents(session, q, limit=limit)
-        return await get_recent_torrents(session, limit=limit)
+            torrents = await search_torrents(session, q, limit=limit)
+        else:
+            torrents = await get_recent_torrents(session, limit=limit)
+        return [TorrentResponse.model_validate(t) for t in torrents]
 
 
 @api_router.post(
