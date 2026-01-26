@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from telegram import Bot
 from telegram.constants import ParseMode
 
-from telegram_rutor_bot.clients.rutor import RutorClient  # type: ignore
 from telegram_rutor_bot.clients.tmdb import TmdbClient
 from telegram_rutor_bot.config import settings
 from telegram_rutor_bot.db import get_films_by_ids
@@ -21,7 +20,6 @@ class WatchlistMonitor:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.tmdb = TmdbClient()
-        self.rutor = RutorClient()
 
     async def sync_watchlist(self) -> int:
         """Syncs TMDB watchlist to local DB."""
