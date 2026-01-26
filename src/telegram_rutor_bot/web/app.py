@@ -544,8 +544,10 @@ app.include_router(discovery.router)
 app.include_router(config_api.router)
 
 
-# Serve React App
-app.mount('/assets', StaticFiles(directory='frontend/dist/assets'), name='assets')
+# Serve React App (only if frontend is built)
+_frontend_assets_path = Path('frontend/dist/assets')
+if _frontend_assets_path.exists():
+    app.mount('/assets', StaticFiles(directory=_frontend_assets_path), name='assets')
 
 
 @app.get('/{full_path:path}', response_model=None)
