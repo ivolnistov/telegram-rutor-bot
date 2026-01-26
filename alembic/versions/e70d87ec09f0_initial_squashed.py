@@ -49,6 +49,7 @@ def upgrade() -> None:
     sa.Column('seed_time_limit', sa.Integer(), nullable=False),
     sa.Column('inactive_seeding_time_limit', sa.Integer(), nullable=False),
     sa.Column('tmdb_api_key', sa.String(), nullable=True),
+    sa.Column('tmdb_session_id', sa.String(), nullable=True),
     sa.Column('search_quality_filters', sa.String(), nullable=True),
     sa.Column('search_translation_filters', sa.String(), nullable=True),
     sa.PrimaryKeyConstraint('id')
