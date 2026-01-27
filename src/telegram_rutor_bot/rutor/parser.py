@@ -29,6 +29,7 @@ from telegram_rutor_bot.db import (
     modify_torrent,
     update_film_metadata,
 )
+from telegram_rutor_bot.db.models import AppConfig, Film
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.utils.cache import FilmInfoCache
 from telegram_rutor_bot.utils.category_mapper import (
@@ -52,6 +53,7 @@ FILE_LIFE_TIME = 1200
 
 __all__ = (
     'download_torrent',
+    'fetch_rutor_torrents',
     'get_file_link',
     'get_torrent_details',
     'get_torrent_info',
@@ -79,7 +81,7 @@ def _get_client() -> httpx.AsyncClient:
     )
 
 
-def parse_name(name: str) -> list[str]:
+def parse_name(name: str) -> tuple[str, str | None, int]:
     """Parse movie name to extract title and year."""
     name = name.replace('ё', 'е').replace('Ё', 'Е')
     search = re.search(r'\(([\d]{4})\)', name)
@@ -90,8 +92,20 @@ def parse_name(name: str) -> list[str]:
         film = name
         year = datetime.now(UTC).year
     res = re.sub(r'\s?\[.*?\]', '', film)
+
+    # Extract original title if present (e.g. "Russian / Original")
+    original_title = None
+    if '/' in res:
+        parts = res.split('/', 1)
+        res = parts[0].strip()
+        original_title_part = parts[1].strip()
+        # Clean up original title (remove year if present in parens inside the name logic, though usually year is at end)
+        # The year extraction logic above already removed the year from 'film' variable if it was in parens at the end.
+        # But sometimes there are multiple titles.
+        original_title = original_title_part
+
     res = re.sub(r'\s?/.*', '', res)
-    return [res.strip(), str(year)]
+    return res.strip(), original_title, year
 
 
 def get_torrent_node(node: Tag) -> Tag | None:
@@ -156,9 +170,8 @@ def _extract_torrent_data(lnk: Tag) -> dict[str, Any] | None:
 
     torrent_lnk = torrent.attrs['href']
     torrent_lnk_blake = blake2s(torrent_lnk.encode()).hexdigest()
-    text = parse_name(torrent.get_text())
-    year = text.pop()
-    name = text[0]
+    torrent_lnk_blake = blake2s(torrent_lnk.encode()).hexdigest()
+    name, original_name, year = parse_name(torrent.get_text())
     blake = blake2s(name.encode()).hexdigest()
 
     return {
@@ -170,6 +183,7 @@ def _extract_torrent_data(lnk: Tag) -> dict[str, Any] | None:
         'torrent_lnk_blake': torrent_lnk_blake,
         'year': year,
         'name': name,
+        'original_name': original_name,
         'blake': blake,
     }
 
@@ -180,23 +194,29 @@ async def _process_torrent_item(
     film_cache: dict[str, int],
     new: list[int],
     category_id: int | None = None,
+    film_id: int | None = None,
 ) -> None:
     """Process a single torrent item"""
     # Get or create film
-    film_id = film_cache.get(torrent_data['blake'])
-    if not film_id:
+    target_film_id = film_id or film_cache.get(torrent_data['blake'])
+
+    if not target_film_id:
         film = await get_or_create_film(
             session, torrent_data['blake'], int(torrent_data['year']), torrent_data['name'], category_id=category_id
         )
-        film_id = film.id
-        film_cache[torrent_data['blake']] = film_id
+        target_film_id = film.id
+        film_cache[torrent_data['blake']] = target_film_id
         if film.id not in new:
-            new.append(film_id)
+            new.append(target_film_id)
+    else:
+        # If film_id was forced, we might want to ensure we have the film object for enrichment later?
+        # But existing code fetches it if 'film' key is in locals or if we just have ID.
+        pass
 
     try:
         await add_torrent(
             session,
-            film_id=film_id,
+            film_id=target_film_id,
             blake=torrent_data['torrent_lnk_blake'],
             name=torrent_data['torrent'].get_text(),
             magnet=torrent_data['magnet'],
@@ -226,13 +246,11 @@ async def _process_torrent_item(
         await enrich_film_data(session, film, torrent_data['torrent_lnk'])
 
 
-async def parse_rutor(
+async def fetch_rutor_torrents(
     url: str,
-    session: AsyncSession,
-    category_id: int | None = None,
     progress_callback: Callable[[int], Awaitable[None]] | None = None,
-) -> list[int]:
-    """Parse rutor.info search results and save to database."""
+) -> list[dict[str, Any]]:
+    """Fetch and parse torrents from rutor url without saving to DB."""
     async with _get_client() as client:
         try:
             response = await client.get(url)
@@ -241,28 +259,8 @@ async def parse_rutor(
         except httpx.InvalidURL as e:
             raise ValueError('invalid url ' + url) from e
 
-    q_filters = []
-    t_filters = []
-
-    # Use session to fetch filters
-    try:
-        config_result = await session.execute(select(AppConfig).where(AppConfig.id == 1))
-        config = config_result.scalar_one_or_none()
-        if config:
-            if config.search_quality_filters:
-                q_filters = [f.strip().lower() for f in config.search_quality_filters.split(',') if f.strip()]
-            if config.search_translation_filters:
-                t_filters = [f.strip().lower() for f in config.search_translation_filters.split(',') if f.strip()]
-    except Exception:
-        # Fallback or log error? If DB fails, maybe continue without filters?
-        # But failure here might mean session issues.
-        # For now, just log/pass as we want search to work even if filters fail.
-        # But we don't have logger here easily accessible (log variable is module level).
-        pass
-
     soup = BeautifulSoup(data, 'lxml')
-    new: list[int] = []
-    film_cache: dict[str, int] = {}
+    results: list[dict[str, Any]] = []
 
     with localize(locale.LC_ALL, os.getenv('HTML_LOCALE', 'ru_RU.UTF-8')):
         body = soup.body
@@ -288,17 +286,92 @@ async def parse_rutor(
             if not torrent_data:
                 continue
 
-            # Check if torrent already exists
-            existing_torrent = await get_torrent_by_blake(session, torrent_data['torrent_lnk_blake'])
-            if existing_torrent:
+            # Additional processing or formatting if needed?
+            # For now return raw extracted data.
+            # We might want to convert date to string for JSON serialization if this goes to API directly?
+            # API will handle Pydantic serialization.
+            results.append(torrent_data)
+
+    return results
+
+
+async def parse_rutor(
+    url: str,
+    session: AsyncSession,
+    category_id: int | None = None,
+    progress_callback: Callable[[int], Awaitable[None]] | None = None,
+    film_id: int | None = None,
+) -> list[int]:
+    """Parse rutor.info search results and save to database."""
+    # Use session to fetch filters
+    q_filters = []
+    t_filters = []
+    try:
+        config_result = await session.execute(select(AppConfig).where(AppConfig.id == 1))
+        config = config_result.scalar_one_or_none()
+        if config:
+            if config.search_quality_filters:
+                q_filters = [f.strip().lower() for f in config.search_quality_filters.split(',') if f.strip()]
+            if config.search_translation_filters:
+                t_filters = [f.strip().lower() for f in config.search_translation_filters.split(',') if f.strip()]
+    except Exception:
+        pass
+
+    log.info('Filters loaded: Q=%s, T=%s', q_filters, t_filters)
+
+    log.info('Filters loaded: Q=%s, T=%s', q_filters, t_filters)
+
+    # Fetch film to check original title if film_id provided
+    target_film = None
+    if film_id:
+        tg_film_result = await session.execute(select(Film).where(Film.id == film_id))
+        target_film = tg_film_result.scalar_one_or_none()
+
+    results = await fetch_rutor_torrents(url, progress_callback)
+    new: list[int] = []
+    film_cache: dict[str, int] = {}
+
+    for torrent_data in results:
+        # Check if torrent already exists
+        existing_torrent = await get_torrent_by_blake(session, torrent_data['torrent_lnk_blake'])
+        if existing_torrent:
+            log.info('Skipping %s: Already exists', torrent_data['name'])
+            continue
+
+        # Check filters
+        if _should_skip_torrent(torrent_data, q_filters, t_filters):
+            log.info('Skipping %s: Filtered', torrent_data['name'])
+            log.info('Skipping %s: Filtered', torrent_data['name'])
+            continue
+
+        # Check original title match if applicable
+        if target_film and target_film.original_title and torrent_data['original_name']:
+            # Normalize for comparison
+            film_ot = target_film.original_title.lower().strip()
+            torrent_ot = torrent_data['original_name'].lower().strip()
+
+            # Simple containment check or equality.
+            # Often Rutor writes "Zootopia 2" and TMDB has "Zootopia 2".
+            # Sometimes punctuation differs.
+            # Let's strip non-alphanumeric for safe comparison
+            def normalize(s: str) -> str:
+                return ''.join(c for c in s if c.isalnum())
+
+            if normalize(film_ot) not in normalize(torrent_ot) and normalize(torrent_ot) not in normalize(film_ot):
+                log.info(
+                    'Skipping %s: Original title mismatch "%s" != "%s"',
+                    torrent_data['name'],
+                    torrent_data['original_name'],
+                    target_film.original_title,
+                )
                 continue
 
-            # Check filters
-            if _should_skip_torrent(torrent_data, q_filters, t_filters):
-                continue
-
-            # Process torrent
-            await _process_torrent_item(session, torrent_data, film_cache, new, category_id)
+        # Process torrent
+        try:
+            await _process_torrent_item(session, torrent_data, film_cache, new, category_id, film_id)
+            log.info('Processed %s: Added/Updated', torrent_data['name'])
+        except Exception as e:
+            log.error('Failed to process %s: %s', torrent_data['name'], e)
 
     return new
 
@@ -313,12 +386,14 @@ def _should_skip_torrent(
     if settings.size_limit and int(torrent_data['size']) > settings.size_limit:
         return True
 
+    full_name = torrent_data['torrent'].get_text().lower()
+
     # Filter by Quality
-    if q_filters and not any(f in torrent_data['name'].lower() for f in q_filters):
+    if q_filters and not any(f in full_name for f in q_filters):
         return True
 
     # Filter by Translation
-    return not (t_filters and not any(f in torrent_data['name'].lower() for f in t_filters))
+    return bool(t_filters and not any(f in full_name for f in t_filters))
 
 
 async def enrich_film_data(session: AsyncSession, film: Film, torrent_link: str) -> None:
