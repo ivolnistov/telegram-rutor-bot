@@ -176,7 +176,7 @@ class TestGetTorrentInfo:
                 with patch('telegram_rutor_bot.rutor.parser.get_movie_ratings') as mock_ratings:
                     mock_ratings.return_value = ('8.7', '8.5')
 
-                    message, _poster, _images = await get_torrent_info('/torrent/123/matrix')
+                    message, _poster, _images, _, _ = await get_torrent_info('/torrent/123/matrix')
 
         # Check message content
         assert '🎬' in message
@@ -196,7 +196,6 @@ class TestGetTorrentInfo:
             assert '🎙 Аудио' in message
         else:
             assert '🎙 Перевод: Профессиональный' in message
-        assert '💾 Скачать: /dl_123' in message
 
     async def test_get_torrent_info_minimal(self):
         """Test parsing minimal torrent info"""
@@ -237,12 +236,11 @@ class TestGetTorrentInfo:
                 with patch('telegram_rutor_bot.rutor.parser.get_movie_ratings') as mock_ratings:
                     mock_ratings.return_value = (None, None)
 
-                    message, _poster, _images = await get_torrent_info('/torrent/456/some-movie')
+                    message, _poster, _images, _, _ = await get_torrent_info('/torrent/456/some-movie')
 
-        # Should at least have title and download link
+        # Should at least have title
         assert '🎬' in message
         assert 'Some Movie (2023)' in message
-        assert '💾 Скачать: /dl_456' in message
 
 
 @pytest.mark.asyncio

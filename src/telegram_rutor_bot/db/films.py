@@ -26,6 +26,7 @@ async def get_or_create_film(
     poster: str | None = None,
     rating: float | None = None,
     category_id: int | None = None,
+    original_title: str | None = None,
 ) -> Film:
     """Get existing film or create new one"""
     # Try to get existing film
@@ -46,6 +47,8 @@ async def get_or_create_film(
             film.rating = str(rating)
         if category_id and not film.category_id:
             film.category_id = category_id
+        if original_title and not film.original_title:
+            film.original_title = original_title
         await session.commit()
         return film
 
@@ -58,6 +61,7 @@ async def get_or_create_film(
         poster=poster,
         rating=str(rating) if rating else None,
         category_id=category_id,
+        original_title=original_title,
     )
     session.add(new_film)
     await session.commit()
@@ -147,6 +151,7 @@ async def update_film_metadata(
     genres: str | None = None,
     tmdb_id: int | None = None,
     tmdb_media_type: str | None = None,
+    original_title: str | None = None,
 ) -> bool:
     """Update film metadata"""
     result = await session.execute(select(Film).where(Film.id == film_id))
@@ -173,6 +178,8 @@ async def update_film_metadata(
         film.country = country
     if genres is not None:
         film.genres = genres
+    if original_title is not None:
+        film.original_title = original_title
 
     await session.commit()
     return True

@@ -31,6 +31,7 @@ class Film(Base):
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     ru_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    original_title: Mapped[str | None] = mapped_column(String, nullable=True)
     poster: Mapped[str | None] = mapped_column(String, nullable=True)
     country: Mapped[str | None] = mapped_column(String, nullable=True)
     rating: Mapped[str | None] = mapped_column(String, nullable=True)

@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 from sqlalchemy import CursorResult, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -39,8 +40,8 @@ async def add_torrent(
 ) -> Torrent:
     """Add a new torrent"""
     # Check if torrent already exists
-    result = await session.execute(select(Torrent).where(Torrent.blake == blake))
-    existing = result.scalar_one_or_none()
+    result = await session.execute(select(Torrent).where((Torrent.blake == blake) | (Torrent.magnet == magnet)))
+    existing = result.scalars().first()
     if existing:
         return existing
 
@@ -59,9 +60,18 @@ async def add_torrent(
     )
 
     session.add(new_torrent)
-    await session.commit()
-    await session.refresh(new_torrent)
-    return new_torrent
+    try:
+        await session.commit()
+        await session.refresh(new_torrent)
+        return new_torrent
+    except IntegrityError:
+        await session.rollback()
+        # Retry fetch
+        result = await session.execute(select(Torrent).where((Torrent.blake == blake) | (Torrent.magnet == magnet)))
+        existing = result.scalars().first()
+        if existing:
+            return existing
+        raise
 
 
 async def get_torrent_by_id(session: AsyncSession, torrent_id: int) -> Torrent | None:

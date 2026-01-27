@@ -34,6 +34,15 @@ export interface Torrent {
   film?: Film | null;
 }
 
+export interface RutorTorrent {
+  name: string;
+  size: number;
+  date: string;
+  magnet: string;
+  link: string;
+  year: string;
+}
+
 export interface Film {
   id: number;
   blake: string;
@@ -72,6 +81,8 @@ export interface TmdbMedia {
   release_date?: string;
   first_air_date?: string;
   vote_average: number;
+  in_library?: boolean;
+  torrents_count?: number;
 }
 
 export interface TaskExecution {

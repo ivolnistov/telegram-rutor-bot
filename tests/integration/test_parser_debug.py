@@ -73,7 +73,7 @@ async def test_debug_parse_torrent() -> None:
 
     # Now test actual parser
     log.debug('\n--- Testing get_torrent_info ---')
-    message, poster, images, _, _ = await get_torrent_info(torrent_link, '/dl_100')
+    message, poster, images, _, _ = await get_torrent_info(torrent_link)
     log.debug(f'\nMessage length: {len(message)}')
     log.debug(f'Has poster: {poster is not None}')
     log.debug(f'Number of images: {len(images)}')

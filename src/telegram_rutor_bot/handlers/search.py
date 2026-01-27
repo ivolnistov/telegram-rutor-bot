@@ -72,7 +72,7 @@ async def search_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
         buttons = []
         # Link Button
-        buttons.append([InlineKeyboardButton('🔗 Rutor Link', url=search.url)])
+        buttons.append([InlineKeyboardButton(get_text('btn_rutor_link', lang), url=search.url)])
 
         is_subscribed = search.id in subscribed_ids
         sub_text = '🔕 Unsubscribe' if is_subscribed else '🔔 Subscribe'
@@ -81,11 +81,11 @@ async def search_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         # Action Buttons
         buttons.append(
             [
-                InlineKeyboardButton('▶️ Run', callback_data=f'es_{search.id}'),
+                InlineKeyboardButton(get_text('btn_run', lang), callback_data=f'es_{search.id}'),
                 InlineKeyboardButton(sub_text, callback_data=sub_data),
             ]
         )
-        buttons.append([InlineKeyboardButton('🗑️ Delete', callback_data=f'ds_{search.id}')])
+        buttons.append([InlineKeyboardButton(get_text('btn_delete', lang), callback_data=f'ds_{search.id}')])
 
         await context.bot.send_message(
             chat_id=update.effective_chat.id,

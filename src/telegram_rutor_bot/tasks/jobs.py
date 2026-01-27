@@ -175,6 +175,40 @@ async def execute_search(
         await session.commit()
 
 
+@broker.task
+async def search_film_on_rutor(
+    film_id: int,
+    query: str,
+    requester_chat_id: int | None = None,
+) -> None:
+    """Execute a search for a specific film on Rutor"""
+    log.info('Executing film search for film %s with query "%s"', film_id, query)
+
+    # Construct Rutor URL
+    # We need a proper URL construction logic.
+    # Usually it is http://rutor.info/search/0/0/000/0/{query}
+    safe_query = query.replace(' ', '+')  # simple encoding
+    url = f'http://rutor.info/search/0/0/000/0/{safe_query}'
+
+    async with get_async_session() as session:
+        try:
+            # We don't track this as a "Search" entity in DB (which is for subscribed searches),
+            # but we could track it as a TaskExecution if we had a generic task model.
+            # For now, just run it.
+
+            new_ids = await parse_rutor(url, session, film_id=film_id)
+
+            log.info('Film search %s finished. Found %s torrents.', film_id, len(new_ids))
+
+            # Notify requester if needed?
+            # The UI triggers this, so maybe just log it.
+            # If we want to notify via ws, we need a mechanism.
+            # For now, rely on simply adding to DB.
+
+        except Exception as e:
+            log.exception('Film search failed: %s', e)
+
+
 async def _notify_requester(bot: Bot, chat_id: int | None, message: str) -> None:
     """Helper to notify requester safely"""
     if not chat_id:

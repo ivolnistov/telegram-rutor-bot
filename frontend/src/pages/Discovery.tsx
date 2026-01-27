@@ -13,6 +13,7 @@ import {
   getTrending,
   rateMedia,
   searchDiscovery,
+  searchOnRutor,
   syncLibrary,
 } from "api";
 import { Button } from "components/ui/Button";
@@ -20,6 +21,7 @@ import { Modal } from "components/ui/Modal";
 import { useDebounce } from "hooks/useDebounce";
 import {
   Check,
+  Download,
   Eye,
   Loader2,
   RefreshCw,
@@ -27,7 +29,7 @@ import {
   Search,
   Star,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { TmdbMedia } from "types";
@@ -42,6 +44,45 @@ const MediaModal = ({
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
+
+  const [isSearchingLive, setIsSearchingLive] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
+  const [torrentSearch, setTorrentSearch] = useState("");
+  const [isTorrentsExpanded, setIsTorrentsExpanded] = useState(false);
+
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    if (isPolling) {
+      timeout = setTimeout(() => {
+        setIsPolling(false);
+      }, 30000);
+    }
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [isPolling]);
+
+  const handleSearchOnRutor = async () => {
+    if (!media) return;
+    setIsSearchingLive(true);
+    setIsPolling(true);
+    try {
+      // Use new endpoint that handles TMDB ID
+      const { status } = await searchOnRutor(media.media_type, media.id);
+      if (status === "search_started") {
+        toast.success(t("library.search_started"));
+      } else {
+        toast.success(t("success"));
+      }
+    } catch (e: any) {
+      const message = String(
+        e?.response?.data?.detail || e?.message || t("error"),
+      );
+      toast.error(message);
+    } finally {
+      setIsSearchingLive(false);
+    }
+  };
 
   const { data: user } = useQuery({
     queryKey: ["me"],
@@ -107,7 +148,15 @@ const MediaModal = ({
     queryKey: ["mediaTorrents", media.title ? "movie" : "tv", media.id],
     queryFn: () => getMediaTorrents(media.title ? "movie" : "tv", media.id),
     enabled: !!media.id,
+    refetchInterval: isPolling ? 2000 : false,
   });
+
+  useEffect(() => {
+    if (linkedTorrents && linkedTorrents.length > 0 && isPolling) {
+      setIsPolling(false);
+      void queryClient.invalidateQueries({ queryKey: ["discovery"] });
+    }
+  }, [linkedTorrents, isPolling, queryClient]);
   const userRating =
     accountStates?.rated && typeof accountStates.rated !== "boolean"
       ? accountStates.rated.value
@@ -171,7 +220,7 @@ const MediaModal = ({
               <div className="flex items-center gap-2 text-amber-400">
                 <Star className="size-4 fill-amber-400" />
                 <span className="font-bold">
-                  {(media.vote_average ?? 0).toFixed(1)}
+                  {media.vote_average.toFixed(1)}
                 </span>
               </div>
               {inLibrary && (
@@ -249,6 +298,20 @@ const MediaModal = ({
             )}
             {t("discovery.subscribe") || "Subscribe"}
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              void handleSearchOnRutor();
+            }}
+            disabled={isSearchingLive}
+          >
+            {isSearchingLive ? (
+              <Loader2 className="size-4 mr-2 animate-spin" />
+            ) : (
+              <Search className="size-4 mr-2" />
+            )}
+            {t("discovery.search_on_rutor")}
+          </Button>
         </div>
 
         {/* Recommendations */}
@@ -289,48 +352,105 @@ const MediaModal = ({
         {/* Linked Torrents */}
         {linkedTorrents && linkedTorrents.length > 0 && (
           <div className="space-y-3 pt-4 border-t border-zinc-800">
-            <h4 className="text-sm font-medium text-zinc-400">
-              Linked Torrents
-            </h4>
-            <div className="space-y-2">
-              {linkedTorrents.map((torrent) => (
-                <div
-                  key={torrent.id}
-                  className="flex items-center justify-between p-2 rounded bg-zinc-800/50 border border-zinc-700/50"
-                >
-                  <div className="flex-1 min-w-0 mr-4">
-                    <div
-                      className="text-sm font-medium text-zinc-200 truncate"
-                      title={torrent.name}
-                    >
-                      {torrent.name}
-                    </div>
-                    <div className="text-xs text-zinc-500 mt-0.5">
-                      {(torrent.sz / 1024 / 1024 / 1024).toFixed(2)} GB •{" "}
-                      {new Date(torrent.created).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="h-7 text-xs"
-                    onClick={() => {
-                      void (async () => {
-                        try {
-                          await downloadTorrent(torrent.id);
-                          toast.success(t("library.download_started"));
-                        } catch {
-                          toast.error(t("library.download_failed"));
-                        }
-                      })();
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-zinc-400">
+                Linked Torrents ({linkedTorrents.length})
+              </h4>
+              {linkedTorrents.length > 4 && (
+                <div className="relative w-48">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={torrentSearch}
+                    onChange={(e) => {
+                      setTorrentSearch(e.target.value);
                     }}
-                  >
-                    <Check className="size-3 mr-1.5" />
-                    Download
-                  </Button>
+                    placeholder="Filter..."
+                    className="w-full bg-zinc-900 border border-zinc-700 text-zinc-200 rounded px-2 pl-7 py-1 text-xs focus:outline-none focus:border-violet-500"
+                  />
                 </div>
-              ))}
+              )}
             </div>
+
+            <div
+              className={`space-y-2 ${
+                isTorrentsExpanded || torrentSearch
+                  ? "max-h-60 overflow-y-auto custom-scrollbar pr-1"
+                  : ""
+              }`}
+            >
+              {linkedTorrents
+                .filter((t) =>
+                  torrentSearch
+                    ? t.name.toLowerCase().includes(torrentSearch.toLowerCase())
+                    : true,
+                )
+                .slice(
+                  0,
+                  !isTorrentsExpanded && !torrentSearch
+                    ? 4
+                    : linkedTorrents.length,
+                )
+                .map((torrent) => (
+                  <div
+                    key={torrent.id}
+                    className="flex items-center justify-between p-2 rounded bg-zinc-800/50 border border-zinc-700/50"
+                  >
+                    <div className="flex-1 min-w-0 mr-4">
+                      <div
+                        className="text-sm font-medium text-zinc-200 truncate"
+                        title={torrent.name}
+                      >
+                        {torrent.name}
+                      </div>
+                      <div className="text-xs text-zinc-500 mt-0.5">
+                        {(torrent.sz / 1024 / 1024 / 1024).toFixed(2)} GB •{" "}
+                        {new Date(torrent.created).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        void (async () => {
+                          try {
+                            await downloadTorrent(torrent.id);
+                            toast.success(t("library.download_started"));
+                          } catch {
+                            toast.error(t("library.download_failed"));
+                          }
+                        })();
+                      }}
+                    >
+                      <Check className="size-3 mr-1.5" />
+                      Download
+                    </Button>
+                  </div>
+                ))}
+              {linkedTorrents.filter((t) =>
+                torrentSearch
+                  ? t.name.toLowerCase().includes(torrentSearch.toLowerCase())
+                  : true,
+              ).length === 0 && (
+                <div className="text-center text-zinc-500 text-sm py-2">
+                  No torrents found
+                </div>
+              )}
+            </div>
+
+            {linkedTorrents.length > 4 && !torrentSearch && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-zinc-400 hover:text-zinc-200 h-8"
+                onClick={() => {
+                  setIsTorrentsExpanded(!isTorrentsExpanded);
+                }}
+              >
+                {isTorrentsExpanded ? "Show Less" : "Show More"}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -517,9 +637,12 @@ const DiscoveryPage = () => {
                 </div>
               )}
 
-              {(media as unknown as { in_library: boolean }).in_library && (
-                <div className="absolute top-2 right-2 z-10 bg-green-500 text-white p-1 rounded-full shadow-md">
-                  <Check className="size-3" />
+              {media.torrents_count && media.torrents_count > 0 && (
+                <div
+                  className="absolute top-2 right-2 z-10 bg-green-500 text-white p-1 rounded-full shadow-md"
+                  title={`${String(media.torrents_count)} torrents available`}
+                >
+                  <Download className="size-3" />
                 </div>
               )}
 
@@ -530,7 +653,7 @@ const DiscoveryPage = () => {
                 <div className="flex items-center gap-2 mt-1">
                   <Star className="size-3 fill-amber-400 text-amber-400" />
                   <span className="text-xs text-zinc-300">
-                    {(media.vote_average ?? 0).toFixed(1)}
+                    {media.vote_average.toFixed(1)}
                   </span>
                   <span className="text-xs text-zinc-500">•</span>
                   <span className="text-xs text-zinc-400">

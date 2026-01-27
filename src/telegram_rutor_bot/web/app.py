@@ -54,14 +54,17 @@ from telegram_rutor_bot.schemas import (
     UserResponse,
 )
 from telegram_rutor_bot.tasks.broker import broker
-from telegram_rutor_bot.tasks.jobs import execute_search
+from telegram_rutor_bot.tasks.jobs import (
+    execute_search,
+    search_film_on_rutor,
+)
 
-# Import torrent client
+# Import torrent clients
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.web import auth, config_api
 
 # Import authentication dependency
-from telegram_rutor_bot.web.auth import get_current_admin_user
+from telegram_rutor_bot.web.auth import get_current_admin_user, get_current_user
 
 # Configure logging
 logging.basicConfig(level=settings.log_level)
@@ -253,7 +256,31 @@ async def list_torrents(q: str | None = None, limit: int = 50) -> list[TorrentRe
             torrents = await search_torrents(session, q, limit=limit)
         else:
             torrents = await get_recent_torrents(session, limit=limit)
+        if q:
+            torrents = await search_torrents(session, q, limit=limit)
+        else:
+            torrents = await get_recent_torrents(session, limit=limit)
         return [TorrentResponse.model_validate(t) for t in torrents]
+
+
+@api_router.post('/api/films/{film_id}/search', response_model=StatusResponse)
+async def search_film_rutor(
+    film_id: int, query: str | None = None, user: User = Depends(get_current_user)
+) -> StatusResponse:
+    """Search for torrents for a specific film on Rutor URL"""
+    async with get_async_session() as session:
+        film = await session.get(Film, film_id)
+        if not film:
+            raise HTTPException(status_code=404, detail='Film not found')
+
+        search_query = query or film.name
+        if film.year and str(film.year) not in search_query:
+            search_query += f' {film.year}'
+
+    # Enqueue task
+    await search_film_on_rutor.kiq(film_id, search_query, requester_chat_id=user.chat_id)
+
+    return StatusResponse(status='search_started')
 
 
 @api_router.post(

@@ -68,9 +68,12 @@ class TmdbMatcher:
                         self.session,
                         film_id=film.id,
                         tmdb_id=match['id'],
-                        tmdb_media_type='movie',  # Assuming movie for now based on search_movie
-                        # Could also update poster/rating here?
-                        # Let's just link id for now.
+                        tmdb_media_type='movie',
+                        poster=match.get('poster_path'),
+                        rating=float(match['vote_average']) if match.get('vote_average') is not None else None,
+                        # Store genres if available? Need to map IDs to names or store JSON?
+                        # Film model has genres string. Match has genre_ids.
+                        # For now, let's at least get poster and rating.
                     )
                     matched_count += 1
                     log.info(f"Matched film '{film.name}' to TMDB ID {match['id']}")

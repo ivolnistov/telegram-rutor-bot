@@ -107,6 +107,26 @@ export const downloadTorrent = async (id: number | string): Promise<unknown> =>
 export const deleteTorrent = async (id: number | string): Promise<unknown> =>
   (await api.delete(`/torrents/${String(id)}`)).data;
 
+export const searchFilmTorrents = async (
+  filmId: number,
+  query?: string,
+): Promise<{ status: string }> =>
+  (
+    await api.post(`/films/${String(filmId)}/search`, null, {
+      params: { query },
+    })
+  ).data as { status: string };
+
+export const searchOnRutor = async (
+  mediaType: string,
+  mediaId: number,
+): Promise<{ status: string }> =>
+  (
+    await api.post("/discovery/search_on_rutor", null, {
+      params: { media_type: mediaType, media_id: String(mediaId) },
+    })
+  ).data as { status: string };
+
 export const getFilms = async (
   query: string = "",
   categoryId?: number | string,

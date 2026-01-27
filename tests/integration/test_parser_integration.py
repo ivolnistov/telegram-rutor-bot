@@ -190,7 +190,7 @@ class TestRutorParserIntegration:
                     mock_ratings.return_value = ('8.7', '8.5')
 
                     # Get torrent info
-                    message, poster, images = await get_torrent_info('/torrent/123456/matrix-1999-1080p', '/dl_123456')
+                    message, poster, images, _, _ = await get_torrent_info('/torrent/123456/matrix-1999-1080p')
 
             # Verify message content
             assert '🎬 The Matrix (1999)' in message  # Title from page title
@@ -215,7 +215,6 @@ class TestRutorParserIntegration:
                 assert '🎙 Аудио' in message
             else:
                 assert '🎙 Перевод: Профессиональный' in message
-            assert '💾 Скачать: /dl_123456' in message
             assert '🔗 IMDB: https://www.imdb.com/title/tt0133093/' in message
             assert '🔗 Кинопоиск: https://www.kinopoisk.ru/film/301/' in message
 
@@ -381,7 +380,7 @@ async def test_real_torrent_info(torrent_data):
     pytest.skip('Skipping external API test')
 
     try:
-        message, _poster, _images = await get_torrent_info(torrent_data['link'], '/dl_test')
+        message, _poster, _images, _, _ = await get_torrent_info(torrent_data['link'])
 
         # Check message content
         assert message is not None
@@ -401,7 +400,7 @@ async def test_real_torrent_info(torrent_data):
             assert 'Кинопоиск:' in message or 'kinopoisk.ru' in message
 
         # Technical details should be present
-        assert '📀' in message or 'Скачать:' in message
+        assert '📀' in message
 
     except httpx.ConnectError:
         pytest.skip('Cannot connect to rutor.info')
@@ -447,7 +446,7 @@ async def test_real_movie_ratings(rating_urls):
             assert rating_value >= rating_urls.get('min_kp_rating', 0)
             assert rating_value <= 10.0
 
-    except (httpx.ConnectError, httpx.TimeoutException):
+    except httpx.ConnectError, httpx.TimeoutException:
         pytest.skip('Cannot connect to rating websites')
     except ValueError:
         # Rating format might have changed
