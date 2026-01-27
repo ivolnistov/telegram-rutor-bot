@@ -16,6 +16,7 @@ import {
   searchOnRutor,
   syncLibrary,
 } from "api";
+import axios from "axios";
 import { Button } from "components/ui/Button";
 import { Modal } from "components/ui/Modal";
 import { useDebounce } from "hooks/useDebounce";
@@ -63,7 +64,6 @@ const MediaModal = ({
   }, [isPolling]);
 
   const handleSearchOnRutor = async () => {
-    if (!media) return;
     setIsSearchingLive(true);
     setIsPolling(true);
     try {
@@ -74,10 +74,15 @@ const MediaModal = ({
       } else {
         toast.success(t("success"));
       }
-    } catch (e: any) {
-      const message = String(
-        e?.response?.data?.detail || e?.message || t("error"),
-      );
+    } catch (e: unknown) {
+      let message = t("error");
+      if (axios.isAxiosError(e)) {
+        message =
+          (e.response?.data as { detail?: string } | undefined)?.detail ||
+          e.message;
+      } else if (e instanceof Error) {
+        message = e.message;
+      }
       toast.error(message);
     } finally {
       setIsSearchingLive(false);
