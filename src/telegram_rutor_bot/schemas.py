@@ -129,4 +129,27 @@ class TaskExecutionResponse(BaseModel):
 
 # Solve circular dependencies
 FilmResponse.model_rebuild()
-TorrentResponse.model_rebuild()
+
+
+class RutorTorrentResponse(BaseModel):
+    """Result from live Rutor search"""
+
+    name: str
+    size: int
+    date: str
+    magnet: str
+    link: str
+    year: str
+
+
+class TorrentCreateRequest(BaseModel):
+    """Request to add a torrent from magnet"""
+
+    magnet: str
+    category_id: int | None = None
+    film_title: str | None = None
+    film_year: int | None = None
+    tmdb_id: int | None = None
+    torrent_name: str | None = None
+    torrent_size: int | None = None
+    torrent_link: str | None = None

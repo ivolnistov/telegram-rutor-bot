@@ -98,20 +98,32 @@ async def torrent_info(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
         # Construct buttons
         buttons = []
         # Download button
-        buttons.append([InlineKeyboardButton('⬇️ Download', callback_data=f'dl_{torrent_id}')])
+        buttons.append([InlineKeyboardButton(get_text('btn_download', lang), callback_data=f'dl_{torrent_id}')])
 
         # Link buttons
         links_row = []
         rutor_url = urljoin('http://rutor.info', torrent.link)
-        links_row.append(InlineKeyboardButton('🔗 Rutor', url=rutor_url))
+        links_row.append(InlineKeyboardButton(get_text('btn_rutor_link', lang), url=rutor_url))
 
         if metadata.get('imdb_url'):
-            links_row.append(InlineKeyboardButton('⭐ IMDB', url=metadata['imdb_url']))
+            links_row.append(InlineKeyboardButton(get_text('btn_imdb', lang), url=metadata['imdb_url']))
         if metadata.get('kp_url'):
-            links_row.append(InlineKeyboardButton('🎬 KP', url=metadata['kp_url']))
+            links_row.append(InlineKeyboardButton(get_text('btn_kp', lang), url=metadata['kp_url']))
 
         if links_row:
             buttons.append(links_row)
+
+        # Search on Rutor button
+        # Use simple name or cleared name if possible, but torrent.name usually contains full title
+        # For better UX we might want to clean it, but torrent.name is what we have.
+        # Let's use torrent.name directly for now as it maps to the search command behavior.
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    get_text('btn_search_rutor', lang), switch_inline_query_current_chat=f'/search {torrent.name}'
+                )
+            ]
+        )
 
         reply_markup = InlineKeyboardMarkup(buttons)
 
@@ -173,6 +185,8 @@ async def torrent_downloads(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     """List active downloads with management buttons"""
     assert update.effective_chat is not None
 
+    lang = await _get_lang(update)
+
     try:
         client = get_torrent_client()
         await client.connect()
@@ -211,11 +225,11 @@ async def torrent_downloads(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         # Management buttons
         row = []
         if torrent['status'] in ['pauseddl', 'pausedup']:
-            row.append(InlineKeyboardButton('▶️ Resume', callback_data=f'resume_{torrent["hash"]}'))
+            row.append(InlineKeyboardButton(get_text('btn_resume', lang), callback_data=f'resume_{torrent["hash"]}'))
         else:
-            row.append(InlineKeyboardButton('⏸️ Pause', callback_data=f'pause_{torrent["hash"]}'))
+            row.append(InlineKeyboardButton(get_text('btn_pause', lang), callback_data=f'pause_{torrent["hash"]}'))
 
-        row.append(InlineKeyboardButton('🗑️ Delete', callback_data=f'delete_{torrent["hash"]}'))
+        row.append(InlineKeyboardButton(get_text('btn_delete', lang), callback_data=f'delete_{torrent["hash"]}'))
         buttons.append(row)
 
         await context.bot.send_message(
@@ -258,13 +272,15 @@ async def _handle_imdb_search(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     details = await get_imdb_details(imdb_id)
     if details:
-        await _send_imdb_info(update, context, details)
+        await _send_imdb_info(update, context, details, lang)
         return
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text='IMDB info not found')
 
 
-async def _send_imdb_info(update: Update, context: ContextTypes.DEFAULT_TYPE, details: dict[str, Any]) -> None:
+async def _send_imdb_info(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, details: dict[str, Any], lang: str
+) -> None:
     """Send IMDB movie info"""
     assert update.effective_chat is not None
     caption_parts = []
@@ -289,7 +305,9 @@ async def _send_imdb_info(update: Update, context: ContextTypes.DEFAULT_TYPE, de
     if details.get('title'):
         # Search button using title
         search_query = details['title']
-        buttons.append([InlineKeyboardButton('🔍 Search on Rutor', switch_inline_query_current_chat=search_query)])
+        buttons.append(
+            [InlineKeyboardButton(get_text('btn_search_rutor', lang), switch_inline_query_current_chat=search_query)]
+        )
 
     reply_markup = InlineKeyboardMarkup(buttons) if buttons else None
 

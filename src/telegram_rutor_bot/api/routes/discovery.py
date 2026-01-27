@@ -1,21 +1,25 @@
+import logging
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from telegram_rutor_bot.clients.tmdb import TmdbClient
 from telegram_rutor_bot.db.database import get_async_db
-from telegram_rutor_bot.db.models import Film, User
+from telegram_rutor_bot.db.films import get_or_create_film, update_film_metadata
+from telegram_rutor_bot.db.models import Film, Torrent, User
 from telegram_rutor_bot.schemas import TorrentResponse
 from telegram_rutor_bot.services.matcher import TmdbMatcher
 from telegram_rutor_bot.services.monitor import WatchlistMonitor
+from telegram_rutor_bot.tasks.jobs import search_film_on_rutor
 from telegram_rutor_bot.web.auth import get_current_user
 
 router = APIRouter(prefix='/api/discovery', tags=['discovery'])
 tmdb = TmdbClient()
+log = logging.getLogger(__name__)
 
 
 async def _enrich_with_library_status(results: list[dict[str, Any]], db: AsyncSession) -> list[dict[str, Any]]:
@@ -27,13 +31,24 @@ async def _enrich_with_library_status(results: list[dict[str, Any]], db: AsyncSe
     if not tmdb_ids:
         return results
 
-    # Find which ones exist in DB
-    stmt = select(Film.tmdb_id).where(Film.tmdb_id.in_(tmdb_ids))
+    # Find which ones exist in DB and check for torrents
+
+    stmt = (
+        select(Film.tmdb_id, func.count(Torrent.id))
+        .outerjoin(Torrent)
+        .where(Film.tmdb_id.in_(tmdb_ids))
+        .group_by(Film.tmdb_id)
+    )
     result = await db.execute(stmt)
-    existing_ids = set(result.scalars().all())
+
+    # Map tmdb_id -> torrent_count
+    counts_map = {row[0]: row[1] for row in result.all()}
+    existing_ids = set(counts_map.keys())
 
     for r in results:
-        r['in_library'] = r.get('id') in existing_ids
+        tmdb_id = r.get('id')
+        r['in_library'] = tmdb_id in existing_ids
+        r['torrents_count'] = counts_map.get(tmdb_id, 0)
 
     return results
 
@@ -204,7 +219,100 @@ async def get_media_torrents(
     film = result.scalar_one_or_none()
 
     if not film:
+        log.warning(f'Film not found for media_id {media_id}')
         return []
 
+    log.info(f'Returning {len(film.torrents)} torrents for film {film.id} (TMDB {media_id})')
     # Convert SQLAlchemy Torrent to Pydantic TorrentResponse
     return [TorrentResponse.model_validate(t) for t in film.torrents]
+
+
+@router.post('/search_on_rutor', response_model=dict[str, str])
+async def search_on_rutor(
+    media_type: str,
+    media_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> dict[str, str]:
+    """
+    Search for torrents on Rutor by TMDB ID.
+    If film doesn't exist locally, it will be created.
+    """
+    if media_type != 'movie':
+        raise HTTPException(status_code=400, detail='Only movies are supported for now')
+
+    # Check if film exists
+    stmt = select(Film).where(Film.tmdb_id == media_id)
+    film = (await db.execute(stmt)).scalar_one_or_none()
+
+    # Always fetch details to get original_title
+    details = {}
+    try:
+        details = await tmdb.get_details(media_type, media_id)
+    except Exception as e:
+        if not film:
+            raise HTTPException(status_code=404, detail=f'TMDB error: {e}') from e
+        # If we have the film, we can proceed without fresh details, but won't be able to search for original title
+        pass
+
+    if not film and not details:
+        raise HTTPException(status_code=404, detail='Media not found in TMDB')
+
+    if not film:
+        # Create film
+        name = details.get('title') or details.get('name') or 'Unknown'
+        year = None
+        if details.get('release_date'):
+            year = int(details['release_date'][:4])
+        elif details.get('first_air_date'):
+            year = int(details['first_air_date'][:4])
+
+        original_title = details.get('original_title') or details.get('original_name')
+
+        # We can use a dummy blake for now, e.g. tmdb_movie_12345
+        dummy_blake = f'tmdb_{media_type}_{media_id}'
+
+        film = await get_or_create_film(
+            db,
+            blake=dummy_blake,
+            year=year,
+            name=name,
+            poster=details.get('poster_path'),
+            rating=details.get('vote_average'),
+            original_title=original_title,
+        )
+
+        await update_film_metadata(
+            db,
+            film_id=film.id,
+            tmdb_id=media_id,
+            tmdb_media_type=media_type,
+            year=year,
+            name=name,
+            poster=details.get('poster_path'),
+            rating=details.get('vote_average'),
+            original_title=original_title,
+        )
+
+    # Now we have a film, trigger search
+
+    # 1. Search with localized name
+    queries = set()
+    query_localized = film.name
+    if film.year:
+        query_localized += f' ({film.year})'
+    queries.add(query_localized)
+
+    # 2. Search with original name if available and different
+    original_name = details.get('original_title') or details.get('original_name')
+    if original_name and original_name != film.name:
+        query_original = original_name
+        if film.year:
+            query_original += f' ({film.year})'
+        queries.add(query_original)
+
+    # Queue tasks
+    for q in queries:
+        await search_film_on_rutor.kiq(film.id, q, requester_chat_id=user.chat_id)
+
+    return {'status': 'search_started'}

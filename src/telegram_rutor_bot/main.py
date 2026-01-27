@@ -27,6 +27,7 @@ from telegram_rutor_bot.tasks.jobs import (
     execute_scheduled_searches,
     execute_search,
     notify_about_new,
+    search_film_on_rutor,
 )
 
 logging.basicConfig(level=settings.log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -185,6 +186,8 @@ def main() -> int:
         _ = notify_about_new
         _ = execute_scheduled_searches
         _ = execute_search
+        log.info('Registering task: search_film_on_rutor')
+        _ = search_film_on_rutor
 
         # Check if broker supports workers
         if isinstance(broker, InMemoryBroker):

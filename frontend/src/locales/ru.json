@@ -24,7 +24,9 @@
         "search_placeholder": "Поиск фильмов и сериалов...",
         "url_copied": "Ссылка на поиск скопирована!",
         "copy_search_url": "Найти раздачу",
-        "no_overview": "Описание отсутствует."
+        "search_on_rutor": "Найти на Rutor",
+        "no_overview": "Описание отсутствует.",
+        "subscribe": "Подписаться"
     },
     "sidebar": {
         "dashboard": "Дашборд",
@@ -122,8 +124,7 @@
         "tmdb_session_id_hint": "ID сессии для оценок и рекомендаций",
         "tmdb_session_id_placeholder": "Введите TMDB Session ID",
         "clients": {
-            "qbittorrent": "qBittorrent",
-            "transmission": "Transmission"
+            "qbittorrent": "qBittorrent"
         },
         "downloads": "Настройки загрузок",
         "seed_ratio_limit": "Лимит рейтинга",
