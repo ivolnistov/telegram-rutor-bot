@@ -83,6 +83,18 @@ export interface TmdbMedia {
   vote_average: number;
   in_library?: boolean;
   torrents_count?: number;
+  kp_rating?: number;
+  genres?: { id: number; name: string }[];
+  production_countries?: { iso_3166_1: string; name: string }[];
+  external_ids?: {
+    imdb_id?: string;
+    facebook_id?: string;
+    instagram_id?: string;
+    twitter_id?: string;
+  };
+  imdb_id?: string; // Shortcut or computed
+  runtime?: number;
+  origin_country?: string[];
 }
 
 export interface TaskExecution {

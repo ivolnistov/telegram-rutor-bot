@@ -414,6 +414,8 @@ async def enrich_film_data(session: AsyncSession, film: Film, torrent_link: str)
             if metadata.get('year'):
                 with suppress(ValueError):
                     updates['year'] = int(metadata['year'])
+            if metadata.get('kp_rating'):
+                updates['kp_rating'] = metadata['kp_rating']
 
         if updates:
             await update_film_metadata(session, film.id, **updates)
@@ -847,6 +849,7 @@ async def get_torrent_info(
                 'year': result.get('year'),
                 'imdb_url': result.get('imdb_url'),
                 'kp_url': result.get('kp_url'),
+                'kp_rating': kp_rating,
             },
         },
     )

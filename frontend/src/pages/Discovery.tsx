@@ -4,8 +4,10 @@ import {
   createSearch,
   deleteRating,
   downloadTorrent,
+  getLibrary,
   getMe,
   getMediaAccountStates,
+  getMediaDetails,
   getMediaTorrents,
   getPersonalRecommendations,
   getRatedMedia,
@@ -34,6 +36,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { TmdbMedia } from "types";
+// ... imports
 
 const MediaModal = ({
   media,
@@ -156,6 +159,23 @@ const MediaModal = ({
     refetchInterval: isPolling ? 2000 : false,
   });
 
+  const { data: fullMedia } = useQuery({
+    queryKey: ["media", media.media_type, media.id],
+    queryFn: () => getMediaDetails(media.media_type, media.id),
+    enabled: !!media.id,
+    staleTime: 1000 * 60 * 30, // 30 mins
+  });
+
+  const displayMedia = fullMedia || media;
+
+  const getYear = (date?: string) => date?.split("-")[0] || "";
+  const formatRuntime = (mins?: number) => {
+    if (!mins) return "";
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h)}h ${String(m)}m`;
+  };
+
   useEffect(() => {
     if (linkedTorrents && linkedTorrents.length > 0 && isPolling) {
       setIsPolling(false);
@@ -211,9 +231,9 @@ const MediaModal = ({
     <Modal
       isOpen={true}
       onClose={onClose}
-      title={media.title || media.name || "Unknown"}
+      title={displayMedia.title || displayMedia.name || "Unknown"}
     >
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="aspect-video w-full rounded-lg overflow-hidden bg-black/20 relative">
           <img
             src={`https://image.tmdb.org/t/p/w780${media.backdrop_path || media.poster_path || ""}`}
@@ -238,9 +258,108 @@ const MediaModal = ({
           </div>
         </div>
 
-        <p className="text-zinc-300 text-sm leading-relaxed">
-          {media.overview || t("discovery.no_overview")}
-        </p>
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-400">
+            {displayMedia.release_date || displayMedia.first_air_date ? (
+              <span className="text-zinc-200 font-medium">
+                {getYear(
+                  displayMedia.release_date || displayMedia.first_air_date,
+                )}
+              </span>
+            ) : null}
+
+            {displayMedia.runtime ? (
+              <span>{formatRuntime(displayMedia.runtime)}</span>
+            ) : null}
+
+            {displayMedia.production_countries &&
+              displayMedia.production_countries.length > 0 && (
+                <div className="flex items-center gap-1.5 ml-1">
+                  {displayMedia.production_countries.map((c) => {
+                    const flag = c.iso_3166_1
+                      ? c.iso_3166_1
+                          .toUpperCase()
+                          .replace(/./g, (char) =>
+                            String.fromCodePoint(127397 + char.charCodeAt(0)),
+                          )
+                      : "";
+                    return (
+                      <span
+                        key={c.iso_3166_1 || c.name}
+                        title={c.name}
+                        className="cursor-help text-base leading-none select-none opacity-80 hover:opacity-100 transition-opacity"
+                      >
+                        {flag}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+          </div>
+
+          {displayMedia.genres && displayMedia.genres.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {displayMedia.genres.map((g) => (
+                <span
+                  key={g.id}
+                  className="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-xs border border-zinc-700"
+                >
+                  {g.name}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-4 text-sm">
+            <div className="flex items-center gap-1.5" title="TMDB Rating">
+              <Star className="size-4 fill-amber-400 text-amber-400" />
+              <span className="font-bold text-zinc-100">
+                {displayMedia.vote_average.toFixed(1)}
+              </span>
+              <span className="text-zinc-500">TMDB</span>
+            </div>
+
+            {displayMedia.external_ids?.imdb_id && (
+              <a
+                href={`https://www.imdb.com/title/${displayMedia.external_ids.imdb_id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-zinc-400 hover:text-[#f5c518] transition-colors"
+              >
+                <div className="font-bold bg-[#f5c518] text-black px-1 rounded-[2px] text-[10px] leading-none py-0.5">
+                  IMDb
+                </div>
+                <span>View</span>
+              </a>
+            )}
+
+            <a
+              href={`https://www.kinopoisk.ru/index.php?kp_query=${encodeURIComponent(
+                displayMedia.title || displayMedia.name || "",
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 text-zinc-400 hover:text-[#ff5500] transition-colors"
+            >
+              <div className="font-bold bg-[#ff5500] text-white px-1 rounded-[2px] text-[10px] leading-none py-0.5">
+                KP
+              </div>
+              <span
+                className={
+                  displayMedia.kp_rating ? "font-bold text-[#ff5500]" : ""
+                }
+              >
+                {displayMedia.kp_rating
+                  ? displayMedia.kp_rating.toFixed(1)
+                  : "Search"}
+              </span>
+            </a>
+          </div>
+
+          <p className="text-zinc-300 text-sm leading-relaxed">
+            {displayMedia.overview || t("discovery.no_overview")}
+          </p>
+        </div>
 
         {/* Rating Section */}
         <div className="space-y-2">
@@ -343,7 +462,7 @@ const MediaModal = ({
                     alt={rec.title || rec.name}
                     className="size-full  object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                   />
-                  {(rec as unknown as { in_library: boolean }).in_library && (
+                  {rec.in_library && (
                     <div className="absolute top-1 right-1 bg-green-500/90 text-white p-0.5 rounded-full shadow-sm">
                       <Check className="size-2.5" />
                     </div>
@@ -471,9 +590,9 @@ const DiscoveryPage = () => {
   const debouncedQuery = useDebounce(searchQuery, 500);
 
   const [contentType, setContentType] = useState<"movie" | "tv">("movie");
-  const [feedType, setFeedType] = useState<"trending" | "personal" | "rated">(
-    "trending",
-  );
+  const [feedType, setFeedType] = useState<
+    "trending" | "personal" | "rated" | "library"
+  >("library");
 
   const [selectedMedia, setSelectedMedia] = useState<TmdbMedia | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -484,6 +603,7 @@ const DiscoveryPage = () => {
       if (debouncedQuery) return searchDiscovery(debouncedQuery);
       if (feedType === "personal") return getPersonalRecommendations(); // Note: check backend impl
       if (feedType === "rated") return getRatedMedia(contentType);
+      if (feedType === "library") return getLibrary(contentType);
       return getTrending(contentType);
     },
   });
@@ -508,6 +628,19 @@ const DiscoveryPage = () => {
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full">
           {/* Feed Type Toggles */}
           <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-1 self-start md:self-auto">
+            <button
+              onClick={() => {
+                setFeedType("library");
+              }}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                feedType === "library"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Library
+            </button>
+
             <button
               onClick={() => {
                 setFeedType("trending");
@@ -642,31 +775,94 @@ const DiscoveryPage = () => {
                 </div>
               )}
 
-              {media.torrents_count && media.torrents_count > 0 && (
-                <div
-                  className="absolute top-2 right-2 z-10 bg-green-500 text-white p-1 rounded-full shadow-md"
-                  title={`${String(media.torrents_count)} torrents available`}
-                >
-                  <Download className="size-3" />
-                </div>
-              )}
-
               <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-12 opacity-0 group-hover:opacity-100 transition-opacity">
-                <h4 className="text-sm font-medium text-white line-clamp-2">
+                <h4 className="text-sm font-medium text-white line-clamp-2 leading-tight">
                   {media.title || media.name}
                 </h4>
-                <div className="flex items-center gap-2 mt-1">
-                  <Star className="size-3 fill-amber-400 text-amber-400" />
-                  <span className="text-xs text-zinc-300">
-                    {media.vote_average.toFixed(1)}
-                  </span>
-                  <span className="text-xs text-zinc-500">•</span>
-                  <span className="text-xs text-zinc-400">
-                    {(media.release_date || media.first_air_date)?.split(
-                      "-",
-                    )[0] || "?"}
-                  </span>
-                </div>
+                {(media.original_title || media.original_name) &&
+                  (media.original_title !== media.title ||
+                    media.original_name !== media.name) && (
+                    <div className="text-[10px] text-zinc-400 truncate mt-0.5">
+                      {media.original_title || media.original_name}
+                    </div>
+                  )}
+                {(media.vote_average > 0 || media.kp_rating) && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Star className="size-3 fill-amber-400 text-amber-400" />
+                    <span className="text-xs text-zinc-300">
+                      {media.vote_average.toFixed(1)}
+                    </span>
+                    {media.kp_rating && (
+                      <>
+                        <span className="text-xs text-zinc-500">•</span>
+                        <span className="px-1 py-0.5 bg-orange-600/90 text-[9px] font-bold text-white rounded-[3px]">
+                          KP {media.kp_rating}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="absolute top-2 left-2 z-10">
+                {(media.release_date || media.first_air_date) && (
+                  <div className="bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-medium text-white/90 border border-white/10 shadow-sm">
+                    {
+                      (media.release_date || media.first_air_date)?.split(
+                        "-",
+                      )[0]
+                    }
+                  </div>
+                )}
+              </div>
+
+              <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5 items-end">
+                {(media.torrents_count || 0) > 0 && (
+                  <div
+                    className="bg-green-500 text-white p-1 rounded-full shadow-md"
+                    title={`${String(media.torrents_count)} torrents available`}
+                  >
+                    <Download className="size-3" />
+                  </div>
+                )}
+                {(() => {
+                  const countries =
+                    media.production_countries &&
+                    media.production_countries.length > 0
+                      ? media.production_countries
+                      : media.origin_country && media.origin_country.length > 0
+                        ? media.origin_country.map((c) => ({
+                            iso_3166_1: c,
+                            name: c,
+                          }))
+                        : [];
+
+                  if (countries.length === 0) return null;
+
+                  return (
+                    <div className="flex -space-x-1">
+                      {countries.slice(0, 3).map((c, i) => (
+                        <div
+                          key={i}
+                          className="relative z-0 hover:z-10 transition-all transform hover:scale-110"
+                          title={c.name}
+                        >
+                          <span className="text-base drop-shadow-md filter cursor-help">
+                            {c.iso_3166_1
+                              ? c.iso_3166_1
+                                  .toUpperCase()
+                                  .replace(/./g, (char) =>
+                                    String.fromCodePoint(
+                                      127397 + char.charCodeAt(0),
+                                    ),
+                                  )
+                              : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ))}
