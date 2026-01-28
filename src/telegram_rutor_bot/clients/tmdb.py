@@ -78,9 +78,14 @@ class TmdbClient:
         data = await self._get('/search/multi', params={'query': query})
         return cast(list[dict[str, Any]], data.get('results', []))
 
-    async def get_details(self, media_type: str, media_id: int) -> dict[str, Any]:
+    async def get_details(
+        self, media_type: str, media_id: int, append_to_response: str | None = None
+    ) -> dict[str, Any]:
         """Get details for a movie or TV show."""
-        return await self._get(f'/{media_type}/{media_id}')
+        params = {}
+        if append_to_response:
+            params['append_to_response'] = append_to_response
+        return await self._get(f'/{media_type}/{media_id}', params=params)
 
     async def get_recommendations(self, media_type: str, media_id: int) -> list[dict[str, Any]]:
         """Get recommendations based on a movie or TV show."""

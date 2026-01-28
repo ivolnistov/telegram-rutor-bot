@@ -140,6 +140,21 @@ services:
       redis:
         condition: service_healthy
 
+  migrations:
+    build: .
+    profiles: [ "tools" ]
+    entrypoint: []
+    command: [ "uv", "run", "alembic", "upgrade", "head" ]
+    environment:
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+    volumes:
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:

@@ -317,6 +317,26 @@ export const getRecommendations = async (
 export const getPersonalRecommendations = async (): Promise<TmdbMedia[]> =>
   (await api.get("/discovery/personal")).data as unknown as TmdbMedia[];
 
+export const getMediaDetails = async (
+  mediaType: "movie" | "tv" | "person",
+  mediaId: number,
+): Promise<TmdbMedia> =>
+  (await api.get(`/discovery/${mediaType}/${String(mediaId)}`))
+    .data as unknown as TmdbMedia;
+
+export const getLibrary = async (
+  mediaType: "movie" | "tv",
+  page = 1,
+): Promise<TmdbMedia[]> => {
+  const limit = 20;
+  const offset = (page - 1) * limit;
+  return (
+    await api.get(
+      `/discovery/library?media_type=${mediaType}&limit=${String(limit)}&offset=${String(offset)}`,
+    )
+  ).data as unknown as TmdbMedia[];
+};
+
 export const rateMedia = async (
   mediaType: "movie" | "tv",
   mediaId: number,

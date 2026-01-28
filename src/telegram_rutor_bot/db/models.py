@@ -35,6 +35,7 @@ class Film(Base):
     poster: Mapped[str | None] = mapped_column(String, nullable=True)
     country: Mapped[str | None] = mapped_column(String, nullable=True)
     rating: Mapped[str | None] = mapped_column(String, nullable=True)
+    kp_rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     user_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     category_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('categories.id'), nullable=True)
     tmdb_id: Mapped[int | None] = mapped_column(Integer, nullable=True)

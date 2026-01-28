@@ -15,6 +15,7 @@ from telegram_rutor_bot.schemas import TorrentResponse
 from telegram_rutor_bot.services.matcher import TmdbMatcher
 from telegram_rutor_bot.services.monitor import WatchlistMonitor
 from telegram_rutor_bot.tasks.jobs import search_film_on_rutor
+from telegram_rutor_bot.utils.country_mapper import map_country_to_iso
 from telegram_rutor_bot.web.auth import get_current_user
 
 router = APIRouter(prefix='/api/discovery', tags=['discovery'])
@@ -33,30 +34,38 @@ async def _enrich_with_library_status(results: list[dict[str, Any]], db: AsyncSe
 
     # Find which ones exist in DB and check for torrents
 
+    # Find which ones exist in DB and check for torrents
     stmt = (
-        select(Film.tmdb_id, func.count(Torrent.id))
+        select(Film.tmdb_id, func.count(Torrent.id), Film.kp_rating)
         .outerjoin(Torrent)
         .where(Film.tmdb_id.in_(tmdb_ids))
-        .group_by(Film.tmdb_id)
+        .group_by(Film.tmdb_id, Film.kp_rating)
     )
     result = await db.execute(stmt)
 
-    # Map tmdb_id -> torrent_count
-    counts_map = {row[0]: row[1] for row in result.all()}
-    existing_ids = set(counts_map.keys())
+    # Map tmdb_id -> {count, kp_rating}
+    library_map = {row[0]: {'count': row[1], 'kp_rating': row[2]} for row in result.all()}
+    existing_ids = set(library_map.keys())
 
     for r in results:
         tmdb_id = r.get('id')
-        r['in_library'] = tmdb_id in existing_ids
-        r['torrents_count'] = counts_map.get(tmdb_id, 0)
+        if tmdb_id in existing_ids:
+            r['in_library'] = True
+            data = library_map[tmdb_id]
+            r['torrents_count'] = data['count']
+            if data['kp_rating']:
+                r['kp_rating'] = data['kp_rating']
+        else:
+            r['in_library'] = False
+            r['torrents_count'] = 0
 
     return results
 
 
 @router.get('/trending')
 async def get_trending(
-    media_type: str = Query('all', regex='^(all|movie|tv)$'),
-    time_window: str = Query('week', regex='^(day|week)$'),
+    media_type: str = Query('all', pattern='^(all|movie|tv)$'),
+    time_window: str = Query('week', pattern='^(day|week)$'),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> list[dict[str, Any]]:
@@ -88,6 +97,22 @@ async def get_recommendations(
     return await _enrich_with_library_status(results, db)
 
 
+@router.get('/{media_type}/{media_id}')
+async def get_media_details(
+    media_type: str,
+    media_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> dict[str, Any]:
+    """Get full details for a movie or TV show"""
+    # Fetch details with external_ids
+    details = await tmdb.get_details(media_type, media_id, append_to_response='external_ids')
+
+    # Enrich with library status (single item list)
+    enriched_list = await _enrich_with_library_status([details], db)
+    return enriched_list[0] if enriched_list else details
+
+
 class RateRequest(BaseModel):
     media_type: str
     media_id: int
@@ -96,7 +121,7 @@ class RateRequest(BaseModel):
 
 @router.get('/watchlist')
 async def get_watchlist(
-    media_type: str = Query('movie', regex='^(movie|tv)$'),
+    media_type: str = Query('movie', pattern='^(movie|tv)$'),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> list[dict[str, Any]]:
@@ -143,7 +168,49 @@ async def rate_media(request: RateRequest, user: User = Depends(get_current_user
     return {'status': 'success'}
 
 
-@router.get('/personal')
+@router.get('/library')
+async def get_library(
+    media_type: str = Query('movie', pattern='^(movie|tv|all)$'),
+    limit: int = 20,
+    offset: int = 0,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> list[dict[str, Any]]:
+    """Get films in local library"""
+    stmt = select(Film).order_by(Film.id.desc()).offset(offset).limit(limit)
+
+    if media_type != 'all':
+        stmt = stmt.where(Film.tmdb_media_type == media_type)
+
+    result = await db.execute(stmt)
+    films = result.scalars().all()
+
+    # Convert to TMDB-like format
+    results = []
+    for film in films:
+        # Map Film model to partial TmdbMedia
+        media = {
+            'id': film.tmdb_id or film.id,  # Fallback to local ID if no TMDB ID
+            'tmdb_id': film.tmdb_id,
+            'title': film.name,
+            'original_title': film.original_title,
+            'poster_path': film.poster,
+            'vote_average': float(film.kp_rating)
+            if film.kp_rating is not None
+            else (float(film.rating) if film.rating else 0.0),
+            'release_date': f'{film.year}-01-01' if film.year else None,
+            'media_type': film.tmdb_media_type or 'movie',
+            'in_library': True,
+            'kp_rating': film.kp_rating,
+            'production_countries': (
+                [{'iso_3166_1': iso, 'name': film.country}] if (iso := map_country_to_iso(film.country)) else []
+            ),
+        }
+        results.append(media)
+
+    return await _enrich_with_library_status(results, db)
+
+
 @router.get('/personal')
 async def get_personal_recs(user: User = Depends(get_current_user)) -> list[dict[str, Any]]:
     """Get personalized recommendations based on ratings"""
@@ -196,7 +263,7 @@ async def delete_rating(
 @router.get('/rated')
 @router.get('/rated')
 async def get_rated(
-    media_type: str = Query('movie', regex='^(movie|tv)$'),
+    media_type: str = Query('movie', pattern='^(movie|tv)$'),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> list[dict[str, Any]]:
@@ -269,6 +336,11 @@ async def search_on_rutor(
 
         original_title = details.get('original_title') or details.get('original_name')
 
+        # Extract country (take first production country)
+        country = None
+        if details.get('production_countries'):
+            country = details['production_countries'][0].get('name')
+
         # We can use a dummy blake for now, e.g. tmdb_movie_12345
         dummy_blake = f'tmdb_{media_type}_{media_id}'
 
@@ -280,6 +352,7 @@ async def search_on_rutor(
             poster=details.get('poster_path'),
             rating=details.get('vote_average'),
             original_title=original_title,
+            country=country,
         )
 
         await update_film_metadata(
@@ -292,6 +365,7 @@ async def search_on_rutor(
             poster=details.get('poster_path'),
             rating=details.get('vote_average'),
             original_title=original_title,
+            country=country,
         )
 
     # Now we have a film, trigger search
