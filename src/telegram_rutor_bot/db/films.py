@@ -1,5 +1,7 @@
 """Film operations for movie metadata"""
 
+import contextlib
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -27,6 +29,7 @@ async def get_or_create_film(
     rating: float | None = None,
     category_id: int | None = None,
     original_title: str | None = None,
+    country: str | None = None,
 ) -> Film:
     """Get existing film or create new one"""
     # Try to get existing film
@@ -49,6 +52,8 @@ async def get_or_create_film(
             film.category_id = category_id
         if original_title and not film.original_title:
             film.original_title = original_title
+        if country and not film.country:
+            film.country = country
         await session.commit()
         return film
 
@@ -62,6 +67,7 @@ async def get_or_create_film(
         rating=str(rating) if rating else None,
         category_id=category_id,
         original_title=original_title,
+        country=country,
     )
     session.add(new_film)
     await session.commit()
@@ -152,6 +158,7 @@ async def update_film_metadata(
     tmdb_id: int | None = None,
     tmdb_media_type: str | None = None,
     original_title: str | None = None,
+    kp_rating: float | str | None = None,
 ) -> bool:
     """Update film metadata"""
     result = await session.execute(select(Film).where(Film.id == film_id))
@@ -160,26 +167,28 @@ async def update_film_metadata(
     if not film:
         return False
 
-    if tmdb_id is not None:
-        film.tmdb_id = tmdb_id
-    if tmdb_media_type is not None:
-        film.tmdb_media_type = tmdb_media_type
-    if year is not None:
-        film.year = year
-    if name is not None:
-        film.name = name
-    if ru_name is not None:
-        film.ru_name = ru_name
-    if poster is not None:
-        film.poster = poster
+    # Standard updates
+    for attr, value in {
+        'tmdb_id': tmdb_id,
+        'tmdb_media_type': tmdb_media_type,
+        'year': year,
+        'name': name,
+        'ru_name': ru_name,
+        'poster': poster,
+        'country': country,
+        'genres': genres,
+        'original_title': original_title,
+    }.items():
+        if value is not None:
+            setattr(film, attr, value)
+
+    # Special cases
     if rating is not None:
         film.rating = str(rating)
-    if country is not None:
-        film.country = country
-    if genres is not None:
-        film.genres = genres
-    if original_title is not None:
-        film.original_title = original_title
+
+    if kp_rating is not None:
+        with contextlib.suppress(ValueError, TypeError):
+            film.kp_rating = float(kp_rating)
 
     await session.commit()
     return True
