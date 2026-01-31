@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from telegram_rutor_bot.db.models import AppConfig
 
 if TYPE_CHECKING:
-    from telegram_rutor_bot.db.models import AppConfig, AppConfigUpdate
+    from telegram_rutor_bot.db.models import AppConfigUpdate
 
 
 async def get_db_config(session: AsyncSession) -> AppConfig:

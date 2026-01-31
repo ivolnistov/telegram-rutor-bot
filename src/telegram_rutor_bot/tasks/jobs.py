@@ -179,7 +179,7 @@ async def execute_search(
 async def search_film_on_rutor(
     film_id: int,
     query: str,
-    requester_chat_id: int | None = None,
+    requester_chat_id: int | None = None,  # pylint: disable=unused-argument
 ) -> None:
     """Execute a search for a specific film on Rutor"""
     log.info('Executing film search for film %s with query "%s"', film_id, query)
@@ -205,7 +205,7 @@ async def search_film_on_rutor(
             # If we want to notify via ws, we need a mechanism.
             # For now, rely on simply adding to DB.
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             log.exception('Film search failed: %s', e)
 
 
@@ -370,7 +370,6 @@ async def notify_about_new(search_id: int) -> None:
 @broker.task
 async def execute_scheduled_searches() -> None:
     """Execute scheduled searches"""
-    log.info('Checking for scheduled searches...')
     log.info('Checking for scheduled searches...')
 
     async with get_async_session() as session:

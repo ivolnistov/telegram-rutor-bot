@@ -194,7 +194,7 @@ async def torrent_downloads(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             torrents = await client.list_torrents()
         finally:
             await client.disconnect()
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Error connecting to client: {e}')
         return
 
@@ -474,7 +474,7 @@ async def _handle_management_action(query: CallbackQuery, update: Update, action
                 await query.edit_message_text(text=f'🗑️ Deleted: {torrent_hash}')
         finally:
             await client.disconnect()
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         if update.effective_chat:
             # Use context.bot if available or query.get_bot()
             # Casting or ignoring for now as bot is usually present
