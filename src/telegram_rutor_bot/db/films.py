@@ -113,13 +113,12 @@ async def get_films_by_ids(session: AsyncSession, film_ids: list[int]) -> list[F
 
 async def get_recommendations(session: AsyncSession, limit: int = 5) -> list[Film]:
     """Get film recommendations (random rated films)"""
-    """Get film recommendations (random rated films)"""
 
     stmt = (
         select(Film)
         .options(selectinload(Film.torrents))
         .where(Film.rating.is_not(None))
-        .order_by(func.random())
+        .order_by(func.random())  # pylint: disable=not-callable
         .limit(limit)
     )
     result = await session.execute(stmt)
