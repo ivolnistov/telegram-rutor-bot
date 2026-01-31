@@ -29,7 +29,7 @@ from telegram_rutor_bot.db import (
     modify_torrent,
     update_film_metadata,
 )
-from telegram_rutor_bot.db.models import AppConfig, Film
+from telegram_rutor_bot.db.models import AppConfig, Film, Torrent
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.utils.cache import FilmInfoCache
 from telegram_rutor_bot.utils.category_mapper import (
@@ -42,8 +42,6 @@ from .rating_parser import get_imdb_details, get_imdb_poster, get_movie_ratings
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
-
-    from telegram_rutor_bot.db.models import AppConfig, Film, Torrent
 
 
 log = logging.getLogger(f'{settings.log_prefix}.parser')
@@ -314,7 +312,7 @@ async def parse_rutor(
                 q_filters = [f.strip().lower() for f in config.search_quality_filters.split(',') if f.strip()]
             if config.search_translation_filters:
                 t_filters = [f.strip().lower() for f in config.search_translation_filters.split(',') if f.strip()]
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         pass
 
     log.info('Filters loaded: Q=%s, T=%s', q_filters, t_filters)
@@ -370,7 +368,7 @@ async def parse_rutor(
         try:
             await _process_torrent_item(session, torrent_data, film_cache, new, category_id, film_id)
             log.info('Processed %s: Added/Updated', torrent_data['name'])
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             log.error('Failed to process %s: %s', torrent_data['name'], e)
 
     return new
