@@ -37,3 +37,18 @@ size_limit = 0  # Torrent size limit in bytes (0 = unlimited)
 
 # TaskIQ settings (optional)
 # redis_url = "redis://redis:6379"  # Redis URL for multi-container setup
+
+# System Searches
+# You can define searches that will be automatically added to the bot
+# Variables: {year}, {prev_year}, {next_year}, {month}, {prev_month}, {next_month}
+# Cron: "min hour day month dow"
+
+[[searches]]
+name = "Movies {year} > 7.0"
+url = "http://rutor.info/search/0/0/000/0/year:{year}|rating:7-10"
+cron = "0 */6 * * *"
+
+[[searches]]
+name = "Top Series"
+url = "http://rutor.info/search/0/0/100/0/series"
+cron = "30 * * * *"
