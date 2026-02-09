@@ -23,10 +23,11 @@ from telegram_rutor_bot.db import (
     get_user,
     update_last_success,
 )
-from telegram_rutor_bot.db.models import Search, TaskExecution, User, subscribes_table
+from telegram_rutor_bot.db.models import Film, Search, TaskExecution, User, subscribes_table
 from telegram_rutor_bot.helpers import format_films
 from telegram_rutor_bot.rutor import parse_rutor
 from telegram_rutor_bot.schemas import Notification
+from telegram_rutor_bot.services.watchlist import check_matches
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 
 from .broker import broker
@@ -99,6 +100,20 @@ async def _run_search_process(session: AsyncSession, task: TaskExecution, search
         progress_callback=update_progress,
     )
 
+    # Passive Search: Check new torrents against watchlist
+    if new:
+        try:
+            # Fetch full Torrent objects since parse_rutor returns IDs.
+            films = await get_films_by_ids(session, new)
+            new_torrents = []
+            for f in films:
+                new_torrents.extend(f.torrents)
+
+            await check_matches(session, new_torrents)
+
+        except Exception as e:
+            log.exception('Passive watchlist check failed: %s', e)
+
     task.progress = 90
     await session.commit()
     await update_last_success(session, search_id)
@@ -117,6 +132,82 @@ async def _run_search_process(session: AsyncSession, task: TaskExecution, search
         await notify_subscribers(search_id, new)
 
     return result_details
+
+
+@broker.task
+async def send_digest() -> None:
+    """Send daily digest of downloaded movies"""
+    log.info('Checking for downloaded movies to notify...')
+
+    # Check if it's time to run (if we run this task frequently, e.g. hourly)
+    # But if we schedule it via cron in main.py or broker, we assume it runs at correct time.
+    # The broker decorator just defines the task.
+    # The scheduling happens in main.py via taskiq-scheduler or here via @broker.task(schedule)
+    # Since we want dynamic schedule from settings, we might need to rely on static cron for now
+    # or handle the logic "is it time?" here if we run it often.
+    # Let's assume we run this every hour and check if "now" matches "settings.notification_cron".
+    # OR: simpler, just define the task here, and we will rely on a static schedule "every hour"?
+    # User said "time we set in settings".
+    # Let's use croniter to check if we mark it as "run now" logic?
+    # NO. Let's just run it every hour, and if the hour matches the config, we send?
+    # Or better: "send_digest" task checks matches.
+
+    # Wait, the prompt says "run at settings.notification_time".
+    # If I put `@broker.task` without schedule, I need to schedule it elsewhere.
+    # If I put `@broker.task(schedule=[{'cron': '...'}])`, it's hardcoded.
+    # I will stick to running it periodically (e.g. hourly) and checking:
+    # "Are there any unnotified downloaded films?"
+    # If yes -> Check if current time >= notification_time (or match cron).
+    # Actually, simpler:
+    # Just check for unnotified films. If user wants a Digest, they probably want it at specific time.
+    # But if I can't dynamically schedule easily without restarting,
+    # I'll check "is current hour == notification hour".
+
+    # For now, let's implement the logic to send.
+
+    async with get_async_session() as session:
+        # Get downloaded but not notified films
+        stmt = select(Film).where(Film.watch_status == 'downloaded', Film.notified == False)  # noqa: E712
+        films = (await session.execute(stmt)).scalars().all()
+
+        if not films:
+            return
+
+        # Check time constraint if we want strict "Digest Time"
+        # Parse settings.notification_cron
+        # Default '0 21 * * *' -> 21:00.
+        # If we run this every hour, we check: does cron match previous hour?
+        # A bit complex.
+        # Let's just implement the "Sending" part and we'll handle scheduling via @broker.task logic below
+        # assuming we passed the check.
+
+        log.info('Found %d unnotified downloaded films', len(films))
+
+        msg = '🎥 <b>Daily Digest: Downloaded Movies</b>\n\n'
+        for film in films:
+            msg += f'✅ <b>{film.name}</b>\n'
+            film.notified = True
+
+        await session.commit()
+
+        token = settings.telegram_token
+        if token:
+            bot = Bot(token=token)
+            # Notify authorized users
+            stmt_users = select(User).where(User.is_authorized == True, User.chat_id.is_not(None))  # noqa: E712
+            users = (await session.execute(stmt_users)).scalars().all()
+            for user in users:
+                with contextlib.suppress(Exception):
+                    await bot.send_message(user.chat_id, msg, parse_mode=ParseMode.HTML)
+
+
+# Schedule digest based on config?
+# We can't easily dynamically bind schedule in decorator.
+# Workaround: Run every minute/hour, check if cron matches.
+@broker.task(schedule=[{'cron': '* * * * *'}])
+async def digest_scheduler() -> None:
+    if croniter.match(settings.notification_cron, datetime.now(UTC)):
+        await send_digest.kiq()
 
 
 @broker.task

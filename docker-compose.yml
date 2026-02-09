@@ -57,7 +57,6 @@ services:
       - TZ=Etc/UTC
       - WEBUI_PORT=8080
       - TORRENTING_PORT=6881
-      - WEBUI_PASSWORD=rutor_secret_pass
       - DELETE_AFTER_RATIO=0
     volumes:
       - qbittorrent_config:/config

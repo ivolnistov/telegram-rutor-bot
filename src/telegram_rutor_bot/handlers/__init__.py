@@ -20,6 +20,7 @@ from .torrents import (
     torrent_recommend,
     torrent_search,
 )
+from .watchlist import watch_command
 
 __all__ = [
     'add_user_cmd',
@@ -44,4 +45,5 @@ __all__ = [
     'torrent_search',
     'unknown',
     'unsubscribe',
+    'watch_command',
 ]

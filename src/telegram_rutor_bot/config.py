@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Unpack
 
-from pydantic import Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -16,6 +16,14 @@ from pydantic_settings import (
 
 if TYPE_CHECKING:
     from telegram_rutor_bot.db.models import AppConfigUpdate
+
+
+class SearchConfig(BaseModel):
+    """Configuration for a system-defined search"""
+
+    name: str = Field(description='Human-readable name for the search')
+    url: str = Field(description='Rutor search URL')
+    cron: str = Field(default='*/30 * * * *', description='Cron schedule for the search')
 
 
 class Settings(BaseSettings):
@@ -53,6 +61,7 @@ class Settings(BaseSettings):
     unauthorized_message: str = Field(
         default='Unauthorized user, please contact my master', description='Message shown to unauthorized users'
     )
+    notification_cron: str = Field(default='0 21 * * *', description='Cron schedule for digest notifications')
 
     # qBittorrent settings
     qbittorrent_host: str = Field(default='localhost', description='qBittorrent Web UI host')
@@ -139,6 +148,13 @@ class Settings(BaseSettings):
             setattr(self, key, value)
 
         # Re-evaluate is_configured logic if needed, but it's a field now.
+
+    # System Searches
+    searches: list[SearchConfig] = Field(default_factory=list, description='List of system-defined searches')
+
+
+# Global settings instance
+settings = Settings()
 
 
 # Global settings instance
