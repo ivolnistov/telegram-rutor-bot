@@ -44,6 +44,14 @@ class Film(Base):
     monitored: Mapped[bool] = mapped_column(Boolean, default=False)
     last_search: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Watchlist fields
+    watch_status: Mapped[str | None] = mapped_column(String, default='none')  # none, watching, downloaded
+    voiceover_filter: Mapped[str | None] = mapped_column(String, nullable=True)
+    target_size_gb: Mapped[float | None] = mapped_column(Float, nullable=True)
+    min_size_gb: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_size_gb: Mapped[float | None] = mapped_column(Float, nullable=True)
+    notified: Mapped[bool] = mapped_column(Boolean, default=False)
+
     torrents: Mapped[list[Torrent]] = relationship('Torrent', back_populates='film')
     category_rel: Mapped[Category | None] = relationship('Category')
 

@@ -21,6 +21,7 @@ from telegram_rutor_bot.config_listener import config_listener_task, refresh_set
 from telegram_rutor_bot.db import get_async_session, init_db
 from telegram_rutor_bot.db.migrate import init_database
 from telegram_rutor_bot.db.models import TaskExecution
+from telegram_rutor_bot.services.search_manager import sync_system_searches
 from telegram_rutor_bot.tasks.broker import broker, scheduler
 from telegram_rutor_bot.tasks.jobs import (
     cleanup_torrents,
@@ -42,6 +43,9 @@ async def run_bot() -> None:
     # Sync config
     await refresh_settings_from_db()
 
+    # Sync system searches
+    await sync_system_searches()
+
     # Store reference to prevent garbage collection
     task = asyncio.create_task(config_listener_task())
     _background_tasks.add(task)
@@ -57,6 +61,7 @@ async def run_bot() -> None:
     application.add_handler(CommandHandler('start', h.start))
     application.add_handler(CommandHandler('list', h.torrent_list))
     application.add_handler(CommandHandler('search', h.torrent_search))
+    application.add_handler(CommandHandler('watch', h.watch_command))
     application.add_handler(CommandHandler('add_search', h.search_add))
     application.add_handler(CommandHandler('list_search', h.search_list))
     application.add_handler(CommandHandler('list_subscriptions', h.subscriptions_list))
