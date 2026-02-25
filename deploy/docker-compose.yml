@@ -57,7 +57,9 @@ services:
       - "6380:6379"
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    build:
+      context: ./docker/qbittorrent
+      dockerfile: Dockerfile
     container_name: qbittorrent
     environment:
       - PUID=1000

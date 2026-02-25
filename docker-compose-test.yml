@@ -52,7 +52,9 @@ services:
       retries: 3
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    build:
+      context: ./docker/qbittorrent
+      dockerfile: Dockerfile
     environment:
       - PUID=1000
       - PGID=1000
