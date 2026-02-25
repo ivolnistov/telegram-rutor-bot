@@ -1,3 +1,4 @@
+import urllib.parse
 from typing import Any, cast
 
 import httpx
@@ -33,7 +34,9 @@ class TmdbClient:
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
-                response = await client.get(f'{self.BASE_URL}{endpoint}', params=params)
+                # Validate endpoint to prevent unintended path traversal
+                safe_endpoint = urllib.parse.quote(endpoint, safe='/_')
+                response = await client.get(f'{self.BASE_URL}{safe_endpoint}', params=params)
                 response.raise_for_status()
                 return cast(dict[str, Any], response.json())
 
@@ -114,7 +117,9 @@ class TmdbClient:
         if not self.session_id:
             return False
 
-        endpoint = f'/{media_type}/{media_id}/rating'
+        endpoint = (
+            f'/{urllib.parse.quote(str(media_type), safe="")}/{urllib.parse.quote(str(media_id), safe="")}/rating'
+        )
         # params assignment removed (unused)
         payload = {'value': rating}
 
@@ -141,7 +146,9 @@ class TmdbClient:
         if not self.session_id:
             return False
 
-        endpoint = f'/{media_type}/{media_id}/rating'
+        endpoint = (
+            f'/{urllib.parse.quote(str(media_type), safe="")}/{urllib.parse.quote(str(media_id), safe="")}/rating'
+        )
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:

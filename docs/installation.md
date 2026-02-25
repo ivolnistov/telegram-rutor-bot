@@ -113,7 +113,7 @@ Run the backend with environment variables pointing to the Docker services:
 
 ```bash
 # Set environment variables
-export RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@localhost:5433/rutorbot
+export RUTOR_BOT_DATABASE_URL=postgresql://rutor:${POSTGRES_PASSWORD:-postgres}@localhost:5433/rutorbot
 export RUTOR_BOT_REDIS_URL=redis://localhost:6380/0
 export RUTOR_BOT_QBITTORRENT_HOST=localhost
 export RUTOR_BOT_QBITTORRENT_PORT=8090

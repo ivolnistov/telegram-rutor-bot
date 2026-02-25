@@ -10,7 +10,7 @@ services:
     environment:
       RUTOR_BOT_TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
       RUTOR_BOT_USERS_WHITE_LIST: ${USERS_WHITE_LIST}
-      RUTOR_BOT_DATABASE_URL: postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      RUTOR_BOT_DATABASE_URL: postgresql://rutor:${POSTGRES_PASSWORD:-postgres}@postgres:5432/rutorbot
       RUTOR_BOT_REDIS_URL: redis://redis:6379/0
       RUTOR_BOT_TORRENT_CLIENT: qbittorrent
       RUTOR_BOT_QBITTORRENT_HOST: qbittorrent
@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: rutor
-      POSTGRES_PASSWORD: rutorpass
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: rutorbot
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -86,7 +86,7 @@ services:
     volumes:
       - film_cache:/app/data/film_cache
     environment:
-      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:${POSTGRES_PASSWORD:-postgres}@postgres:5432/rutorbot
       - RUTOR_BOT_REDIS_URL=redis://redis:6379
       - RUTOR_BOT_TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
@@ -111,7 +111,7 @@ services:
     volumes:
       - film_cache:/app/data/film_cache
     environment:
-      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:${POSTGRES_PASSWORD:-postgres}@postgres:5432/rutorbot
       - RUTOR_BOT_REDIS_URL=redis://redis:6379
       - RUTOR_BOT_TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
@@ -134,7 +134,7 @@ services:
     volumes:
       - film_cache:/app/data/film_cache
     environment:
-      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:${POSTGRES_PASSWORD:-postgres}@postgres:5432/rutorbot
       - RUTOR_BOT_REDIS_URL=redis://redis:6379
       - RUTOR_BOT_TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - RUTOR_BOT_TORRENT_CLIENT=qbittorrent
@@ -157,7 +157,7 @@ services:
     entrypoint: []
     command: [ "uv", "run", "alembic", "upgrade", "head" ]
     environment:
-      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
+      - RUTOR_BOT_DATABASE_URL=postgresql://rutor:${POSTGRES_PASSWORD:-postgres}@postgres:5432/rutorbot
     depends_on:
       postgres:
         condition: service_healthy

@@ -586,7 +586,13 @@ async def serve_spa(full_path: str) -> FileResponse | HTMLResponse:
 
     response: FileResponse | HTMLResponse
     # Serve static files if they exist
-    file_path = Path(f'frontend/dist/{full_path}')
+    base_dir = Path('frontend/dist').resolve()
+    file_path = (base_dir / full_path).resolve()
+
+    # Prevent path traversal
+    if not str(file_path).startswith(str(base_dir)):
+        raise HTTPException(status_code=400, detail='Invalid path')
+
     if file_path.exists() and file_path.is_file():
         # Prevent accessing wizard.html directly if configured
         if full_path == 'wizard.html' and settings.is_configured:

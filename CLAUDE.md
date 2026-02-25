@@ -36,7 +36,7 @@ docker-compose down                # Stop all services
 docker compose up -d postgres redis qbittorrent
 
 # 2. Run Backend (Host 0.0.0.0, Port 8088)
-# Export RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@localhost:5433/rutorbot
+# Export RUTOR_BOT_DATABASE_URL=postgresql://rutor:${POSTGRES_PASSWORD:-postgres}@localhost:5433/rutorbot
 # Export RUTOR_BOT_REDIS_URL=redis://localhost:6380/0
 uv run uvicorn src.telegram_rutor_bot.web.app:app --reload --port 8088 --host 0.0.0.0
 
