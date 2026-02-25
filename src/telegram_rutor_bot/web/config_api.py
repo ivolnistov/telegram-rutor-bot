@@ -14,6 +14,7 @@ from telegram_rutor_bot.config import SearchConfig, settings
 from telegram_rutor_bot.db import get_async_session, get_or_create_user_by_chat_id
 from telegram_rutor_bot.db.config_ops import get_db_config, update_db_config
 from telegram_rutor_bot.db.models import AppConfigUpdate, Search
+from telegram_rutor_bot.db.searches import _get_or_create_category
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.web.auth import get_current_admin_if_configured
 
@@ -81,7 +82,16 @@ async def get_config() -> ConfigCheckResponse:
 
         stmt = select(Search).where(Search.creator_id.is_(None))
         system_searches_db = (await session.execute(stmt)).scalars().all()
-        searches = [SearchConfig(name=s.query or '', url=s.url, cron=s.cron) for s in system_searches_db]
+        searches = [
+            SearchConfig(
+                name=s.query or '',
+                url=s.url,
+                cron=s.cron,
+                category=s.category_rel.name if s.category_rel else None,
+                is_series=s.is_series,
+            )
+            for s in system_searches_db
+        ]
 
     # Convert DB config to dict
     current_vals: dict[str, Any] = {
@@ -168,14 +178,12 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:  # noq
         'telegram_token': config.telegram.token,
     }
 
-    updates.update(
-        {
-            'qbittorrent_host': config.torrent.host,
-            'qbittorrent_port': config.torrent.port,
-            'qbittorrent_username': config.torrent.username,
-            'qbittorrent_password': config.torrent.password,
-        }
-    )
+    updates.update({
+        'qbittorrent_host': config.torrent.host,
+        'qbittorrent_port': config.torrent.port,
+        'qbittorrent_username': config.torrent.username,
+        'qbittorrent_password': config.torrent.password,
+    })
 
     if config.tmdb_api_key:
         updates['tmdb_api_key'] = config.tmdb_api_key
@@ -212,7 +220,19 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:  # noq
         await session.execute(delete(Search).where(Search.creator_id.is_(None)))
 
         for idx, s in enumerate(config.searches):
-            db_search = Search(url=s.url, cron=s.cron, creator_id=None, query=s.name or f'System Search {idx + 1}')
+            category_id = None
+            if s.category:
+                cat_obj = await _get_or_create_category(session, s.category)
+                category_id = cat_obj.id
+
+            db_search = Search(
+                url=s.url,
+                cron=s.cron,
+                creator_id=None,
+                query=s.name or f'System Search {idx + 1}',
+                category_id=category_id,
+                is_series=s.is_series,
+            )
             session.add(db_search)
         await session.commit()
 

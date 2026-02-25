@@ -193,6 +193,7 @@ async def _process_torrent_item(
     new: list[int],
     category_id: int | None = None,
     film_id: int | None = None,
+    is_series: bool = False,
 ) -> None:
     """Process a single torrent item"""
     # Get or create film
@@ -224,6 +225,9 @@ async def _process_torrent_item(
             approved=False,
             downloaded=False,
         )
+        # If it's a series, every new torrent is considered a fresh notification event
+        if is_series and target_film_id not in new:
+            new.append(target_film_id)
     except IntegrityError:
         # Torrent with this magnet already exists, update it
         existing = await get_torrent_by_magnet(session, torrent_data['magnet'])
@@ -299,6 +303,7 @@ async def parse_rutor(
     category_id: int | None = None,
     progress_callback: Callable[[int], Awaitable[None]] | None = None,
     film_id: int | None = None,
+    is_series: bool = False,
 ) -> list[int]:
     """Parse rutor.info search results and save to database."""
     # Use session to fetch filters
@@ -366,7 +371,7 @@ async def parse_rutor(
 
         # Process torrent
         try:
-            await _process_torrent_item(session, torrent_data, film_cache, new, category_id, film_id)
+            await _process_torrent_item(session, torrent_data, film_cache, new, category_id, film_id, is_series)
             log.info('Processed %s: Added/Updated', torrent_data['name'])
         except Exception as e:  # pylint: disable=broad-exception-caught
             log.error('Failed to process %s: %s', torrent_data['name'], e)

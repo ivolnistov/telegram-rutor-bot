@@ -11,6 +11,8 @@ LOG_FILE="/config/plex_rename.log"
 
 echo "--- $(date) ---" >> "$LOG_FILE"
 echo "Processing: $TORRENT_NAME (Category: $CATEGORY)" >> "$LOG_FILE"
+echo "Source: $CONTENT_PATH" >> "$LOG_FILE"
+echo "Save Path: $SAVE_PATH" >> "$LOG_FILE"
 
 # Use Python + guessit for smart parsing
 python3 - <<EOF >> "$LOG_FILE" 2>&1
@@ -19,7 +21,7 @@ import shutil
 from guessit import guessit
 
 content_path = "$CONTENT_PATH"
-category = "$CATEGORY".strip().upper()
+category = "$CATEGORY".strip()
 save_path = "$SAVE_PATH"
 
 def sanitize(text):
@@ -33,35 +35,44 @@ def process():
     # Guess metadata
     name = os.path.basename(content_path)
     guess = guessit(name)
-
+    
     title = guess.get('title')
     year = guess.get('year')
     season = guess.get('season')
     episode = guess.get('episode')
+    
+    if not title:
+        # Fallback to torrent name if file name is cryptic
+        guess = guessit("$TORRENT_NAME")
+        title = guess.get('title')
+        if not year: year = guess.get('year')
+        if not season: season = guess.get('season')
 
     if not title:
         print(f"Could not guess title for {name}, skipping.")
         return
 
     title = sanitize(title)
-
+    
     # TV SHOWS Logic
-    if "TV" in category or season is not None:
+    if "TV" in category.upper() or season is not None:
         if season is None: season = 1
         season_str = f"Season {int(season):02d}"
-
-        target_dir = os.path.join(save_path, title, season_str)
+        
+        # Ensure we don't double the category folder if qbit already handled it
+        base_dir = save_path
+        target_dir = os.path.join(base_dir, title, season_str)
         os.makedirs(target_dir, exist_ok=True)
-
+        
         if os.path.isfile(content_path):
             ext = os.path.splitext(content_path)[1]
             ep_str = f"S{int(season):02d}E{int(episode):02d}" if episode else "S" + str(season)
             new_filename = f"{title} - {ep_str}{ext}"
             target_path = os.path.join(target_dir, new_filename)
-
+            
             print(f"Moving file to: {target_path}")
             shutil.move(content_path, target_path)
-
+        
         elif os.path.isdir(content_path):
             print(f"Processing directory: {name}")
             for root, dirs, files in os.walk(content_path):
@@ -70,40 +81,40 @@ def process():
                         f_guess = guessit(f)
                         f_ep = f_guess.get('episode') or episode
                         f_s = f_guess.get('season') or season
-
+                        
                         ext = os.path.splitext(f)[1]
-                        ep_str = f"S{int(f_s):02d}E{int(f_ep):02d}" if f_ep else "Extra"
+                        ep_str = f"S{int(f_s or season or 1):02d}E{int(f_ep):02d}" if f_ep else "Extra"
                         new_f = f"{title} - {ep_str}{ext}"
-
+                        
                         src = os.path.join(root, f)
                         dst = os.path.join(target_dir, new_f)
                         print(f"Moving {f} -> {dst}")
                         shutil.move(src, dst)
-
-            # Remove old dir if empty
-            try: shutil.rmtree(content_path)
-            except: pass
+            
+            # Clean up old dir if empty
+            if not os.listdir(content_path):
+                os.rmdir(content_path)
 
     # FILMS Logic
     else:
         folder_name = f"{title} ({year})" if year else title
         target_dir = os.path.join(save_path, folder_name)
         os.makedirs(target_dir, exist_ok=True)
-
+        
         if os.path.isfile(content_path):
             ext = os.path.splitext(content_path)[1]
             new_filename = f"{folder_name}{ext}"
             target_path = os.path.join(target_dir, new_filename)
             shutil.move(content_path, target_path)
-
+        
         elif os.path.isdir(content_path):
             for root, dirs, files in os.walk(content_path):
                 for f in files:
                     if f.lower().endswith(('.mkv', '.mp4', '.avi')):
                         ext = os.path.splitext(f)[1]
                         shutil.move(os.path.join(root, f), os.path.join(target_dir, f"{folder_name}{ext}"))
-            try: shutil.rmtree(content_path)
-            except: pass
+            if not os.listdir(content_path):
+                os.rmdir(content_path)
 
 process()
 EOF

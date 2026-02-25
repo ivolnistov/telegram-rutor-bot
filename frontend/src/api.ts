@@ -209,6 +209,8 @@ export interface SystemSearchConfig {
   name: string;
   url: string;
   cron: string;
+  category?: string;
+  is_series?: boolean;
 }
 
 export interface ConfigCheckResponse {

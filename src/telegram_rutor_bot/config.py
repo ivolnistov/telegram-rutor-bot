@@ -24,6 +24,8 @@ class SearchConfig(BaseModel):
     name: str = Field(description='Human-readable name for the search')
     url: str = Field(description='Rutor search URL')
     cron: str = Field(default='*/30 * * * *', description='Cron schedule for the search')
+    category: str | None = Field(default=None, description='Optional category for the torrents')
+    is_series: bool = Field(default=False, description='Treat search results as TV series for deduplication')
 
 
 class Settings(BaseSettings):

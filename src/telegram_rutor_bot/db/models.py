@@ -157,6 +157,7 @@ class Search(Base):
     creator_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('users.id'), nullable=True)
     query: Mapped[str | None] = mapped_column(String, nullable=True)
     category_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('categories.id'), nullable=True)
+    is_series: Mapped[bool] = mapped_column(Boolean, default=False)
 
     creator: Mapped[User | None] = relationship('User', back_populates='created_searches')
     category_rel: Mapped[Category | None] = relationship('Category', back_populates='searches')

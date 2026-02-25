@@ -103,7 +103,7 @@ class WatchlistMonitor:
                 url = f'http://rutor.info/search/0/0/0/0/{quote(query)}'
 
                 # parse_rutor handles filtering (via settings) and DB saving
-                new_ids = await parse_rutor(url, self.session)
+                new_ids = await parse_rutor(url, self.session, is_series=(film.tmdb_media_type == 'tv'))
 
                 if new_ids:
                     log.info(f'Found {len(new_ids)} new items for {film.name}')

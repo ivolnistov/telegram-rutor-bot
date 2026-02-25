@@ -17,7 +17,7 @@ import os
 import base64
 import hashlib
 
-config_path = os.environ.get('CONFIG_FILE', '/config/qBittorrent/qBittorrent.conf')
+config_path = os.environ['CONFIG_FILE']
 script_path = '/usr/local/bin/plex_rename.sh'
 cmd = f'/bin/bash {script_path} "%F" "%R" "%D" "%N" "%L"'
 
@@ -25,11 +25,6 @@ if not os.path.exists(config_path):
     print(f'Config file not found at {config_path}, skipping...')
     sys.exit(0)
 
-enable_rename = os.environ.get('ENABLE_PLEX_RENAME', 'false').lower() == 'true'
-
-if not enable_rename:
-    print('ENABLE_PLEX_RENAME is not set to true, skipping AutoRun configuration.')
-    # We still want to process BitTorrent and WebUI settings, so we just clear cmd
 # Read config lines
 lines = []
 with open(config_path, 'r') as f:
@@ -44,13 +39,6 @@ autorun_found = False
 program_set = False
 enabled_set = False
 
-enable_rename = os.environ.get('ENABLE_PLEX_RENAME', 'false').lower() == 'true'
-enabled_val = "true" if enable_rename else "false"
-cmd = f'/bin/bash {script_path} "%F" "%R" "%D" "%N" "%L"' if enable_rename else ""
-
-if not enable_rename:
-    print('ENABLE_PLEX_RENAME is not set to true, disabling AutoRun configuration.')
-
 for line in lines:
     stripped = line.strip()
     if stripped == '[AutoRun]':
@@ -62,7 +50,7 @@ for line in lines:
     if stripped.startswith('[') and stripped.endswith(']'):
         if in_autorun:
             if not enabled_set:
-                new_lines.append(f'enabled={enabled_val}\n')
+                new_lines.append('enabled=true\n')
             if not program_set:
                 new_lines.append(f'program={cmd}\n')
         in_autorun = False
@@ -71,7 +59,7 @@ for line in lines:
 
     if in_autorun:
         if stripped.startswith('enabled='):
-            new_lines.append(f'enabled={enabled_val}\n')
+            new_lines.append('enabled=true\n')
             enabled_set = True
         elif stripped.startswith('program='):
             new_lines.append(f'program={cmd}\n')
@@ -83,11 +71,11 @@ for line in lines:
 
 if not autorun_found:
     new_lines.append('\n[AutoRun]\n')
-    new_lines.append(f'enabled={enabled_val}\n')
+    new_lines.append('enabled=true\n')
     new_lines.append(f'program={cmd}\n')
 elif in_autorun:
      if not enabled_set:
-        new_lines.append(f'enabled={enabled_val}\n')
+        new_lines.append('enabled=true\n')
      if not program_set:
         new_lines.append(f'program={cmd}\n')
 
@@ -129,6 +117,8 @@ in_bt = False
 password_set = False
 host_header_set = False
 csrf_set = False
+ban_count_set = False
+ban_time_set = False
 whitelist_enabled_set = False
 whitelist_set = False
 
@@ -136,6 +126,8 @@ whitelist_set = False
 ratio_set = False
 time_set = False
 action_set = False
+tmm_disabled_set = False
+tmm_mode_set = False
 
 for line in new_lines:
     stripped = line.strip()
@@ -158,12 +150,16 @@ for line in new_lines:
              if conf_str and not password_set: final_lines.append(f'WebUI\\Password_PBKDF2={conf_str}\n')
              if not host_header_set: final_lines.append('WebUI\\HostHeaderValidation=false\n')
              if not csrf_set: final_lines.append('WebUI\\CSRFProtection=false\n')
+             if not ban_count_set: final_lines.append('WebUI\\MaxAuthenticationFailCount=100\n')
+             if not ban_time_set: final_lines.append('WebUI\\BanTime=0\n')
              if not whitelist_enabled_set: final_lines.append('WebUI\\AuthSubnetWhitelistEnabled=true\n')
-             if not whitelist_set: final_lines.append('WebUI\\AuthSubnetWhitelist=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1/32\n')
+             if not whitelist_set: final_lines.append('WebUI\\AuthSubnetWhitelist=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16\n')
         elif in_bt:
              if share_ratio_val and not ratio_set: final_lines.append(f'Session\\ShareRatioLimit={share_ratio_val}\n')
              if seeding_time_val and not time_set: final_lines.append(f'Session\\SeedingTimeLimit={seeding_time_val}\n')
              if share_action_val and not action_set: final_lines.append(f'Session\\ShareLimitAction={share_action_val}\n')
+             if not tmm_disabled_set: final_lines.append('Session\\AutoTMMDisabled=false\n')
+             if not tmm_mode_set: final_lines.append('Session\\TorrentTMMMode=0\n')
 
         in_pref = False
         in_bt = False
@@ -183,11 +179,17 @@ for line in new_lines:
         elif stripped.startswith('WebUI\\CSRFProtection='):
             final_lines.append('WebUI\\CSRFProtection=false\n')
             csrf_set = True
+        elif stripped.startswith('WebUI\\MaxAuthenticationFailCount='):
+            final_lines.append('WebUI\\MaxAuthenticationFailCount=100\n')
+            ban_count_set = True
+        elif stripped.startswith('WebUI\\BanTime='):
+            final_lines.append('WebUI\\BanTime=0\n')
+            ban_time_set = True
         elif stripped.startswith('WebUI\\AuthSubnetWhitelistEnabled='):
             final_lines.append('WebUI\\AuthSubnetWhitelistEnabled=true\n')
             whitelist_enabled_set = True
         elif stripped.startswith('WebUI\\AuthSubnetWhitelist='):
-            final_lines.append('WebUI\\AuthSubnetWhitelist=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1/32\n')
+            final_lines.append('WebUI\\AuthSubnetWhitelist=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16\n')
             whitelist_set = True
         else:
             final_lines.append(line)
@@ -211,6 +213,12 @@ for line in new_lines:
                 action_set = True
             else:
                 final_lines.append(line)
+        elif stripped.startswith('Session\\AutoTMMDisabled='):
+            final_lines.append('Session\\AutoTMMDisabled=false\n')
+            tmm_disabled_set = True
+        elif stripped.startswith('Session\\TorrentTMMMode='):
+            final_lines.append('Session\\TorrentTMMMode=0\n')
+            tmm_mode_set = True
         else:
             final_lines.append(line)
 
@@ -222,10 +230,16 @@ if in_pref:
      if conf_str and not password_set: final_lines.append(f'WebUI\\Password_PBKDF2={conf_str}\n')
      if not host_header_set: final_lines.append('WebUI\\HostHeaderValidation=false\n')
      if not csrf_set: final_lines.append('WebUI\\CSRFProtection=false\n')
+     if not ban_count_set: final_lines.append('WebUI\\MaxAuthenticationFailCount=100\n')
+     if not ban_time_set: final_lines.append('WebUI\\BanTime=0\n')
+     if not whitelist_enabled_set: final_lines.append('WebUI\\AuthSubnetWhitelistEnabled=true\n')
+     if not whitelist_set: final_lines.append('WebUI\\AuthSubnetWhitelist=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16\n')
 elif in_bt:
      if share_ratio_val and not ratio_set: final_lines.append(f'Session\\ShareRatioLimit={share_ratio_val}\n')
      if seeding_time_val and not time_set: final_lines.append(f'Session\\SeedingTimeLimit={seeding_time_val}\n')
      if share_action_val and not action_set: final_lines.append(f'Session\\ShareLimitAction={share_action_val}\n')
+     if not tmm_disabled_set: final_lines.append('Session\\AutoTMMDisabled=false\n')
+     if not tmm_mode_set: final_lines.append('Session\\TorrentTMMMode=0\n')
 
 with open(config_path, 'w') as f:
     f.writelines(final_lines)

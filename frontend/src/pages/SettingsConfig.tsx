@@ -11,6 +11,7 @@ import {
 } from "api";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
+import { Checkbox } from "components/ui/Checkbox";
 import { Input } from "components/ui/Input";
 import { Select } from "components/ui/Select";
 import { Tooltip } from "components/ui/Tooltip";
@@ -127,9 +128,7 @@ export default function SettingsConfig() {
         if (res.searches) {
           setActiveSearches(res.searches);
         } else if (res.current_values.searches) {
-          setActiveSearches(
-            res.current_values.searches as SystemSearchConfig[],
-          );
+          setActiveSearches(res.current_values.searches);
         }
 
         // Load Filters
@@ -664,7 +663,13 @@ export default function SettingsConfig() {
               onClick={() => {
                 setActiveSearches([
                   ...activeSearches,
-                  { name: "", url: "", cron: "0 * * * *" },
+                  {
+                    name: "",
+                    url: "",
+                    cron: "0 * * * *",
+                    category: "",
+                    is_series: false,
+                  },
                 ]);
               }}
             >
@@ -680,7 +685,7 @@ export default function SettingsConfig() {
             {activeSearches.map((search, index) => (
               <div
                 key={index}
-                className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr_auto] gap-2 items-start bg-zinc-900/50 p-3 rounded-lg border border-zinc-800"
+                className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr_1fr_auto_auto] gap-3 items-start bg-zinc-900/50 p-3 rounded-lg border border-zinc-800"
               >
                 <div>
                   <label className="text-xs font-medium text-zinc-500 mb-1 block">
@@ -724,7 +729,34 @@ export default function SettingsConfig() {
                     placeholder="0 * * * *"
                   />
                 </div>
-                <div className="flex items-end justify-center h-full pt-5">
+                <div>
+                  <label className="text-xs font-medium text-zinc-500 mb-1 block">
+                    Category
+                  </label>
+                  <Input
+                    value={search.category || ""}
+                    onChange={(e) => {
+                      const newSearches = [...activeSearches];
+                      newSearches[index].category = e.target.value;
+                      setActiveSearches(newSearches);
+                    }}
+                    placeholder="qbittorrent cat"
+                  />
+                </div>
+                <div className="flex flex-col items-center justify-center pt-2">
+                  <label className="text-xs font-medium text-zinc-500 mb-2 block">
+                    Сериалы
+                  </label>
+                  <Checkbox
+                    checked={search.is_series || false}
+                    onCheckedChange={(checked) => {
+                      const newSearches = [...activeSearches];
+                      newSearches[index].is_series = checked;
+                      setActiveSearches(newSearches);
+                    }}
+                  />
+                </div>
+                <div className="flex items-end justify-center h-full pt-6">
                   <Button
                     variant="ghost"
                     size="icon"
