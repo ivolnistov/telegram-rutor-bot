@@ -1,0 +1,25 @@
+name: TruffleHog Secret Scanner
+
+on:
+  push:
+    branches: ["main", "release"]
+  pull_request:
+    branches: ["main", "release"]
+
+jobs:
+  trufflehog:
+    name: Scan Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
