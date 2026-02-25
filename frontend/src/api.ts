@@ -205,11 +205,20 @@ export const updateUserStatus = async ({
 };
 
 // Config API
+export interface SystemSearchConfig {
+  name: string;
+  url: string;
+  cron: string;
+}
+
 export interface ConfigCheckResponse {
   configured: boolean;
   missing_fields: string[];
-  current_values: Record<string, string | number | boolean | null>;
+  current_values: Record<string, string | number | boolean | null> & {
+    searches?: SystemSearchConfig[];
+  };
   env_vars: string[];
+  searches?: SystemSearchConfig[];
 }
 
 export interface TorrentConfig {

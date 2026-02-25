@@ -7,12 +7,13 @@ from typing import Any, cast
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
+from sqlalchemy import delete, select
 
 from telegram_rutor_bot.clients.tmdb import TmdbClient
-from telegram_rutor_bot.config import settings
+from telegram_rutor_bot.config import SearchConfig, settings
 from telegram_rutor_bot.db import get_async_session, get_or_create_user_by_chat_id
 from telegram_rutor_bot.db.config_ops import get_db_config, update_db_config
-from telegram_rutor_bot.db.models import AppConfigUpdate
+from telegram_rutor_bot.db.models import AppConfigUpdate, Search
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.web.auth import get_current_admin_if_configured
 
@@ -28,6 +29,7 @@ class ConfigCheckResponse(BaseModel):
     missing_fields: list[str] = []
     current_values: dict[str, Any] = {}
     env_vars: list[str] = []
+    searches: list[SearchConfig] = []
 
 
 class TorrentConfig(BaseModel):
@@ -68,6 +70,7 @@ class ConfigSetupRequest(BaseModel):
     seed_time_limit: int = 2880
     inactive_seeding_time_limit: int = 0
     seed_limit_action: int = 0  # 0 = Pause, 1 = Remove
+    searches: list[SearchConfig] = []
 
 
 @router.get('', response_model=ConfigCheckResponse, dependencies=[Depends(get_current_admin_if_configured)])
@@ -75,6 +78,10 @@ async def get_config() -> ConfigCheckResponse:
     """Get current configuration status and effective values."""
     async with get_async_session() as session:
         db_config = await get_db_config(session)
+
+        stmt = select(Search).where(Search.creator_id.is_(None))
+        system_searches_db = (await session.execute(stmt)).scalars().all()
+        searches = [SearchConfig(name=s.query or '', url=s.url, cron=s.cron) for s in system_searches_db]
 
     # Convert DB config to dict
     current_vals: dict[str, Any] = {
@@ -141,13 +148,19 @@ async def get_config() -> ConfigCheckResponse:
 
     is_configured = bool(current_vals.get('telegram_token'))
 
+    # System searches already fetched from DB
+
     return ConfigCheckResponse(
-        configured=is_configured, missing_fields=missing, current_values=current_vals, env_vars=env_vars
+        configured=is_configured,
+        missing_fields=missing,
+        current_values=current_vals,
+        env_vars=env_vars,
+        searches=searches,
     )
 
 
 @router.post('', response_model=ConfigCheckResponse, dependencies=[Depends(get_current_admin_if_configured)])
-async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:
+async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:  # noqa: PLR0912
     """Save configuration to Database and initialize users."""
 
     updates = {
@@ -193,6 +206,17 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:
                 except Exception as e:
                     log.error('Failed to init user %s: %s', user_data.id, e)
             await session.commit()
+
+    # Save system searches to DB instead of config.toml
+    async with get_async_session() as session:
+        await session.execute(delete(Search).where(Search.creator_id.is_(None)))
+
+        for idx, s in enumerate(config.searches):
+            db_search = Search(url=s.url, cron=s.cron, creator_id=None, query=s.name or f'System Search {idx + 1}')
+            session.add(db_search)
+        await session.commit()
+
+    settings.searches = config.searches
 
     # Trigger Reload (In-process)
     settings.refresh(**cast(AppConfigUpdate, updates))

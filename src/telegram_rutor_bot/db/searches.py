@@ -118,14 +118,14 @@ async def get_searches(session: AsyncSession, show_empty: bool = False) -> list[
     query = select(Search).options(selectinload(Search.category_rel))
 
     if not show_empty:
-        # Filter out searches with no subscribers
+        # Filter out searches with no subscribers, EXCEPT system searches
         subquery = (
             select(count())
             .select_from(subscribes_table)
             .where(subscribes_table.c.search_id == Search.id)
             .scalar_subquery()
         )
-        query = query.where(subquery > 0)
+        query = query.where((subquery > 0) | (Search.creator_id.is_(None)))
 
     result = await session.execute(query.order_by(Search.id))
     return list(result.scalars().all())

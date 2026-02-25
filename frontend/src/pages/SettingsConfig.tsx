@@ -7,6 +7,7 @@ import {
   saveConfig,
   updateSearchFilters,
   type ConfigSetupRequest,
+  type SystemSearchConfig,
 } from "api";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -50,6 +51,11 @@ export default function SettingsConfig() {
   // Search Filters
   const [qualityFilters, setQualityFilters] = useState("");
   const [translationFilters, setTranslationFilters] = useState("");
+
+  // Active System Searches
+  const [activeSearches, setActiveSearches] = useState<SystemSearchConfig[]>(
+    [],
+  );
 
   const handleConnectTmdb = async () => {
     try {
@@ -116,11 +122,15 @@ export default function SettingsConfig() {
 
         setSeedRatioLimit(Number(res.current_values.seed_ratio_limit || 1.0));
         setSeedTimeLimit(Number(res.current_values.seed_time_limit || 2880));
-        setInactiveSeedingTimeLimit(
-          Number(res.current_values.inactive_seeding_time_limit || 0),
-        );
         setSeedLimitAction(Number(res.current_values.seed_limit_action || 0));
         setEnvVars(res.env_vars);
+        if (res.searches) {
+          setActiveSearches(res.searches);
+        } else if (res.current_values.searches) {
+          setActiveSearches(
+            res.current_values.searches as SystemSearchConfig[],
+          );
+        }
 
         // Load Filters
         const filters = await getSearchFilters();
@@ -156,6 +166,7 @@ export default function SettingsConfig() {
       seed_time_limit: seedTimeLimit,
       inactive_seeding_time_limit: inactiveSeedingTimeLimit,
       seed_limit_action: seedLimitAction,
+      searches: activeSearches.filter((s) => s.name && s.url),
     };
 
     try {
@@ -639,6 +650,101 @@ export default function SettingsConfig() {
               Only torrents matching these translations will be
               notified/downloaded.
             </p>
+          </div>
+        </div>
+
+        <div className="space-y-4 border-t border-zinc-800 pt-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-medium text-zinc-200">
+              Active Searches (System)
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setActiveSearches([
+                  ...activeSearches,
+                  { name: "", url: "", cron: "0 * * * *" },
+                ]);
+              }}
+            >
+              Add Search
+            </Button>
+          </div>
+          <p className="text-xs text-zinc-500 mb-4">
+            These searches run automatically in the background. Use {"{year}"}{" "}
+            in the URL for dynamic substitution.
+          </p>
+
+          <div className="space-y-4">
+            {activeSearches.map((search, index) => (
+              <div
+                key={index}
+                className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr_auto] gap-2 items-start bg-zinc-900/50 p-3 rounded-lg border border-zinc-800"
+              >
+                <div>
+                  <label className="text-xs font-medium text-zinc-500 mb-1 block">
+                    Name
+                  </label>
+                  <Input
+                    value={search.name}
+                    onChange={(e) => {
+                      const newSearches = [...activeSearches];
+                      newSearches[index].name = e.target.value;
+                      setActiveSearches(newSearches);
+                    }}
+                    placeholder="e.g. Top Movies {year}"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-zinc-500 mb-1 block">
+                    Rutor URL
+                  </label>
+                  <Input
+                    value={search.url}
+                    onChange={(e) => {
+                      const newSearches = [...activeSearches];
+                      newSearches[index].url = e.target.value;
+                      setActiveSearches(newSearches);
+                    }}
+                    placeholder="http://rutor.info/search/0/0/000/0/{year}"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-zinc-500 mb-1 block">
+                    Cron Schedule
+                  </label>
+                  <Input
+                    value={search.cron}
+                    onChange={(e) => {
+                      const newSearches = [...activeSearches];
+                      newSearches[index].cron = e.target.value;
+                      setActiveSearches(newSearches);
+                    }}
+                    placeholder="0 * * * *"
+                  />
+                </div>
+                <div className="flex items-end justify-center h-full pt-5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                    onClick={() => {
+                      const newSearches = [...activeSearches];
+                      newSearches.splice(index, 1);
+                      setActiveSearches(newSearches);
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {activeSearches.length === 0 && (
+              <div className="text-center py-8 text-sm text-zinc-500 italic bg-zinc-900/30 rounded-lg border border-dashed border-zinc-800">
+                No active system searches configured.
+              </div>
+            )}
           </div>
         </div>
 

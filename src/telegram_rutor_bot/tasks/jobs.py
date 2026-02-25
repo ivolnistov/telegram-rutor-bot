@@ -93,8 +93,12 @@ async def _run_search_process(session: AsyncSession, task: TaskExecution, search
         task.progress = percent
         await session.commit()
 
+    # Parse dynamic variables in URL
+    current_year = datetime.now(UTC).year
+    resolved_url = search.url.replace('{year}', str(current_year))
+
     new = await parse_rutor(
-        search.url,
+        resolved_url,
         session,
         category_id=search.category_id,
         progress_callback=update_progress,
@@ -430,8 +434,12 @@ async def notify_about_new(search_id: int) -> None:
             return
 
         try:
+            # Parse dynamic variables in URL
+            current_year = datetime.now(UTC).year
+            resolved_url = search.url.replace('{year}', str(current_year))
+
             # Run the search
-            new = await parse_rutor(search.url, session, category_id=search.category_id)
+            new = await parse_rutor(resolved_url, session, category_id=search.category_id)
             await update_last_success(session, search_id)
 
             if not new:
