@@ -2,38 +2,40 @@
 # Ultra Smart Rename Script for Plex with TMDB & Tags Support
 # $1: Content path, $2: Root path, $3: Save path, $4: Torrent name, $5: Category, $6: Tags
 
-CONTENT_PATH="$1"
-SAVE_PATH="$3"
-TORRENT_NAME="$4"
-CATEGORY="$5"
-TAGS="$6"
+export CONTENT_PATH="$1"
+export SAVE_PATH="$3"
+export TORRENT_NAME="$4"
+export CATEGORY="$5"
+export TAGS="$6"
 
 LOG_FILE="/config/plex_rename.log"
-TMDB_KEY="af702c5536acdf6b135a2284739b7c01"
+export TMDB_KEY="af702c5536acdf6b135a2284739b7c01" #gitleaks:allow
 
 echo "--- $(date) ---" >> "$LOG_FILE"
 echo "Processing: $TORRENT_NAME" >> "$LOG_FILE"
 echo "Tags: $TAGS" >> "$LOG_FILE"
 
 # Use Python + guessit + TMDB + Tags for smart parsing
-python3 - <<EOF >> "$LOG_FILE" 2>&1
+# Using quoted EOF to prevent bash expansion inside the Python script
+python3 - <<'EOF' >> "$LOG_FILE" 2>&1
 import os
 import shutil
 import requests
 import re
+import sys
 from guessit import guessit
 
-content_path = "$CONTENT_PATH"
-category = "$CATEGORY".strip().upper()
-save_path = "$SAVE_PATH"
-tmdb_key = "$TMDB_KEY"
-tags = "$TAGS"
+content_path = os.environ.get("CONTENT_PATH")
+save_path = os.environ.get("SAVE_PATH")
+torrent_name = os.environ.get("TORRENT_NAME")
+category = os.environ.get("CATEGORY", "").strip().upper()
+tmdb_key = os.environ.get("TMDB_KEY")
+tags = os.environ.get("TAGS", "")
 
 def sanitize(text):
     return text.replace('/', '-').replace(':', '-').strip()
 
 def get_tmdb_id_from_tags(tags_str):
-    # Look for tags like "tmdb:12345" or just "12345" if it's pure ID
     match = re.search(r'tmdb:(\d+)', tags_str, re.I)
     if match: return match.group(1)
     return None
@@ -43,7 +45,7 @@ def get_tmdb_id_from_api(title, year=None, is_show=False):
     url = f"https://api.themoviedb.org/3/search/{'tv' if is_show else 'movie'}"
     params = {"api_key": tmdb_key, "query": title}
     if year: params["year" if not is_show else "first_air_date_year"] = year
-    
+
     try:
         r = requests.get(url, params=params, timeout=10)
         data = r.json()
@@ -67,17 +69,17 @@ def write_id_file(folder_path, tmdb_id):
     except: pass
 
 def process():
-    if not os.path.exists(content_path):
-        print(f"Error: {content_path} not found")
+    if not content_path or not os.path.exists(content_path):
+        print(f"Error: content_path '{content_path}' not found")
         return
 
     name = os.path.basename(content_path)
     guess = guessit(name)
     title = guess.get('title')
     if not title:
-        guess = guessit("$TORRENT_NAME")
+        guess = guessit(torrent_name)
         title = guess.get('title')
-    
+
     if not title:
         print(f"Could not guess title for {name}, skipping.")
         return
@@ -86,20 +88,16 @@ def process():
     season = guess.get('season')
     episode = guess.get('episode')
     is_show = "TV" in category or season is not None
-    
-    # 1. Try to get ID from Tags
+
     tmdb_id = get_tmdb_id_from_tags(tags)
-    
-    # 2. Fallback to API search
     if not tmdb_id:
         print("No TMDB ID in tags, searching API...")
         tmdb_id = get_tmdb_id_from_api(title, year, is_show)
-    
+
     tmdb_tag = f" {{tmdb-{tmdb_id}}}" if tmdb_id else ""
-    
     clean_title = sanitize(title)
     display_title = f"{clean_title} ({year})" if year else clean_title
-    
+
     if is_show:
         if season is None: season = 1
         season_str = f"Season {int(season):02d}"
@@ -108,7 +106,7 @@ def process():
         target_dir = os.path.join(show_root, season_str)
         os.makedirs(target_dir, exist_ok=True)
         write_id_file(show_root, tmdb_id)
-        
+
         files_to_process = []
         if os.path.isfile(content_path): files_to_process.append(content_path)
         else:
@@ -116,15 +114,16 @@ def process():
                 for f in files:
                     if f.lower().endswith(('.mkv', '.mp4', '.avi')):
                         files_to_process.append(os.path.join(root, f))
-        
+
         for f_path in files_to_process:
             f_guess = guessit(os.path.basename(f_path))
-            f_ep = f_guess.get('episode') or episode
-            f_s = f_guess.get('season') or season
+            f_ep = f_guess.get('episode')
+            f_s = f_guess.get('season')
             ext = os.path.splitext(f_path)[1]
-            ep_str = f"S{int(f_s or season or 1):02d}E{int(f_ep):02d}" if f_ep else "Extra"
+            ep_str = f"S{int(f_s or season):02d}E{int(f_ep):02d}" if f_ep else "Extra"
             new_f = f"{clean_title} - {ep_str}{ext}"
             dst = os.path.join(target_dir, new_f)
+            print(f"Moving {os.path.basename(f_path)} -> {dst}")
             shutil.move(f_path, dst)
             set_mkv_title(dst, f"{clean_title} - {ep_str}")
     else:
@@ -132,7 +131,7 @@ def process():
         target_dir = os.path.join(save_path, folder_name)
         os.makedirs(target_dir, exist_ok=True)
         write_id_file(target_dir, tmdb_id)
-        
+
         if os.path.isfile(content_path):
             ext = os.path.splitext(content_path)[1]
             dst = os.path.join(target_dir, f"{folder_name}{ext}")

@@ -19,27 +19,27 @@ class TestParserHelpers:
 
     def test_parse_name_with_year(self):
         """Test parsing movie name with year"""
-        name, year = parse_name('The Matrix (1999) 1080p BluRay')
+        name, _orig, year = parse_name('The Matrix (1999) 1080p BluRay')
         assert name == 'The Matrix'
-        assert year == '1999'
+        assert str(year) == '1999'
 
     def test_parse_name_without_year(self):
         """Test parsing movie name without year"""
-        name, year = parse_name('Some Movie Title')
+        name, _orig, year = parse_name('Some Movie Title')
         assert name == 'Some Movie Title'
-        assert year == str(datetime.now(UTC).year)
+        assert str(year) == str(datetime.now(UTC).year)
 
     def test_parse_name_with_brackets_and_slash(self):
         """Test parsing complex movie name"""
-        name, year = parse_name('The Matrix (1999) [Extended Cut] / Матрица')
+        name, _orig, year = parse_name('The Matrix (1999) [Extended Cut] / Матрица')
         assert name == 'The Matrix'
-        assert year == '1999'
+        assert str(year) == '1999'
 
     def test_parse_name_cyrillic(self):
         """Test parsing with cyrillic ё"""
-        name, year = parse_name('Ёлки (2010)')
+        name, _orig, year = parse_name('Ёлки (2010)')
         assert name == 'Елки'  # ё is replaced with e
-        assert year == '2010'
+        assert str(year) == '2010'
 
     def test_size_to_bytes_converter_gb(self):
         """Test GB conversion"""
