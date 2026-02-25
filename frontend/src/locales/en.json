@@ -89,7 +89,10 @@
     },
     "downloads": {
         "title": "Downloads",
-        "no_downloads": "No active downloads"
+        "no_downloads": "No active downloads",
+        "delete": "Delete download",
+        "deleted": "Download deleted",
+        "delete_failed": "Failed to delete"
     },
     "settings": {
         "title": "Configuration",

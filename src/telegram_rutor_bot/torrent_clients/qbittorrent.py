@@ -32,6 +32,15 @@ class QBittorrentClient(TorrentClient):
         """Connect to qBittorrent and authenticate"""
         self._client = httpx.AsyncClient()
 
+        # Check if auth is bypassed (e.g. via IP Whitelist)
+        try:
+            check_resp = await self._client.get(f'{self.api_url}/app/version')
+            if check_resp.status_code == 200:
+                self._authenticated = True
+                return
+        except Exception:
+            pass
+
         # Authenticate if credentials provided
         if self.username and self.password:
             response = await self._client.post(

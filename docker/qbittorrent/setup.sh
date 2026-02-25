@@ -19,7 +19,7 @@ import hashlib
 
 config_path = os.environ['CONFIG_FILE']
 script_path = '/usr/local/bin/plex_rename.sh'
-cmd = f'/bin/bash {script_path} "%F" "%R" "%D" "%N" "%L"'
+cmd = f'/bin/bash {script_path} "%F" "%R" "%D" "%N" "%L" "%G"'
 
 if not os.path.exists(config_path):
     print(f'Config file not found at {config_path}, skipping...')
