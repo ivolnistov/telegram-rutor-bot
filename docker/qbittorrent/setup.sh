@@ -129,6 +129,8 @@ in_bt = False
 password_set = False
 host_header_set = False
 csrf_set = False
+whitelist_enabled_set = False
+whitelist_set = False
 
 # Flags for BitTorrent
 ratio_set = False
@@ -156,6 +158,8 @@ for line in new_lines:
              if conf_str and not password_set: final_lines.append(f'WebUI\\Password_PBKDF2={conf_str}\n')
              if not host_header_set: final_lines.append('WebUI\\HostHeaderValidation=false\n')
              if not csrf_set: final_lines.append('WebUI\\CSRFProtection=false\n')
+             if not whitelist_enabled_set: final_lines.append('WebUI\\AuthSubnetWhitelistEnabled=true\n')
+             if not whitelist_set: final_lines.append('WebUI\\AuthSubnetWhitelist=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1/32\n')
         elif in_bt:
              if share_ratio_val and not ratio_set: final_lines.append(f'Session\\ShareRatioLimit={share_ratio_val}\n')
              if seeding_time_val and not time_set: final_lines.append(f'Session\\SeedingTimeLimit={seeding_time_val}\n')
@@ -179,6 +183,12 @@ for line in new_lines:
         elif stripped.startswith('WebUI\\CSRFProtection='):
             final_lines.append('WebUI\\CSRFProtection=false\n')
             csrf_set = True
+        elif stripped.startswith('WebUI\\AuthSubnetWhitelistEnabled='):
+            final_lines.append('WebUI\\AuthSubnetWhitelistEnabled=true\n')
+            whitelist_enabled_set = True
+        elif stripped.startswith('WebUI\\AuthSubnetWhitelist='):
+            final_lines.append('WebUI\\AuthSubnetWhitelist=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1/32\n')
+            whitelist_set = True
         else:
             final_lines.append(line)
 
