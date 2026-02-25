@@ -17,7 +17,7 @@ import os
 import base64
 import hashlib
 
-config_path = os.environ['CONFIG_FILE']
+config_path = os.environ.get('CONFIG_FILE', '/config/qBittorrent/qBittorrent.conf')
 script_path = '/usr/local/bin/plex_rename.sh'
 cmd = f'/bin/bash {script_path} "%F" "%R" "%D" "%N" "%L"'
 
@@ -25,6 +25,11 @@ if not os.path.exists(config_path):
     print(f'Config file not found at {config_path}, skipping...')
     sys.exit(0)
 
+enable_rename = os.environ.get('ENABLE_PLEX_RENAME', 'false').lower() == 'true'
+
+if not enable_rename:
+    print('ENABLE_PLEX_RENAME is not set to true, skipping AutoRun configuration.')
+    # We still want to process BitTorrent and WebUI settings, so we just clear cmd
 # Read config lines
 lines = []
 with open(config_path, 'r') as f:
@@ -39,6 +44,13 @@ autorun_found = False
 program_set = False
 enabled_set = False
 
+enable_rename = os.environ.get('ENABLE_PLEX_RENAME', 'false').lower() == 'true'
+enabled_val = "true" if enable_rename else "false"
+cmd = f'/bin/bash {script_path} "%F" "%R" "%D" "%N" "%L"' if enable_rename else ""
+
+if not enable_rename:
+    print('ENABLE_PLEX_RENAME is not set to true, disabling AutoRun configuration.')
+
 for line in lines:
     stripped = line.strip()
     if stripped == '[AutoRun]':
@@ -50,7 +62,7 @@ for line in lines:
     if stripped.startswith('[') and stripped.endswith(']'):
         if in_autorun:
             if not enabled_set:
-                new_lines.append('enabled=true\n')
+                new_lines.append(f'enabled={enabled_val}\n')
             if not program_set:
                 new_lines.append(f'program={cmd}\n')
         in_autorun = False
@@ -59,7 +71,7 @@ for line in lines:
 
     if in_autorun:
         if stripped.startswith('enabled='):
-            new_lines.append('enabled=true\n')
+            new_lines.append(f'enabled={enabled_val}\n')
             enabled_set = True
         elif stripped.startswith('program='):
             new_lines.append(f'program={cmd}\n')
@@ -71,11 +83,11 @@ for line in lines:
 
 if not autorun_found:
     new_lines.append('\n[AutoRun]\n')
-    new_lines.append('enabled=true\n')
+    new_lines.append(f'enabled={enabled_val}\n')
     new_lines.append(f'program={cmd}\n')
 elif in_autorun:
      if not enabled_set:
-        new_lines.append('enabled=true\n')
+        new_lines.append(f'enabled={enabled_val}\n')
      if not program_set:
         new_lines.append(f'program={cmd}\n')
 

@@ -62,6 +62,7 @@ services:
       - WEBUI_PORT=8080
       - TORRENTING_PORT=6881
       - WEBUI_PASSWORD=rutor_secret_pass
+      - ENABLE_PLEX_RENAME=${ENABLE_PLEX_RENAME:-false}
       - DELETE_AFTER_RATIO=0
     volumes:
       - qbittorrent_config:/config
