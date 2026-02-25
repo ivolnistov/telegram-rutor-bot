@@ -1,11 +1,12 @@
 import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
 import betterTailwindcss from 'eslint-plugin-better-tailwindcss'
 import importPlugin from 'eslint-plugin-import'
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -34,7 +35,10 @@ export default defineConfig([
       'func-style': ['error', 'expression'],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/only-throw-error': 'error',
-      'better-tailwindcss/enforce-consistent-important-position': ['error', { position: 'recommended' }],
+      'better-tailwindcss/enforce-consistent-important-position': [
+        'error',
+        { position: 'recommended' },
+      ],
       'better-tailwindcss/enforce-consistent-variable-syntax': 'error',
       'better-tailwindcss/enforce-shorthand-classes': 'error',
       'better-tailwindcss/no-deprecated-classes': 'error',
@@ -56,4 +60,5 @@ export default defineConfig([
       ],
     },
   },
+  eslintPluginPrettierRecommended,
 ])

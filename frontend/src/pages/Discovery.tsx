@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addToWatchlist,
   createSearch,
@@ -17,11 +17,11 @@ import {
   searchDiscovery,
   searchOnRutor,
   syncLibrary,
-} from "api";
-import axios from "axios";
-import { Button } from "components/ui/Button";
-import { Modal } from "components/ui/Modal";
-import { useDebounce } from "hooks/useDebounce";
+} from 'api'
+import axios from 'axios'
+import { Button } from 'components/ui/Button'
+import { Modal } from 'components/ui/Modal'
+import { useDebounce } from 'hooks/useDebounce'
 import {
   Check,
   Download,
@@ -31,212 +31,208 @@ import {
   Rss,
   Search,
   Star,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import type { TmdbMedia } from "types";
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import type { TmdbMedia } from 'types'
 // ... imports
 
 const MediaModal = ({
   media,
   onClose,
 }: {
-  media: TmdbMedia;
-  onClose: () => void;
+  media: TmdbMedia
+  onClose: () => void
 }) => {
-  const { t } = useTranslation();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const queryClient = useQueryClient();
+  const { t } = useTranslation()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const queryClient = useQueryClient()
 
-  const [isSearchingLive, setIsSearchingLive] = useState(false);
-  const [isPolling, setIsPolling] = useState(false);
-  const [torrentSearch, setTorrentSearch] = useState("");
-  const [isTorrentsExpanded, setIsTorrentsExpanded] = useState(false);
+  const [isSearchingLive, setIsSearchingLive] = useState(false)
+  const [isPolling, setIsPolling] = useState(false)
+  const [torrentSearch, setTorrentSearch] = useState('')
+  const [isTorrentsExpanded, setIsTorrentsExpanded] = useState(false)
 
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
+    let timeout: ReturnType<typeof setTimeout>
     if (isPolling) {
       timeout = setTimeout(() => {
-        setIsPolling(false);
-      }, 30000);
+        setIsPolling(false)
+      }, 30000)
     }
     return () => {
-      clearTimeout(timeout);
-    };
-  }, [isPolling]);
+      clearTimeout(timeout)
+    }
+  }, [isPolling])
 
   const handleSearchOnRutor = async () => {
-    setIsSearchingLive(true);
-    setIsPolling(true);
+    setIsSearchingLive(true)
+    setIsPolling(true)
     try {
       // Use new endpoint that handles TMDB ID
-      const { status } = await searchOnRutor(media.media_type, media.id);
-      if (status === "search_started") {
-        toast.success(t("library.search_started"));
+      const { status } = await searchOnRutor(media.media_type, media.id)
+      if (status === 'search_started') {
+        toast.success(t('library.search_started'))
       } else {
-        toast.success(t("success"));
+        toast.success(t('success'))
       }
     } catch (e: unknown) {
-      let message = t("error");
+      let message = t('error')
       if (axios.isAxiosError(e)) {
         message =
           (e.response?.data as { detail?: string } | undefined)?.detail ||
-          e.message;
+          e.message
       } else if (e instanceof Error) {
-        message = e.message;
+        message = e.message
       }
-      toast.error(message);
+      toast.error(message)
     } finally {
-      setIsSearchingLive(false);
+      setIsSearchingLive(false)
     }
-  };
+  }
 
   const { data: user } = useQuery({
-    queryKey: ["me"],
+    queryKey: ['me'],
     queryFn: getMe,
     staleTime: Infinity,
-  });
+  })
 
   const handleSubscribe = async () => {
     if (!user) {
-      toast.error(t("error"));
-      return;
+      toast.error(t('error'))
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       let title =
         media.title ||
         media.name ||
         media.original_title ||
         media.original_name ||
-        "";
+        ''
 
-      const releaseDate = media.release_date || media.first_air_date;
+      const releaseDate = media.release_date || media.first_air_date
       if (releaseDate) {
-        const year = releaseDate.split("-")[0];
+        const year = releaseDate.split('-')[0]
         if (year) {
-          title += ` ${year}`;
+          title += ` ${year}`
         }
       }
 
-      const url = `https://rutor.info/search/0/0/0/0/${encodeURIComponent(title || "")}`;
-      const cron = "0 */4 * * *"; // Every 4 hours
+      const url = `https://rutor.info/search/0/0/0/0/${encodeURIComponent(title || '')}`
+      const cron = '0 */4 * * *' // Every 4 hours
 
-      const formData = new FormData();
-      formData.append("url", url);
-      formData.append("cron", cron);
-      formData.append("category", "Films");
-      formData.append("chat_id", String(user.chat_id));
+      const formData = new FormData()
+      formData.append('url', url)
+      formData.append('cron', cron)
+      formData.append('category', 'Films')
+      formData.append('chat_id', String(user.chat_id))
 
-      await createSearch(formData);
-      toast.success(t("discovery.subscribed") || "Subscribed successfully");
+      await createSearch(formData)
+      toast.success(t('discovery.subscribed') || 'Subscribed successfully')
     } catch {
-      toast.error(t("error"));
+      toast.error(t('error'))
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const { data: recommendations } = useQuery({
-    queryKey: ["recommendations", media.id],
-    queryFn: () => getRecommendations(media.title ? "movie" : "tv", media.id),
+    queryKey: ['recommendations', media.id],
+    queryFn: () => getRecommendations(media.title ? 'movie' : 'tv', media.id),
     enabled: !!media.id,
-  });
+  })
 
   const { data: accountStates } = useQuery({
-    queryKey: ["accountStates", media.id],
+    queryKey: ['accountStates', media.id],
     queryFn: () =>
-      getMediaAccountStates(media.title ? "movie" : "tv", media.id),
+      getMediaAccountStates(media.title ? 'movie' : 'tv', media.id),
     enabled: !!media.id,
-  });
+  })
 
   const { data: linkedTorrents } = useQuery({
-    queryKey: ["mediaTorrents", media.title ? "movie" : "tv", media.id],
-    queryFn: () => getMediaTorrents(media.title ? "movie" : "tv", media.id),
+    queryKey: ['mediaTorrents', media.title ? 'movie' : 'tv', media.id],
+    queryFn: () => getMediaTorrents(media.title ? 'movie' : 'tv', media.id),
     enabled: !!media.id,
     refetchInterval: isPolling ? 2000 : false,
-  });
+  })
 
   const { data: fullMedia } = useQuery({
-    queryKey: ["media", media.media_type, media.id],
+    queryKey: ['media', media.media_type, media.id],
     queryFn: () => getMediaDetails(media.media_type, media.id),
     enabled: !!media.id,
     staleTime: 1000 * 60 * 30, // 30 mins
-  });
+  })
 
-  const displayMedia = fullMedia || media;
+  const displayMedia = fullMedia || media
 
-  const getYear = (date?: string) => date?.split("-")[0] || "";
+  const getYear = (date?: string) => date?.split('-')[0] || ''
   const formatRuntime = (mins?: number) => {
-    if (!mins) return "";
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${String(h)}h ${String(m)}m`;
-  };
+    if (!mins) return ''
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    return `${String(h)}h ${String(m)}m`
+  }
 
   useEffect(() => {
     if (linkedTorrents && linkedTorrents.length > 0 && isPolling) {
-      setIsPolling(false);
-      void queryClient.invalidateQueries({ queryKey: ["discovery"] });
+      setIsPolling(false)
+      void queryClient.invalidateQueries({ queryKey: ['discovery'] })
     }
-  }, [linkedTorrents, isPolling, queryClient]);
+  }, [linkedTorrents, isPolling, queryClient])
   const userRating =
-    accountStates?.rated && typeof accountStates.rated !== "boolean"
+    accountStates?.rated && typeof accountStates.rated !== 'boolean'
       ? accountStates.rated.value
-      : 0;
+      : 0
 
-  const inLibrary = accountStates?.in_library;
-  const inWatchlist = accountStates?.watchlist;
+  const inLibrary = accountStates?.in_library
+  const inWatchlist = accountStates?.watchlist
 
   const handleWatchlist = async () => {
     try {
-      await addToWatchlist(
-        media.title ? "movie" : "tv",
-        media.id,
-        !inWatchlist,
-      );
+      await addToWatchlist(media.title ? 'movie' : 'tv', media.id, !inWatchlist)
       toast.success(
-        inWatchlist ? "Removed from Watchlist" : "Added to Watchlist",
-      );
+        inWatchlist ? 'Removed from Watchlist' : 'Added to Watchlist',
+      )
       await queryClient.invalidateQueries({
-        queryKey: ["accountStates", media.id],
-      });
+        queryKey: ['accountStates', media.id],
+      })
       // Invalidate discovery to update watchlist feed if implemented/visible
     } catch {
-      toast.error(t("error"));
+      toast.error(t('error'))
     }
-  };
+  }
 
   const handleRate = async (value: number) => {
     try {
       if (value === userRating) {
-        await deleteRating(media.title ? "movie" : "tv", media.id);
-        toast.success(t("discovery.rating_removed") || "Rating removed");
+        await deleteRating(media.title ? 'movie' : 'tv', media.id)
+        toast.success(t('discovery.rating_removed') || 'Rating removed')
       } else {
-        await rateMedia(media.title ? "movie" : "tv", media.id, value);
-        toast.success(t("discovery.rated") || "Rated successfully");
+        await rateMedia(media.title ? 'movie' : 'tv', media.id, value)
+        toast.success(t('discovery.rated') || 'Rated successfully')
       }
       await queryClient.invalidateQueries({
-        queryKey: ["accountStates", media.id],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["discovery", "rated"] });
+        queryKey: ['accountStates', media.id],
+      })
+      await queryClient.invalidateQueries({ queryKey: ['discovery', 'rated'] })
     } catch {
-      toast.error(t("error"));
+      toast.error(t('error'))
     }
-  };
+  }
 
   return (
     <Modal
       isOpen={true}
       onClose={onClose}
-      title={displayMedia.title || displayMedia.name || "Unknown"}
+      title={displayMedia.title || displayMedia.name || 'Unknown'}
     >
       <div className="space-y-5">
         <div className="aspect-video w-full rounded-lg overflow-hidden bg-black/20 relative">
           <img
-            src={`https://image.tmdb.org/t/p/w780${media.backdrop_path || media.poster_path || ""}`}
+            src={`https://image.tmdb.org/t/p/w780${media.backdrop_path || media.poster_path || ''}`}
             alt={media.title || media.name}
             className="size-full  object-cover"
           />
@@ -282,7 +278,7 @@ const MediaModal = ({
                           .replace(/./g, (char) =>
                             String.fromCodePoint(127397 + char.charCodeAt(0)),
                           )
-                      : "";
+                      : ''
                     return (
                       <span
                         key={c.iso_3166_1 || c.name}
@@ -291,7 +287,7 @@ const MediaModal = ({
                       >
                         {flag}
                       </span>
-                    );
+                    )
                   })}
                 </div>
               )}
@@ -335,7 +331,7 @@ const MediaModal = ({
 
             <a
               href={`https://www.kinopoisk.ru/index.php?kp_query=${encodeURIComponent(
-                displayMedia.title || displayMedia.name || "",
+                displayMedia.title || displayMedia.name || '',
               )}`}
               target="_blank"
               rel="noreferrer"
@@ -346,40 +342,40 @@ const MediaModal = ({
               </div>
               <span
                 className={
-                  displayMedia.kp_rating ? "font-bold text-[#ff5500]" : ""
+                  displayMedia.kp_rating ? 'font-bold text-[#ff5500]' : ''
                 }
               >
                 {displayMedia.kp_rating
                   ? displayMedia.kp_rating.toFixed(1)
-                  : "Search"}
+                  : 'Search'}
               </span>
             </a>
           </div>
 
           <p className="text-zinc-300 text-sm leading-relaxed">
-            {displayMedia.overview || t("discovery.no_overview")}
+            {displayMedia.overview || t('discovery.no_overview')}
           </p>
         </div>
 
         {/* Rating Section */}
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-zinc-400">
-            {t("discovery.your_rating")}
+            {t('discovery.your_rating')}
           </h4>
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
               <button
                 key={star}
                 onClick={() => {
-                  void handleRate(star);
+                  void handleRate(star)
                 }}
                 className="group focus:outline-none"
               >
                 <Star
                   className={`size-5 transition-colors ${
                     userRating >= star
-                      ? "fill-amber-400 text-amber-400"
-                      : "text-zinc-700 hover:text-amber-400 hover:fill-amber-400"
+                      ? 'fill-amber-400 text-amber-400'
+                      : 'text-zinc-700 hover:text-amber-400 hover:fill-amber-400'
                   }`}
                 />
               </button>
@@ -389,12 +385,12 @@ const MediaModal = ({
 
         <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
           <Button variant="ghost" onClick={onClose}>
-            {t("common.close")}
+            {t('common.close')}
           </Button>
           <Button
             variant="outline"
             onClick={() => {
-              void handleWatchlist();
+              void handleWatchlist()
             }}
           >
             {inWatchlist ? (
@@ -411,7 +407,7 @@ const MediaModal = ({
           </Button>
           <Button
             onClick={() => {
-              void handleSubscribe();
+              void handleSubscribe()
             }}
             disabled={isSubmitting || !user}
           >
@@ -420,12 +416,12 @@ const MediaModal = ({
             ) : (
               <Rss className="size-4 mr-2" />
             )}
-            {t("discovery.subscribe") || "Subscribe"}
+            {t('discovery.subscribe') || 'Subscribe'}
           </Button>
           <Button
             variant="outline"
             onClick={() => {
-              void handleSearchOnRutor();
+              void handleSearchOnRutor()
             }}
             disabled={isSearchingLive}
           >
@@ -434,7 +430,7 @@ const MediaModal = ({
             ) : (
               <Search className="size-4 mr-2" />
             )}
-            {t("discovery.search_on_rutor")}
+            {t('discovery.search_on_rutor')}
           </Button>
         </div>
 
@@ -442,7 +438,7 @@ const MediaModal = ({
         {recommendations && recommendations.length > 0 && (
           <div className="space-y-3 pt-4 border-t border-zinc-800">
             <h4 className="text-sm font-medium text-zinc-400">
-              {t("discovery.recommendations")}
+              {t('discovery.recommendations')}
             </h4>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
               {recommendations.slice(0, 4).map((rec) => (
@@ -458,7 +454,7 @@ const MediaModal = ({
                   }}
                 >
                   <img
-                    src={`https://image.tmdb.org/t/p/w300${rec.poster_path || ""}`}
+                    src={`https://image.tmdb.org/t/p/w300${rec.poster_path || ''}`}
                     alt={rec.title || rec.name}
                     className="size-full  object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                   />
@@ -487,7 +483,7 @@ const MediaModal = ({
                     type="text"
                     value={torrentSearch}
                     onChange={(e) => {
-                      setTorrentSearch(e.target.value);
+                      setTorrentSearch(e.target.value)
                     }}
                     placeholder="Filter..."
                     className="w-full bg-zinc-900 border border-zinc-700 text-zinc-200 rounded px-2 pl-7 py-1 text-xs focus:outline-none focus:border-violet-500"
@@ -499,8 +495,8 @@ const MediaModal = ({
             <div
               className={`space-y-2 ${
                 isTorrentsExpanded || torrentSearch
-                  ? "max-h-60 overflow-y-auto custom-scrollbar pr-1"
-                  : ""
+                  ? 'max-h-60 overflow-y-auto custom-scrollbar pr-1'
+                  : ''
               }`}
             >
               {linkedTorrents
@@ -528,7 +524,7 @@ const MediaModal = ({
                         {torrent.name}
                       </div>
                       <div className="text-xs text-zinc-500 mt-0.5">
-                        {(torrent.sz / 1024 / 1024 / 1024).toFixed(2)} GB •{" "}
+                        {(torrent.sz / 1024 / 1024 / 1024).toFixed(2)} GB •{' '}
                         {new Date(torrent.created).toLocaleDateString()}
                       </div>
                     </div>
@@ -539,12 +535,12 @@ const MediaModal = ({
                       onClick={() => {
                         void (async () => {
                           try {
-                            await downloadTorrent(torrent.id);
-                            toast.success(t("library.download_started"));
+                            await downloadTorrent(torrent.id)
+                            toast.success(t('library.download_started'))
                           } catch {
-                            toast.error(t("library.download_failed"));
+                            toast.error(t('library.download_failed'))
                           }
-                        })();
+                        })()
                       }}
                     >
                       <Check className="size-3 mr-1.5" />
@@ -569,58 +565,58 @@ const MediaModal = ({
                 size="sm"
                 className="w-full text-zinc-400 hover:text-zinc-200 h-8"
                 onClick={() => {
-                  setIsTorrentsExpanded(!isTorrentsExpanded);
+                  setIsTorrentsExpanded(!isTorrentsExpanded)
                 }}
               >
-                {isTorrentsExpanded ? "Show Less" : "Show More"}
+                {isTorrentsExpanded ? 'Show Less' : 'Show More'}
               </Button>
             )}
           </div>
         )}
       </div>
     </Modal>
-  );
-};
+  )
+}
 
 // Start of DiscoveryPage
 
 const DiscoveryPage = () => {
-  const { t } = useTranslation();
-  const [searchQuery, setSearchQuery] = useState("");
-  const debouncedQuery = useDebounce(searchQuery, 500);
+  const { t } = useTranslation()
+  const [searchQuery, setSearchQuery] = useState('')
+  const debouncedQuery = useDebounce(searchQuery, 500)
 
-  const [contentType, setContentType] = useState<"movie" | "tv">("movie");
+  const [contentType, setContentType] = useState<'movie' | 'tv'>('movie')
   const [feedType, setFeedType] = useState<
-    "trending" | "personal" | "rated" | "library"
-  >("library");
+    'trending' | 'personal' | 'rated' | 'library'
+  >('library')
 
-  const [selectedMedia, setSelectedMedia] = useState<TmdbMedia | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<TmdbMedia | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const { data: displayData, isLoading } = useQuery({
-    queryKey: ["discovery", feedType, contentType, debouncedQuery],
+    queryKey: ['discovery', feedType, contentType, debouncedQuery],
     queryFn: () => {
-      if (debouncedQuery) return searchDiscovery(debouncedQuery);
-      if (feedType === "personal") return getPersonalRecommendations(); // Note: check backend impl
-      if (feedType === "rated") return getRatedMedia(contentType);
-      if (feedType === "library") return getLibrary(contentType);
-      return getTrending(contentType);
+      if (debouncedQuery) return searchDiscovery(debouncedQuery)
+      if (feedType === 'personal') return getPersonalRecommendations() // Note: check backend impl
+      if (feedType === 'rated') return getRatedMedia(contentType)
+      if (feedType === 'library') return getLibrary(contentType)
+      return getTrending(contentType)
     },
-  });
+  })
 
   const handleSync = async () => {
-    setIsSyncing(true);
+    setIsSyncing(true)
     try {
-      const { matched } = await syncLibrary();
-      toast.success(`Library synced. Matched ${String(matched)} films.`);
+      const { matched } = await syncLibrary()
+      toast.success(`Library synced. Matched ${String(matched)} films.`)
       // Invalidate queries to refresh "in_library" badges
       // queryClient.invalidateQueries({ queryKey: ["discovery"] }); // need queryClient
     } catch {
-      toast.error("Failed to sync library");
+      toast.error('Failed to sync library')
     } finally {
-      setIsSyncing(false);
+      setIsSyncing(false)
     }
-  };
+  }
 
   return (
     <div>
@@ -630,12 +626,12 @@ const DiscoveryPage = () => {
           <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-1 self-start md:self-auto">
             <button
               onClick={() => {
-                setFeedType("library");
+                setFeedType('library')
               }}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                feedType === "library"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200"
+                feedType === 'library'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
               Library
@@ -643,12 +639,12 @@ const DiscoveryPage = () => {
 
             <button
               onClick={() => {
-                setFeedType("trending");
+                setFeedType('trending')
               }}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                feedType === "trending"
-                  ? "bg-zinc-800 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200"
+                feedType === 'trending'
+                  ? 'bg-zinc-800 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
               Trending
@@ -656,12 +652,12 @@ const DiscoveryPage = () => {
 
             <button
               onClick={() => {
-                setFeedType("rated");
+                setFeedType('rated')
               }}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                feedType === "rated"
-                  ? "bg-amber-600 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200"
+                feedType === 'rated'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
               Rated
@@ -669,12 +665,12 @@ const DiscoveryPage = () => {
 
             <button
               onClick={() => {
-                setFeedType("personal");
+                setFeedType('personal')
               }}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                feedType === "personal"
-                  ? "bg-violet-600 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200"
+                feedType === 'personal'
+                  ? 'bg-violet-600 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
               For You
@@ -683,37 +679,37 @@ const DiscoveryPage = () => {
           {/* Content Type Toggles */}
           <div
             className={`flex bg-zinc-900 border border-zinc-800 rounded-lg p-1 transition-opacity self-start md:self-auto ${
-              feedType === "personal"
-                ? "invisible opacity-0"
-                : "visible opacity-100"
+              feedType === 'personal'
+                ? 'invisible opacity-0'
+                : 'visible opacity-100'
             }`}
-            aria-hidden={feedType === "personal"}
+            aria-hidden={feedType === 'personal'}
           >
             <button
               onClick={() => {
-                setContentType("movie");
+                setContentType('movie')
               }}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                contentType === "movie"
-                  ? "bg-zinc-800 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200"
+                contentType === 'movie'
+                  ? 'bg-zinc-800 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
-              tabIndex={feedType === "personal" ? -1 : 0}
+              tabIndex={feedType === 'personal' ? -1 : 0}
             >
-              {t("discovery.movies")}
+              {t('discovery.movies')}
             </button>
             <button
               onClick={() => {
-                setContentType("tv");
+                setContentType('tv')
               }}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                contentType === "tv"
-                  ? "bg-zinc-800 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200"
+                contentType === 'tv'
+                  ? 'bg-zinc-800 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
-              tabIndex={feedType === "personal" ? -1 : 0}
+              tabIndex={feedType === 'personal' ? -1 : 0}
             >
-              {t("discovery.tv_shows")}
+              {t('discovery.tv_shows')}
             </button>
           </div>
           <div className="flex-1" /> {/* Spacer */}
@@ -724,9 +720,9 @@ const DiscoveryPage = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
+                  setSearchQuery(e.target.value)
                 }}
-                placeholder={t("discovery.search_placeholder")}
+                placeholder={t('discovery.search_placeholder')}
                 className="w-full bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
               />
             </div>
@@ -734,7 +730,7 @@ const DiscoveryPage = () => {
               variant="outline"
               size="icon"
               onClick={() => {
-                void handleSync();
+                void handleSync()
               }}
               disabled={isSyncing}
               title="Sync Library"
@@ -744,7 +740,7 @@ const DiscoveryPage = () => {
               ) : (
                 <RefreshCw className="size-4" />
               )}
-            </Button>{" "}
+            </Button>{' '}
           </div>
         </div>
       </div>
@@ -760,7 +756,7 @@ const DiscoveryPage = () => {
               key={media.id}
               className="group relative aspect-[2/3] bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-violet-500/50 transition-all cursor-pointer"
               onClick={() => {
-                setSelectedMedia(media);
+                setSelectedMedia(media)
               }}
             >
               {media.poster_path ? (
@@ -809,7 +805,7 @@ const DiscoveryPage = () => {
                   <div className="bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-medium text-white/90 border border-white/10 shadow-sm">
                     {
                       (media.release_date || media.first_air_date)?.split(
-                        "-",
+                        '-',
                       )[0]
                     }
                   </div>
@@ -835,9 +831,9 @@ const DiscoveryPage = () => {
                             iso_3166_1: c,
                             name: c,
                           }))
-                        : [];
+                        : []
 
-                  if (countries.length === 0) return null;
+                  if (countries.length === 0) return null
 
                   return (
                     <div className="flex -space-x-1">
@@ -856,12 +852,12 @@ const DiscoveryPage = () => {
                                       127397 + char.charCodeAt(0),
                                     ),
                                   )
-                              : ""}
+                              : ''}
                           </span>
                         </div>
                       ))}
                     </div>
-                  );
+                  )
                 })()}
               </div>
             </div>
@@ -873,11 +869,11 @@ const DiscoveryPage = () => {
         <MediaModal
           media={selectedMedia}
           onClose={() => {
-            setSelectedMedia(null);
+            setSelectedMedia(null)
           }}
         />
       )}
     </div>
-  );
-};
-export default DiscoveryPage;
+  )
+}
+export default DiscoveryPage

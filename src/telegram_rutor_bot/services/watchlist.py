@@ -121,7 +121,9 @@ async def check_matches(session: AsyncSession, new_torrents: list[Torrent]) -> N
             client = get_torrent_client()
             await client.connect()
             try:
-                await client.add_torrent(best.magnet)
+                # Pass TMDB ID as tag if available
+                tags = f'tmdb:{film.tmdb_id}' if film.tmdb_id else None
+                await client.add_torrent(best.magnet, tags=tags)
                 film.watch_status = 'downloaded'
                 film.notified = False  # To be picked up by digest
                 await session.commit()

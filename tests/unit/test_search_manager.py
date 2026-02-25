@@ -9,7 +9,7 @@ from telegram_rutor_bot.services.search_manager import _substitute_variables, sy
 
 @pytest.fixture
 def mock_settings():
-    with patch('telegram_rutor_bot.services.search_manager.settings', autospec=True) as mock:
+    with patch('telegram_rutor_bot.services.search_manager.settings') as mock:
         yield mock
 
 

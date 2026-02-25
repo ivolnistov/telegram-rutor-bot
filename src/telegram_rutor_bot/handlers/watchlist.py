@@ -43,7 +43,7 @@ async def watch_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     async with get_async_session() as session:
         # Check if film exists
         stmt = select(Film).where(Film.name == name)  # Exact match for now
-        # TODO: Ideally should use TMDB to normalize name, but for now simple string match
+        # NOTE: Ideally should use TMDB to normalize name, but for now simple string match
         film = (await session.execute(stmt)).scalars().first()
 
         if not film:

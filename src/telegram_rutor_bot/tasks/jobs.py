@@ -115,7 +115,7 @@ async def _run_search_process(session: AsyncSession, task: TaskExecution, search
 
             await check_matches(session, new_torrents)
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             log.exception('Passive watchlist check failed: %s', e)
 
     task.progress = 90

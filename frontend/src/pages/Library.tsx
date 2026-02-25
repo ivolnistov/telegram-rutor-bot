@@ -1,43 +1,43 @@
-import { useQuery } from "@tanstack/react-query";
-import { downloadTorrent, getTorrents } from "api";
-import { Button } from "components/ui/Button";
-import { Input } from "components/ui/Input";
-import { useDebounce } from "hooks/useDebounce";
-import { Download, Search } from "lucide-react";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import type { Torrent } from "types";
+import { useQuery } from '@tanstack/react-query'
+import { downloadTorrent, getTorrents } from 'api'
+import { Button } from 'components/ui/Button'
+import { Input } from 'components/ui/Input'
+import { useDebounce } from 'hooks/useDebounce'
+import { Download, Search } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import type { Torrent } from 'types'
 
 const LibraryPage = () => {
-  const { t } = useTranslation();
-  const [searchQuery, setSearchQuery] = useState("");
-  const debouncedQuery = useDebounce(searchQuery, 300);
+  const { t } = useTranslation()
+  const [searchQuery, setSearchQuery] = useState('')
+  const debouncedQuery = useDebounce(searchQuery, 300)
 
   const { data: torrents, isLoading } = useQuery({
-    queryKey: ["torrents", debouncedQuery],
+    queryKey: ['torrents', debouncedQuery],
     queryFn: () => getTorrents(100, debouncedQuery),
-  });
+  })
 
   return (
     <div>
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-        <h3 className="text-xl font-semibold">{t("library.title")}</h3>
+        <h3 className="text-xl font-semibold">{t('library.title')}</h3>
         <div className="w-full md:w-64">
           <Input
             icon={<Search className="size-4 " />}
             type="text"
-            placeholder={t("library.search_placeholder")}
+            placeholder={t('library.search_placeholder')}
             value={searchQuery}
             onChange={(e) => {
-              setSearchQuery(e.target.value);
+              setSearchQuery(e.target.value)
             }}
           />
         </div>
       </div>
 
       {isLoading ? (
-        <div className="text-zinc-500">{t("library.loading")}</div>
+        <div className="text-zinc-500">{t('library.loading')}</div>
       ) : (
         <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-900/30">
           <div className="overflow-x-auto">
@@ -61,7 +61,7 @@ const LibraryPage = () => {
                         {torrent.film?.poster ? (
                           <img
                             src={
-                              torrent.film.poster.startsWith("http")
+                              torrent.film.poster.startsWith('http')
                                 ? torrent.film.poster
                                 : `https://image.tmdb.org/t/p/w92${torrent.film.poster}`
                             }
@@ -102,17 +102,17 @@ const LibraryPage = () => {
                         onClick={() => {
                           void (async () => {
                             try {
-                              await downloadTorrent(torrent.id);
-                              toast.success(t("library.download_started"));
+                              await downloadTorrent(torrent.id)
+                              toast.success(t('library.download_started'))
                             } catch (e) {
-                              console.error(e);
-                              toast.error(t("library.download_failed"));
+                              console.error(e)
+                              toast.error(t('library.download_failed'))
                             }
-                          })();
+                          })()
                         }}
                       >
                         <Download className="size-3 mr-1.5" />
-                        {t("library.download")}
+                        {t('library.download')}
                       </Button>
                     </td>
                   </tr>
@@ -123,12 +123,12 @@ const LibraryPage = () => {
 
           {torrents?.length === 0 && (
             <div className="py-12 text-center text-zinc-500 border-t border-zinc-800">
-              {t("library.no_films")}
+              {t('library.no_films')}
             </div>
           )}
         </div>
       )}
     </div>
-  );
-};
-export default LibraryPage;
+  )
+}
+export default LibraryPage

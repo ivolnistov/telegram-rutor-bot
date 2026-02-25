@@ -1,5 +1,5 @@
-import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { Link, Outlet, useLocation } from '@tanstack/react-router'
+import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import {
   Clock,
   Download,
@@ -7,18 +7,18 @@ import {
   MonitorPlay,
   Search,
   Settings,
-} from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { Toaster } from "sonner";
-import LanguageSwitcher from "./components/LanguageSwitcher";
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Toaster } from 'sonner'
+import LanguageSwitcher from './components/LanguageSwitcher'
 
 const App = () => {
-  const { t } = useTranslation();
-  const location = useLocation();
+  const { t } = useTranslation()
+  const location = useLocation()
 
-  const isLogin = location.pathname === "/login";
+  const isLogin = location.pathname === '/login'
 
-  const showHeader = !isLogin;
+  const showHeader = !isLogin
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-violet-500/30">
@@ -44,39 +44,39 @@ const App = () => {
                   to="/"
                   className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 [&.active]:bg-zinc-800 [&.active]:text-white [&.active]:shadow-sm"
                   activeProps={{
-                    className: "bg-zinc-800 text-white shadow-sm",
+                    className: 'bg-zinc-800 text-white shadow-sm',
                   }}
                 >
                   <Search className="size-4 " />
-                  {t("sidebar.dashboard")}
+                  {t('sidebar.dashboard')}
                 </Link>
                 <Link
                   to="/library"
                   className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 [&.active]:bg-zinc-800 [&.active]:text-white [&.active]:shadow-sm"
                 >
                   <Library className="size-4 " />
-                  {t("sidebar.torrents")}
+                  {t('sidebar.torrents')}
                 </Link>
                 <Link
                   to="/tasks"
                   className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 [&.active]:bg-zinc-800 [&.active]:text-white [&.active]:shadow-sm"
                 >
                   <Clock className="size-4 " />
-                  {t("sidebar.tasks")}
+                  {t('sidebar.tasks')}
                 </Link>
                 <Link
                   to="/downloads"
                   className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 [&.active]:bg-zinc-800 [&.active]:text-white [&.active]:shadow-sm"
                 >
                   <Download className="size-4 " />
-                  {t("downloads.title", "Downloads")}
+                  {t('downloads.title', 'Downloads')}
                 </Link>
                 <Link
                   to="/settings/category"
                   className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 [&.active]:bg-zinc-800 [&.active]:text-white [&.active]:shadow-sm"
                 >
                   <Settings className="size-4 " />
-                  {t("sidebar.settings")}
+                  {t('sidebar.settings')}
                 </Link>
               </nav>
               <LanguageSwitcher />
@@ -91,7 +91,7 @@ const App = () => {
       <TanStackRouterDevtools />
       <Toaster theme="dark" position="top-right" richColors />
     </div>
-  );
-};
+  )
+}
 
-export default App;
+export default App

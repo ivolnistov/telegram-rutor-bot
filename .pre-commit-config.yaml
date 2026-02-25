@@ -35,10 +35,24 @@ repos:
 
       - id: markdownlint
         name: markdownlint
-        entry: npx markdownlint-cli
+        entry: bash -c 'cd frontend && npx markdownlint-cli "**/*.md" --ignore "**/node_modules/**" --ignore "dist/**" -c .markdownlint.json'
         language: system
         types: [markdown]
-        args: ["--fix"]
+        pass_filenames: false
+
+      - id: frontend-prettier
+        name: frontend prettier
+        entry: bash -c 'cd frontend && npm run format'
+        language: system
+        types_or: [javascript, jsx, ts, tsx, json, css, html]
+        pass_filenames: false
+
+      - id: frontend-eslint
+        name: frontend eslint
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        types_or: [javascript, jsx, ts, tsx]
+        pass_filenames: false
 
       - id: mypy
         name: mypy

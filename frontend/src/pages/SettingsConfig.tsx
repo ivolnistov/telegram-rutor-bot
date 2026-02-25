@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from '@tanstack/react-router'
 import {
   checkConfig,
   createTmdbSession,
@@ -8,13 +8,13 @@ import {
   updateSearchFilters,
   type ConfigSetupRequest,
   type SystemSearchConfig,
-} from "api";
-import { Button } from "components/ui/Button";
-import { Card } from "components/ui/Card";
-import { Checkbox } from "components/ui/Checkbox";
-import { Input } from "components/ui/Input";
-import { Select } from "components/ui/Select";
-import { Tooltip } from "components/ui/Tooltip";
+} from 'api'
+import { Button } from 'components/ui/Button'
+import { Card } from 'components/ui/Card'
+import { Checkbox } from 'components/ui/Checkbox'
+import { Input } from 'components/ui/Input'
+import { Select } from 'components/ui/Select'
+import { Tooltip } from 'components/ui/Tooltip'
 import {
   Check,
   Eye,
@@ -23,130 +23,128 @@ import {
   Pause,
   Settings as SettingsIcon,
   Trash2,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 export default function SettingsConfig() {
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [envVars, setEnvVars] = useState<string[]>([]);
+  const { t } = useTranslation()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [envVars, setEnvVars] = useState<string[]>([])
 
-  const [telegramToken, setTelegramToken] = useState("");
-  const [tmdbApiKey, setTmdbApiKey] = useState("");
-  const [tmdbSessionId, setTmdbSessionId] = useState("");
+  const [telegramToken, setTelegramToken] = useState('')
+  const [tmdbApiKey, setTmdbApiKey] = useState('')
+  const [tmdbSessionId, setTmdbSessionId] = useState('')
 
   // Torrent Client State
-  const [host, setHost] = useState("localhost");
-  const [port, setPort] = useState(8080);
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("");
-  const [showTorrentPassword, setShowTorrentPassword] = useState(false);
-  const [seedRatioLimit, setSeedRatioLimit] = useState(1.0);
-  const [seedTimeLimit, setSeedTimeLimit] = useState(2880);
-  const [inactiveSeedingTimeLimit, setInactiveSeedingTimeLimit] = useState(0);
-  const [seedLimitAction, setSeedLimitAction] = useState(0);
+  const [host, setHost] = useState('localhost')
+  const [port, setPort] = useState(8080)
+  const [username, setUsername] = useState('admin')
+  const [password, setPassword] = useState('')
+  const [showTorrentPassword, setShowTorrentPassword] = useState(false)
+  const [seedRatioLimit, setSeedRatioLimit] = useState(1.0)
+  const [seedTimeLimit, setSeedTimeLimit] = useState(2880)
+  const [inactiveSeedingTimeLimit, setInactiveSeedingTimeLimit] = useState(0)
+  const [seedLimitAction, setSeedLimitAction] = useState(0)
 
   // Search Filters
-  const [qualityFilters, setQualityFilters] = useState("");
-  const [translationFilters, setTranslationFilters] = useState("");
+  const [qualityFilters, setQualityFilters] = useState('')
+  const [translationFilters, setTranslationFilters] = useState('')
 
   // Active System Searches
-  const [activeSearches, setActiveSearches] = useState<SystemSearchConfig[]>(
-    [],
-  );
+  const [activeSearches, setActiveSearches] = useState<SystemSearchConfig[]>([])
 
   const handleConnectTmdb = async () => {
     try {
       // Ensure key is saved to backend before requesting token
-      await handleSave();
-      const { auth_url } = await getTmdbAuthUrl(window.location.href);
-      window.location.href = auth_url;
+      await handleSave()
+      const { auth_url } = await getTmdbAuthUrl(window.location.href)
+      window.location.href = auth_url
     } catch (e) {
-      console.error(e);
-      toast.error("Failed to get TMDB auth URL (Ensure API Key is valid)");
+      console.error(e)
+      toast.error('Failed to get TMDB auth URL (Ensure API Key is valid)')
     }
-  };
+  }
 
-  const processedToken = useRef<string | null>(null);
+  const processedToken = useRef<string | null>(null)
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const requestToken = params.get("request_token");
-    const approved = params.get("approved");
+    const params = new URLSearchParams(window.location.search)
+    const requestToken = params.get('request_token')
+    const approved = params.get('approved')
 
-    if (requestToken && approved === "true") {
+    if (requestToken && approved === 'true') {
       // Prevent double invocation (React Strict Mode)
       if (processedToken.current === requestToken) {
-        return;
+        return
       }
-      processedToken.current = requestToken;
+      processedToken.current = requestToken
 
       const finishAuth = async () => {
-        const toastId = toast.loading("Connecting to TMDB...");
+        const toastId = toast.loading('Connecting to TMDB...')
         try {
-          await createTmdbSession(requestToken);
-          toast.dismiss(toastId);
-          toast.success("Connected to TMDB!");
+          await createTmdbSession(requestToken)
+          toast.dismiss(toastId)
+          toast.success('Connected to TMDB!')
 
           // Clear URL
-          window.history.replaceState({}, "", window.location.pathname);
+          window.history.replaceState({}, '', window.location.pathname)
 
           // Refresh config
-          const res = await checkConfig();
-          setTmdbSessionId(String(res.current_values.tmdb_session_id || ""));
+          const res = await checkConfig()
+          setTmdbSessionId(String(res.current_values.tmdb_session_id || ''))
         } catch (e) {
-          console.error(e);
-          toast.dismiss(toastId);
-          toast.error("Failed to create TMDB session");
+          console.error(e)
+          toast.dismiss(toastId)
+          toast.error('Failed to create TMDB session')
         }
-      };
+      }
 
-      void finishAuth();
+      void finishAuth()
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await checkConfig();
-        setTelegramToken(String(res.current_values.telegram_token || ""));
-        setTmdbApiKey(String(res.current_values.tmdb_api_key || ""));
-        setTmdbSessionId(String(res.current_values.tmdb_session_id || ""));
+        const res = await checkConfig()
+        setTelegramToken(String(res.current_values.telegram_token || ''))
+        setTmdbApiKey(String(res.current_values.tmdb_api_key || ''))
+        setTmdbSessionId(String(res.current_values.tmdb_session_id || ''))
 
-        setHost(String(res.current_values.qbittorrent_host || "localhost"));
-        setPort(Number(res.current_values.qbittorrent_port || 8080));
-        setUsername(String(res.current_values.qbittorrent_username || "admin"));
-        setPassword(String(res.current_values.qbittorrent_password || ""));
+        setHost(String(res.current_values.qbittorrent_host || 'localhost'))
+        setPort(Number(res.current_values.qbittorrent_port || 8080))
+        setUsername(String(res.current_values.qbittorrent_username || 'admin'))
+        setPassword(String(res.current_values.qbittorrent_password || ''))
 
-        setSeedRatioLimit(Number(res.current_values.seed_ratio_limit || 1.0));
-        setSeedTimeLimit(Number(res.current_values.seed_time_limit || 2880));
-        setSeedLimitAction(Number(res.current_values.seed_limit_action || 0));
-        setEnvVars(res.env_vars);
+        setSeedRatioLimit(Number(res.current_values.seed_ratio_limit || 1.0))
+        setSeedTimeLimit(Number(res.current_values.seed_time_limit || 2880))
+        setSeedLimitAction(Number(res.current_values.seed_limit_action || 0))
+        setEnvVars(res.env_vars)
         if (res.searches) {
-          setActiveSearches(res.searches);
+          setActiveSearches(res.searches)
         } else if (res.current_values.searches) {
-          setActiveSearches(res.current_values.searches);
+          setActiveSearches(res.current_values.searches)
         }
 
         // Load Filters
-        const filters = await getSearchFilters();
-        setQualityFilters(filters.quality || "");
-        setTranslationFilters(filters.translation || "");
+        const filters = await getSearchFilters()
+        setQualityFilters(filters.quality || '')
+        setTranslationFilters(filters.translation || '')
       } catch (err) {
-        console.error(err);
-        toast.error(t("common.error"));
+        console.error(err)
+        toast.error(t('common.error'))
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    void load();
-  }, [t]);
+    }
+    void load()
+  }, [t])
 
   const handleSave = async () => {
-    setSaving(true);
+    setSaving(true)
 
     const config: ConfigSetupRequest = {
       telegram: {
@@ -155,7 +153,7 @@ export default function SettingsConfig() {
       tmdb_api_key: tmdbApiKey,
       tmdb_session_id: tmdbSessionId,
       torrent: {
-        client: "qbittorrent",
+        client: 'qbittorrent',
         host,
         port: port,
         username,
@@ -166,30 +164,29 @@ export default function SettingsConfig() {
       inactive_seeding_time_limit: inactiveSeedingTimeLimit,
       seed_limit_action: seedLimitAction,
       searches: activeSearches.filter((s) => s.name && s.url),
-    };
+    }
 
     try {
-      await saveConfig(config);
+      await saveConfig(config)
       await updateSearchFilters({
         quality: qualityFilters || null,
         translation: translationFilters || null,
-      });
-      toast.success(t("common.saved"));
+      })
+      toast.success(t('common.saved'))
     } catch (e: unknown) {
       if (e instanceof Error) {
-        toast.error(e.message);
+        toast.error(e.message)
       } else {
-        toast.error(t("common.error"));
+        toast.error(t('common.error'))
       }
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
-  const isEnv = (key: string) => envVars.includes(key);
+  const isEnv = (key: string) => envVars.includes(key)
 
-  if (loading)
-    return <div className="text-zinc-500">{t("common.loading")}</div>;
+  if (loading) return <div className="text-zinc-500">{t('common.loading')}</div>
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -198,19 +195,19 @@ export default function SettingsConfig() {
           to="/settings/category"
           className="px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-300 border-b-2 border-transparent hover:border-zinc-800 transition-colors"
         >
-          {t("sidebar.categories")}
+          {t('sidebar.categories')}
         </Link>
         <Link
           to="/settings/users"
           className="px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-300 border-b-2 border-transparent hover:border-zinc-800 transition-colors"
         >
-          {t("sidebar.users")}
+          {t('sidebar.users')}
         </Link>
         <Link
           to="/settings/config"
           className="px-4 py-2 text-sm font-medium border-b-2 border-violet-500 text-violet-400"
         >
-          {t("settings.title")}
+          {t('settings.title')}
         </Link>
       </div>
 
@@ -218,10 +215,10 @@ export default function SettingsConfig() {
         <div>
           <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
             <SettingsIcon className="size-5 text-violet-400" />
-            {t("settings.title")}
+            {t('settings.title')}
           </h2>
           <p className="text-zinc-500 text-sm mt-1">
-            {t("settings.description")}
+            {t('settings.description')}
           </p>
         </div>
       </div>
@@ -230,9 +227,9 @@ export default function SettingsConfig() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-medium text-zinc-200">
-              {t("settings.telegram")}
+              {t('settings.telegram')}
             </h2>
-            {isEnv("telegram_token") && <EnvBadge />}
+            {isEnv('telegram_token') && <EnvBadge />}
           </div>
 
           <div className="grid gap-2">
@@ -241,9 +238,9 @@ export default function SettingsConfig() {
                 htmlFor="token"
                 className="text-sm font-medium text-zinc-400"
               >
-                {t("settings.telegram_token")}
+                {t('settings.telegram_token')}
               </label>
-              <Tooltip content={t("settings.telegram_token_hint")}>
+              <Tooltip content={t('settings.telegram_token_hint')}>
                 <div className="p-1 cursor-help rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300">
                   <Info className="size-4" />
                 </div>
@@ -255,18 +252,18 @@ export default function SettingsConfig() {
                   id="token"
                   value={telegramToken}
                   onChange={(e) => {
-                    setTelegramToken(e.target.value);
+                    setTelegramToken(e.target.value)
                   }}
-                  placeholder={t("settings.telegram_token_placeholder")}
-                  disabled={isEnv("telegram_token")}
+                  placeholder={t('settings.telegram_token_placeholder')}
+                  disabled={isEnv('telegram_token')}
                   className={
-                    isEnv("telegram_token")
-                      ? "opacity-60 cursor-not-allowed"
-                      : ""
+                    isEnv('telegram_token')
+                      ? 'opacity-60 cursor-not-allowed'
+                      : ''
                   }
                 />
               </div>
-              {isEnv("telegram_token") && (
+              {isEnv('telegram_token') && (
                 <Check className="size-5 text-green-500 shrink-0" />
               )}
             </div>
@@ -278,12 +275,12 @@ export default function SettingsConfig() {
                 htmlFor="tmdbApiKey"
                 className="text-sm font-medium text-zinc-400"
               >
-                {t("settings.tmdb_api_key")}
+                {t('settings.tmdb_api_key')}
               </label>
               <Tooltip
                 content={
                   <>
-                    {t("settings.tmdb_api_key_hint")}{" "}
+                    {t('settings.tmdb_api_key_hint')}{' '}
                     <a
                       href="https://www.themoviedb.org/settings/api"
                       target="_blank"
@@ -307,9 +304,9 @@ export default function SettingsConfig() {
                   type="password"
                   value={tmdbApiKey}
                   onChange={(e) => {
-                    setTmdbApiKey(e.target.value);
+                    setTmdbApiKey(e.target.value)
                   }}
-                  placeholder={t("settings.tmdb_api_key_placeholder")}
+                  placeholder={t('settings.tmdb_api_key_placeholder')}
                 />
               </div>
             </div>
@@ -321,9 +318,9 @@ export default function SettingsConfig() {
                 htmlFor="tmdbSessionId"
                 className="text-sm font-medium text-zinc-400"
               >
-                {t("settings.tmdb_session_id")}
+                {t('settings.tmdb_session_id')}
               </label>
-              <Tooltip content={t("settings.tmdb_session_id_hint")}>
+              <Tooltip content={t('settings.tmdb_session_id_hint')}>
                 <div className="p-1 cursor-help rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300">
                   <Info className="size-4" />
                 </div>
@@ -336,16 +333,16 @@ export default function SettingsConfig() {
                   type="password"
                   value={tmdbSessionId}
                   onChange={(e) => {
-                    setTmdbSessionId(e.target.value);
+                    setTmdbSessionId(e.target.value)
                   }}
-                  placeholder={t("settings.tmdb_session_id_placeholder")}
+                  placeholder={t('settings.tmdb_session_id_placeholder')}
                 />
               </div>
               {tmdbApiKey && !tmdbSessionId && (
                 <Button
                   variant="outline"
                   onClick={() => {
-                    void handleConnectTmdb();
+                    void handleConnectTmdb()
                   }}
                   className="shrink-0"
                 >
@@ -358,7 +355,7 @@ export default function SettingsConfig() {
 
         <div className="space-y-4 border-t border-zinc-800 pt-6">
           <h2 className="text-lg font-medium text-zinc-200">
-            {t("settings.torrent_client")}
+            {t('settings.torrent_client')}
           </h2>
 
           <div className="grid grid-cols-2 gap-4">
@@ -368,21 +365,21 @@ export default function SettingsConfig() {
                   htmlFor="host"
                   className="text-sm font-medium text-zinc-400"
                 >
-                  {t("settings.host")}
+                  {t('settings.host')}
                 </label>
-                {isEnv("qbittorrent_host") && <EnvBadge />}
+                {isEnv('qbittorrent_host') && <EnvBadge />}
               </div>
               <Input
                 id="host"
                 value={host}
                 onChange={(e) => {
-                  setHost(e.target.value);
+                  setHost(e.target.value)
                 }}
-                disabled={isEnv("qbittorrent_host")}
+                disabled={isEnv('qbittorrent_host')}
                 className={
-                  isEnv("qbittorrent_host")
-                    ? "opacity-60 cursor-not-allowed"
-                    : ""
+                  isEnv('qbittorrent_host')
+                    ? 'opacity-60 cursor-not-allowed'
+                    : ''
                 }
               />
             </div>
@@ -392,22 +389,22 @@ export default function SettingsConfig() {
                   htmlFor="port"
                   className="text-sm font-medium text-zinc-400"
                 >
-                  {t("settings.port")}
+                  {t('settings.port')}
                 </label>
-                {isEnv("qbittorrent_port") && <EnvBadge />}
+                {isEnv('qbittorrent_port') && <EnvBadge />}
               </div>
               <Input
                 id="port"
                 type="number"
                 value={port}
                 onChange={(e) => {
-                  setPort(Number(e.target.value));
+                  setPort(Number(e.target.value))
                 }}
-                disabled={isEnv("qbittorrent_port")}
+                disabled={isEnv('qbittorrent_port')}
                 className={
-                  isEnv("qbittorrent_port")
-                    ? "opacity-60 cursor-not-allowed"
-                    : ""
+                  isEnv('qbittorrent_port')
+                    ? 'opacity-60 cursor-not-allowed'
+                    : ''
                 }
               />
             </div>
@@ -420,21 +417,21 @@ export default function SettingsConfig() {
                   htmlFor="username"
                   className="text-sm font-medium text-zinc-400"
                 >
-                  {t("settings.username")}
+                  {t('settings.username')}
                 </label>
-                {isEnv("qbittorrent_username") && <EnvBadge />}
+                {isEnv('qbittorrent_username') && <EnvBadge />}
               </div>
               <Input
                 id="username"
                 value={username}
                 onChange={(e) => {
-                  setUsername(e.target.value);
+                  setUsername(e.target.value)
                 }}
-                disabled={isEnv("qbittorrent_username")}
+                disabled={isEnv('qbittorrent_username')}
                 className={
-                  isEnv("qbittorrent_username")
-                    ? "opacity-60 cursor-not-allowed"
-                    : ""
+                  isEnv('qbittorrent_username')
+                    ? 'opacity-60 cursor-not-allowed'
+                    : ''
                 }
               />
             </div>
@@ -444,31 +441,31 @@ export default function SettingsConfig() {
                   htmlFor="password"
                   className="text-sm font-medium text-zinc-400"
                 >
-                  {t("settings.password")}
+                  {t('settings.password')}
                 </label>
-                {isEnv("qbittorrent_password") && <EnvBadge />}
+                {isEnv('qbittorrent_password') && <EnvBadge />}
               </div>
               <Input
                 id="password"
-                type={showTorrentPassword ? "text" : "password"}
+                type={showTorrentPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => {
-                  setPassword(e.target.value);
+                  setPassword(e.target.value)
                 }}
                 placeholder={
-                  password ? "********" : t("settings.password_placeholder")
+                  password ? '********' : t('settings.password_placeholder')
                 }
-                disabled={isEnv("qbittorrent_password")}
+                disabled={isEnv('qbittorrent_password')}
                 className={
-                  isEnv("qbittorrent_password")
-                    ? "opacity-60 cursor-not-allowed"
-                    : ""
+                  isEnv('qbittorrent_password')
+                    ? 'opacity-60 cursor-not-allowed'
+                    : ''
                 }
                 endContent={
                   <button
                     type="button"
                     onClick={() => {
-                      setShowTorrentPassword(!showTorrentPassword);
+                      setShowTorrentPassword(!showTorrentPassword)
                     }}
                     className="hover:text-zinc-300 focus:outline-none"
                   >
@@ -487,31 +484,31 @@ export default function SettingsConfig() {
         <div className="space-y-4 border-t border-zinc-800 pt-6">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-medium text-zinc-200">
-              {t("settings.downloads")}
+              {t('settings.downloads')}
             </h2>
-            {isEnv("seed_ratio_limit") && <EnvBadge />}
+            {isEnv('seed_ratio_limit') && <EnvBadge />}
           </div>
 
           <div className="grid gap-2">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-zinc-400">
-                {t("settings.seed_limit_action")}
+                {t('settings.seed_limit_action')}
               </label>
             </div>
             <Select
               value={seedLimitAction}
               onChange={(val) => {
-                setSeedLimitAction(Number(val));
+                setSeedLimitAction(Number(val))
               }}
               options={[
                 {
                   value: 0,
-                  label: t("settings.action_pause"),
+                  label: t('settings.action_pause'),
                   icon: <Pause className="size-3.5 text-yellow-500" />,
                 },
                 {
                   value: 1,
-                  label: t("settings.action_remove"),
+                  label: t('settings.action_remove'),
                   icon: <Trash2 className="size-3.5 text-red-500" />,
                 },
               ]}
@@ -524,9 +521,9 @@ export default function SettingsConfig() {
                 htmlFor="ratio"
                 className="text-sm font-medium text-zinc-400"
               >
-                {t("settings.seed_ratio_limit")}
+                {t('settings.seed_ratio_limit')}
               </label>
-              <Tooltip content={t("settings.seed_ratio_limit_hint")}>
+              <Tooltip content={t('settings.seed_ratio_limit_hint')}>
                 <div className="p-1 cursor-help rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300">
                   <Info className="size-4" />
                 </div>
@@ -541,19 +538,19 @@ export default function SettingsConfig() {
                   min="0"
                   value={seedRatioLimit}
                   onChange={(e) => {
-                    setSeedRatioLimit(Number(e.target.value));
+                    setSeedRatioLimit(Number(e.target.value))
                   }}
-                  disabled={isEnv("seed_ratio_limit")}
+                  disabled={isEnv('seed_ratio_limit')}
                   className={
-                    isEnv("seed_ratio_limit")
-                      ? "opacity-60 cursor-not-allowed"
-                      : ""
+                    isEnv('seed_ratio_limit')
+                      ? 'opacity-60 cursor-not-allowed'
+                      : ''
                   }
                 />
               </div>
             </div>
             <p className="text-xs text-zinc-500">
-              {t("settings.seed_ratio_limit_desc")}
+              {t('settings.seed_ratio_limit_desc')}
             </p>
           </div>
 
@@ -563,9 +560,9 @@ export default function SettingsConfig() {
                 htmlFor="timeLimit"
                 className="text-sm font-medium text-zinc-400"
               >
-                {t("settings.seed_time_limit")}
+                {t('settings.seed_time_limit')}
               </label>
-              {isEnv("seed_time_limit") && <EnvBadge />}
+              {isEnv('seed_time_limit') && <EnvBadge />}
             </div>
             <Input
               id="timeLimit"
@@ -573,15 +570,15 @@ export default function SettingsConfig() {
               min="0"
               value={seedTimeLimit}
               onChange={(e) => {
-                setSeedTimeLimit(Number(e.target.value));
+                setSeedTimeLimit(Number(e.target.value))
               }}
-              disabled={isEnv("seed_time_limit")}
+              disabled={isEnv('seed_time_limit')}
               className={
-                isEnv("seed_time_limit") ? "opacity-60 cursor-not-allowed" : ""
+                isEnv('seed_time_limit') ? 'opacity-60 cursor-not-allowed' : ''
               }
             />
             <p className="text-xs text-zinc-500">
-              {t("settings.seed_time_limit_desc")}
+              {t('settings.seed_time_limit_desc')}
             </p>
           </div>
 
@@ -591,9 +588,9 @@ export default function SettingsConfig() {
                 htmlFor="inactiveTimeLimit"
                 className="text-sm font-medium text-zinc-400"
               >
-                {t("settings.inactive_seeding_time_limit")}
+                {t('settings.inactive_seeding_time_limit')}
               </label>
-              {isEnv("inactive_seeding_time_limit") && <EnvBadge />}
+              {isEnv('inactive_seeding_time_limit') && <EnvBadge />}
             </div>
             <Input
               id="inactiveTimeLimit"
@@ -601,17 +598,17 @@ export default function SettingsConfig() {
               min="0"
               value={inactiveSeedingTimeLimit}
               onChange={(e) => {
-                setInactiveSeedingTimeLimit(Number(e.target.value));
+                setInactiveSeedingTimeLimit(Number(e.target.value))
               }}
-              disabled={isEnv("inactive_seeding_time_limit")}
+              disabled={isEnv('inactive_seeding_time_limit')}
               className={
-                isEnv("inactive_seeding_time_limit")
-                  ? "opacity-60 cursor-not-allowed"
-                  : ""
+                isEnv('inactive_seeding_time_limit')
+                  ? 'opacity-60 cursor-not-allowed'
+                  : ''
               }
             />
             <p className="text-xs text-zinc-500">
-              {t("settings.inactive_seeding_time_limit_desc")}
+              {t('settings.inactive_seeding_time_limit_desc')}
             </p>
           </div>
         </div>
@@ -625,7 +622,7 @@ export default function SettingsConfig() {
             <Input
               value={qualityFilters}
               onChange={(e) => {
-                setQualityFilters(e.target.value);
+                setQualityFilters(e.target.value)
               }}
               placeholder="e.g. 1080p, 2160p, HDR"
             />
@@ -641,7 +638,7 @@ export default function SettingsConfig() {
             <Input
               value={translationFilters}
               onChange={(e) => {
-                setTranslationFilters(e.target.value);
+                setTranslationFilters(e.target.value)
               }}
               placeholder="e.g. Dubbed, MVO, Original"
             />
@@ -664,20 +661,20 @@ export default function SettingsConfig() {
                 setActiveSearches([
                   ...activeSearches,
                   {
-                    name: "",
-                    url: "",
-                    cron: "0 * * * *",
-                    category: "",
+                    name: '',
+                    url: '',
+                    cron: '0 * * * *',
+                    category: '',
                     is_series: false,
                   },
-                ]);
+                ])
               }}
             >
               Add Search
             </Button>
           </div>
           <p className="text-xs text-zinc-500 mb-4">
-            These searches run automatically in the background. Use {"{year}"}{" "}
+            These searches run automatically in the background. Use {'{year}'}{' '}
             in the URL for dynamic substitution.
           </p>
 
@@ -694,9 +691,9 @@ export default function SettingsConfig() {
                   <Input
                     value={search.name}
                     onChange={(e) => {
-                      const newSearches = [...activeSearches];
-                      newSearches[index].name = e.target.value;
-                      setActiveSearches(newSearches);
+                      const newSearches = [...activeSearches]
+                      newSearches[index].name = e.target.value
+                      setActiveSearches(newSearches)
                     }}
                     placeholder="e.g. Top Movies {year}"
                   />
@@ -708,9 +705,9 @@ export default function SettingsConfig() {
                   <Input
                     value={search.url}
                     onChange={(e) => {
-                      const newSearches = [...activeSearches];
-                      newSearches[index].url = e.target.value;
-                      setActiveSearches(newSearches);
+                      const newSearches = [...activeSearches]
+                      newSearches[index].url = e.target.value
+                      setActiveSearches(newSearches)
                     }}
                     placeholder="http://rutor.info/search/0/0/000/0/{year}"
                   />
@@ -722,9 +719,9 @@ export default function SettingsConfig() {
                   <Input
                     value={search.cron}
                     onChange={(e) => {
-                      const newSearches = [...activeSearches];
-                      newSearches[index].cron = e.target.value;
-                      setActiveSearches(newSearches);
+                      const newSearches = [...activeSearches]
+                      newSearches[index].cron = e.target.value
+                      setActiveSearches(newSearches)
                     }}
                     placeholder="0 * * * *"
                   />
@@ -734,11 +731,11 @@ export default function SettingsConfig() {
                     Category
                   </label>
                   <Input
-                    value={search.category || ""}
+                    value={search.category || ''}
                     onChange={(e) => {
-                      const newSearches = [...activeSearches];
-                      newSearches[index].category = e.target.value;
-                      setActiveSearches(newSearches);
+                      const newSearches = [...activeSearches]
+                      newSearches[index].category = e.target.value
+                      setActiveSearches(newSearches)
                     }}
                     placeholder="qbittorrent cat"
                   />
@@ -750,9 +747,9 @@ export default function SettingsConfig() {
                   <Checkbox
                     checked={search.is_series || false}
                     onCheckedChange={(checked) => {
-                      const newSearches = [...activeSearches];
-                      newSearches[index].is_series = checked;
-                      setActiveSearches(newSearches);
+                      const newSearches = [...activeSearches]
+                      newSearches[index].is_series = checked
+                      setActiveSearches(newSearches)
                     }}
                   />
                 </div>
@@ -762,9 +759,9 @@ export default function SettingsConfig() {
                     size="icon"
                     className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
                     onClick={() => {
-                      const newSearches = [...activeSearches];
-                      newSearches.splice(index, 1);
-                      setActiveSearches(newSearches);
+                      const newSearches = [...activeSearches]
+                      newSearches.splice(index, 1)
+                      setActiveSearches(newSearches)
                     }}
                   >
                     <Trash2 className="size-4" />
@@ -783,17 +780,17 @@ export default function SettingsConfig() {
         <div className="flex justify-end pt-4">
           <Button
             onClick={() => {
-              void handleSave();
+              void handleSave()
             }}
             disabled={saving}
             className="bg-violet-600 hover:bg-violet-700 text-white px-8"
           >
-            {saving ? t("settings.saving") : t("settings.save_config")}
+            {saving ? t('settings.saving') : t('settings.save_config')}
           </Button>
         </div>
       </Card>
     </div>
-  );
+  )
 }
 
 const EnvBadge = () => {
@@ -801,5 +798,5 @@ const EnvBadge = () => {
     <span className="inline-flex items-center rounded-full bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 text-xs font-medium text-blue-400">
       ENV
     </span>
-  );
-};
+  )
+}

@@ -38,6 +38,7 @@ from telegram_rutor_bot.utils.category_mapper import (
     map_rutor_category,
 )
 
+from .formatter import format_torrent_message
 from .rating_parser import get_imdb_details, get_imdb_poster, get_movie_ratings
 
 if TYPE_CHECKING:
@@ -685,113 +686,6 @@ def _is_poster_image(src: str, img_data: bytes, current_images_count: int) -> bo
     )
 
 
-def _format_title_section(result: dict[str, Any], soup: BeautifulSoup) -> list[str]:
-    """Format title section of the message"""
-    message_parts = []
-
-    if 'title' in result:
-        title_line = f'🎬 {result["title"]}'
-        if 'year' in result:
-            title_line += f' ({result["year"]})'
-        message_parts.append(title_line)
-
-        # Add original title if different
-        if 'original_title' in result and result['original_title'] != result['title']:
-            message_parts.append(f'🌍 {result["original_title"]}')
-    else:
-        # Try to extract title from page
-        title_tag = soup.find('title')
-        if title_tag:
-            page_title = title_tag.text.strip()
-            # Clean up the title
-            page_title = (
-                page_title.replace(' :: RuTor.info', '').replace(' :: Rutor', '').replace(' :: rutor.info', '').strip()
-            )
-            if page_title:
-                message_parts.append(f'🎬 {page_title}')
-
-    return message_parts
-
-
-def _format_ratings_section(imdb_rating: str | None, kp_rating: str | None) -> list[str]:
-    """Format ratings section of the message"""
-    rating_parts = []
-    if imdb_rating:
-        rating_parts.append(f'⭐ IMDB: {imdb_rating}/10')
-    if kp_rating:
-        rating_parts.append(f'⭐ Кинопоиск: {kp_rating}/10')
-
-    if rating_parts:
-        return [' | '.join(rating_parts)]
-    return []
-
-
-def _format_movie_details(result: dict[str, Any]) -> list[str]:
-    """Format movie details section"""
-    message_parts = []
-
-    detail_fields = [
-        ('genre', '📁 Жанр: {}'),
-        ('country', '🌍 Страна: {}'),
-        ('duration', '⏱ Продолжительность: {}'),
-        ('director', '🎭 Режиссер: {}'),
-    ]
-
-    for field, template in detail_fields:
-        if field in result:
-            message_parts.append(template.format(result[field]))
-
-    if 'actors' in result:
-        actors = result['actors'][:150] + '...' if len(result['actors']) > 150 else result['actors']
-        message_parts.append(f'👥 В ролях: {actors}')
-
-    return message_parts
-
-
-def _format_technical_details(result: dict[str, Any]) -> list[str]:
-    """Format technical details section"""
-    message_parts = ['📀 Технические детали:']
-
-    if 'quality' in result:
-        message_parts.append(f'💎 Качество: {result["quality"]}')
-    if 'video_quality' in result:
-        message_parts.append(f'📹 Видео: {result["video_quality"]}')
-    if 'audio' in result:
-        for i, audio in enumerate(result['audio'], 1):
-            message_parts.append(f'🎙 Аудио {i}: {audio}')
-    elif 'translate_quality' in result:
-        message_parts.append(f'🎙 Перевод: {result["translate_quality"]}')
-    if 'subtitles' in result:
-        message_parts.append(f'💬 Субтитры: {result["subtitles"]}')
-
-    return message_parts
-
-
-def _format_description_section(result: dict[str, Any]) -> list[str]:
-    """Format description section"""
-    message_parts = []
-
-    if 'description' in result:
-        message_parts.extend(['', '📝 Описание:'])
-        desc = result['description'][:500] + '...' if len(result['description']) > 500 else result['description']
-        message_parts.append(desc)
-
-    return message_parts
-
-
-def _format_links_section(download_command: str, imdb_url: str | None, kp_url: str | None, page_link: str) -> list[str]:
-    """Format links section"""
-    message_parts = ['', f'💾 Скачать: {download_command}']
-
-    if imdb_url:
-        message_parts.append(f'🔗 IMDB: {imdb_url}')
-    if kp_url:
-        message_parts.append(f'🔗 Кинопоиск: {kp_url}')
-    message_parts.append(f'🔗 Rutor: {page_link}')
-
-    return message_parts
-
-
 async def get_torrent_info(
     torrent_link: str,
 ) -> tuple[str, bytes | None, list[bytes], str | None, dict[str, Any]]:
@@ -836,7 +730,7 @@ async def get_torrent_info(
         if result.get('poster_url'):
             poster_url = result['poster_url']
 
-    message = _format_torrent_message(result, soup, imdb_rating, kp_rating)
+    message = format_torrent_message(result, soup, imdb_rating, kp_rating)
 
     # Cache the result
     cache.set(
@@ -894,20 +788,6 @@ async def _enrich_from_imdb(result: dict[str, Any], imdb_url: str) -> None:
 
     if imdb_details.get('poster_url'):
         result['poster_url'] = imdb_details['poster_url']
-
-
-def _format_torrent_message(result: dict[str, Any], soup: BeautifulSoup, imdb_rating: str, kp_rating: str) -> str:
-    """Format the final torrent info message"""
-    message_parts = []
-    message_parts.extend(_format_title_section(result, soup))
-    message_parts.extend(_format_ratings_section(imdb_rating, kp_rating))
-    message_parts.append('')
-    message_parts.extend(_format_movie_details(result))
-    message_parts.append('')
-    message_parts.extend(_format_technical_details(result))
-    message_parts.extend(_format_description_section(result))
-
-    return '\n'.join(message_parts)
 
 
 def _extract_genre_from_details(soup: BeautifulSoup) -> tuple[str | None, str | None]:
@@ -1005,11 +885,13 @@ async def download_torrent(torrent: Torrent) -> dict[str, Any]:
     torrent_client = get_torrent_client()
     try:
         await torrent_client.connect()
+        tags = f'tmdb:{torrent.film.tmdb_id}' if torrent.film and torrent.film.tmdb_id else None
         return await torrent_client.add_torrent(
             torrent.magnet,
             download_dir=download_dir,
             category=category,
             rename=torrent.name,
+            tags=tags,
         )
     finally:
         await torrent_client.disconnect()

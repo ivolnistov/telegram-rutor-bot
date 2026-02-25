@@ -1,14 +1,14 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider } from "@tanstack/react-router";
-import React from "react";
-import ReactDOM from "react-dom/client";
-import "./i18n"; // Import i18n configuration
-import "./index.css";
-import { router } from "./router";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RouterProvider } from '@tanstack/react-router'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import './i18n' // Import i18n configuration
+import './index.css'
+import { router } from './router'
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient()
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <React.Suspense
@@ -22,4 +22,4 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       </React.Suspense>
     </QueryClientProvider>
   </React.StrictMode>,
-);
+)

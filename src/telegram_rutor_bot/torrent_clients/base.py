@@ -41,6 +41,7 @@ class TorrentClient(ABC):
         ratio_limit: float | None = None,
         seed_time_limit: int | None = None,
         inactive_seeding_time_limit: int | None = None,
+        tags: str | None = None,
     ) -> dict[str, Any]:
         """Add a torrent by magnet link
 
@@ -52,6 +53,7 @@ class TorrentClient(ABC):
             ratio_limit: Ratio limit to stop seeding
             seed_time_limit: Time limit to stop seeding (minutes)
             inactive_seeding_time_limit: Inactive time limit to stop seeding (minutes)
+            tags: Optional tags for the torrent
 
         Returns:
             Dictionary with torrent info (id, name, etc.)

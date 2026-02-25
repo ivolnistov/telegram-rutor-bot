@@ -50,7 +50,7 @@ cd frontend && npm run dev
 
 The project uses a standard Python package structure with all source code in `src/telegram_rutor_bot/`:
 
-```
+```text
 src/telegram_rutor_bot/
 ├── main.py              # Entry point using multiprocessing
 ├── config.py            # Pydantic settings configuration

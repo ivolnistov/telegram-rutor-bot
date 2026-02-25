@@ -38,7 +38,7 @@ class QBittorrentClient(TorrentClient):
             if check_resp.status_code == 200:
                 self._authenticated = True
                 return
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             pass
 
         # Authenticate if credentials provided
@@ -103,6 +103,7 @@ class QBittorrentClient(TorrentClient):
         ratio_limit: float | None = None,
         seed_time_limit: int | None = None,
         inactive_seeding_time_limit: int | None = None,
+        tags: str | None = None,
     ) -> dict[str, Any]:
         """Add a torrent by magnet link"""
         data = {'urls': magnet_link}
@@ -120,6 +121,8 @@ class QBittorrentClient(TorrentClient):
             data['inactiveSeedingTimeLimit'] = str(inactive_seeding_time_limit)
         if rename:
             data['rename'] = rename
+        if tags:
+            data['tags'] = tags
 
         await self._request('POST', 'torrents/add', data=data)
 

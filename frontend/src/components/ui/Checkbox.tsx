@@ -1,11 +1,11 @@
-import { Check } from "lucide-react";
-import * as React from "react";
+import { Check } from 'lucide-react'
+import * as React from 'react'
 export interface CheckboxProps extends Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
-  "onChange"
+  'onChange'
 > {
-  checked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
+  checked?: boolean
+  onCheckedChange?: (checked: boolean) => void
 }
 
 const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
@@ -23,21 +23,21 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         />
         <div
           className={[
-            "flex size-4 shrink-0 items-center justify-center rounded-sm border border-zinc-600 bg-transparent shadow-sm transition-colors cursor-pointer",
-            "peer-focus-visible:outline-none peer-focus-visible:ring-1 peer-focus-visible:ring-violet-500",
-            "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-            "peer-checked:bg-violet-600 peer-checked:text-white peer-checked:border-violet-600",
+            'flex size-4 shrink-0 items-center justify-center rounded-sm border border-zinc-600 bg-transparent shadow-sm transition-colors cursor-pointer',
+            'peer-focus-visible:outline-none peer-focus-visible:ring-1 peer-focus-visible:ring-violet-500',
+            'peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
+            'peer-checked:bg-violet-600 peer-checked:text-white peer-checked:border-violet-600',
             className,
           ]
             .filter(Boolean)
-            .join(" ")}
+            .join(' ')}
         >
           {checked && <Check className="size-3" strokeWidth={3} />}
         </div>
       </label>
-    );
+    )
   },
-);
-Checkbox.displayName = "Checkbox";
+)
+Checkbox.displayName = 'Checkbox'
 
-export { Checkbox };
+export { Checkbox }

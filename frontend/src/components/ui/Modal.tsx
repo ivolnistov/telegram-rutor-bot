@@ -1,13 +1,13 @@
-import { X } from "lucide-react";
-import { type ReactNode, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { X } from 'lucide-react'
+import { type ReactNode, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface ModalProps {
-  isOpen?: boolean;
-  onClose: () => void;
-  title?: string;
-  children: ReactNode;
-  className?: string;
+  isOpen?: boolean
+  onClose: () => void
+  title?: string
+  children: ReactNode
+  className?: string
 }
 
 export const Modal = ({
@@ -15,19 +15,19 @@ export const Modal = ({
   onClose,
   title,
   children,
-  className = "",
+  className = '',
 }: ModalProps) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEscape);
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleEscape)
     return () => {
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [onClose]);
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [onClose])
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -40,7 +40,7 @@ export const Modal = ({
                     ${className}
                 `}
         onClick={(e) => {
-          e.stopPropagation();
+          e.stopPropagation()
         }}
       >
         {title && (
@@ -58,5 +58,5 @@ export const Modal = ({
       </div>
     </div>,
     document.body,
-  );
-};
+  )
+}

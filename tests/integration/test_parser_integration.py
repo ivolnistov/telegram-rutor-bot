@@ -189,8 +189,14 @@ class TestRutorParserIntegration:
                 with patch('telegram_rutor_bot.rutor.parser.get_movie_ratings') as mock_ratings:
                     mock_ratings.return_value = ('8.7', '8.5')
 
-                    # Get torrent info
-                    message, poster, images, _, _ = await get_torrent_info('/torrent/123456/matrix-1999-1080p')
+                    # Mock IMDB details parser so it doesn't overwrite the mocked Rutor payload
+                    with patch(
+                        'telegram_rutor_bot.rutor.parser.get_imdb_details', new_callable=AsyncMock
+                    ) as mock_imdb_details:
+                        mock_imdb_details.return_value = None
+
+                        # Get torrent info
+                        message, poster, images, _, _ = await get_torrent_info('/torrent/123456/matrix-1999-1080p')
 
             # Verify message content
             assert '🎬 The Matrix (1999)' in message  # Title from page title
@@ -288,19 +294,19 @@ class TestParserUtilities:
     def test_parse_name(self):
         """Test movie name parsing"""
         # Test with year in parentheses
-        name, year = parse_name('The Matrix (1999) 1080p BluRay')
+        name, _orig, year = parse_name('The Matrix (1999) 1080p BluRay')
         assert name == 'The Matrix'
-        assert year == '1999'
+        assert str(year) == '1999'
 
         # Test with brackets
-        name, year = parse_name('The Matrix (1999) [Extended Cut] / Матрица')
+        name, _orig, year = parse_name('The Matrix (1999) [Extended Cut] / Матрица')
         assert name == 'The Matrix'
-        assert year == '1999'
+        assert str(year) == '1999'
 
         # Test without year
-        name, year = parse_name('Some Movie Title')
+        name, _orig, year = parse_name('Some Movie Title')
         assert name == 'Some Movie Title'
-        assert year == str(datetime.now(UTC).year)  # Current year
+        assert str(year) == str(datetime.now(UTC).year)  # Current year
 
     def test_size_to_bytes_converter(self):
         """Test file size conversion"""
