@@ -31,9 +31,7 @@ services:
       - "6380:6379" # Exposed on 6380 for local dev
 
   qbittorrent:
-    build:
-      context: ./docker/qbittorrent
-      dockerfile: Dockerfile
+    image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent_dev
     environment:
       - PUID=1000

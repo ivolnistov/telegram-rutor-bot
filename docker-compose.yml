@@ -31,7 +31,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U rutor -d rutorbot" ]
+      test: ["CMD-SHELL", "pg_isready -U rutor -d rutorbot"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,15 +42,13 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3
 
   qbittorrent:
-    build:
-      context: ./docker/qbittorrent
-      dockerfile: Dockerfile
+    image: lscr.io/linuxserver/qbittorrent:latest
     environment:
       - PUID=1000
       - PGID=1000
@@ -70,7 +68,7 @@ services:
   bot:
     build: .
     restart: unless-stopped
-    command: [ "bot" ]
+    command: ["bot"]
     volumes:
       - ./src:/app/src
       - ./pyproject.toml:/app/pyproject.toml
@@ -96,7 +94,7 @@ services:
   scheduler:
     build: .
     restart: unless-stopped
-    command: [ "scheduler" ]
+    command: ["scheduler"]
     volumes:
       - ./src:/app/src
       - ./pyproject.toml:/app/pyproject.toml
@@ -120,7 +118,7 @@ services:
   worker:
     build: .
     restart: unless-stopped
-    command: [ "worker" ]
+    command: ["worker"]
     volumes:
       - ./src:/app/src
       - ./pyproject.toml:/app/pyproject.toml
@@ -146,7 +144,7 @@ services:
   migrations:
     build: .
     entrypoint: []
-    command: [ "uv", "run", "alembic", "upgrade", "head" ]
+    command: ["uv", "run", "alembic", "upgrade", "head"]
     environment:
       - RUTOR_BOT_DATABASE_URL=postgresql://rutor:rutorpass@postgres:5432/rutorbot
     depends_on:
