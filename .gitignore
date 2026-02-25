@@ -34,3 +34,4 @@ data
 ANTIGRAVITY.md
 .agent/
 .env
+*.tar.gz
