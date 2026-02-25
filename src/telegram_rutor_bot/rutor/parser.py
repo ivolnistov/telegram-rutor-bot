@@ -730,7 +730,7 @@ async def get_torrent_info(
         if result.get('poster_url'):
             poster_url = result['poster_url']
 
-    message = format_torrent_message(result, soup, imdb_rating, kp_rating)
+    message = format_torrent_message(result, soup, imdb_rating, kp_rating, torrent_link)
 
     # Cache the result
     cache.set(

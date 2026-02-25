@@ -112,7 +112,9 @@ def _format_links_section(download_command: str, imdb_url: str | None, kp_url: s
     return message_parts
 
 
-def format_torrent_message(result: dict[str, Any], soup: BeautifulSoup, imdb_rating: str, kp_rating: str) -> str:
+def format_torrent_message(
+    result: dict[str, Any], soup: BeautifulSoup, imdb_rating: str | None, kp_rating: str | None, torrent_link: str
+) -> str:
     """Format the final torrent info message"""
     message_parts = []
     message_parts.extend(_format_title_section(result, soup))
@@ -123,14 +125,20 @@ def format_torrent_message(result: dict[str, Any], soup: BeautifulSoup, imdb_rat
     message_parts.extend(_format_technical_details(result))
     message_parts.extend(_format_description_section(result))
 
-    links_part = []
-    if result.get('imdb_url'):
-        links_part.append(f'🔗 IMDB: {result["imdb_url"]}')
-    if result.get('kp_url'):
-        links_part.append(f'🔗 Кинопоиск: {result["kp_url"]}')
+    # Ensure torrent_link is well-formed for splitting
+    parts = torrent_link.strip('/').split('/')
+    torrent_id = parts[1] if len(parts) >= 2 and parts[0] == 'torrent' else 'unknown'
 
-    if links_part:
-        message_parts.append('')
-        message_parts.extend(links_part)
+    download_command = f'/dl_{torrent_id}'
+
+    # We might only have relative path or full URL
+    if torrent_link.startswith('http'):
+        page_link = torrent_link
+    else:
+        page_link = f'http://www.rutor.info{torrent_link if torrent_link.startswith("/") else "/" + torrent_link}'
+
+    message_parts.extend(
+        _format_links_section(download_command, result.get('imdb_url'), result.get('kp_url'), page_link)
+    )
 
     return '\\n'.join(message_parts)
