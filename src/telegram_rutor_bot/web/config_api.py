@@ -170,7 +170,7 @@ async def get_config() -> ConfigCheckResponse:
 
 
 @router.post('', response_model=ConfigCheckResponse, dependencies=[Depends(get_current_admin_if_configured)])
-async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:  # noqa: PLR0912
+async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:  # noqa: PLR0912,PLR0915
     """Save configuration to Database and initialize users."""
 
     updates = {
@@ -178,12 +178,14 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:  # noq
         'telegram_token': config.telegram.token,
     }
 
-    updates.update({
-        'qbittorrent_host': config.torrent.host,
-        'qbittorrent_port': config.torrent.port,
-        'qbittorrent_username': config.torrent.username,
-        'qbittorrent_password': config.torrent.password,
-    })
+    updates.update(
+        {
+            'qbittorrent_host': config.torrent.host,
+            'qbittorrent_port': config.torrent.port,
+            'qbittorrent_username': config.torrent.username,
+            'qbittorrent_password': config.torrent.password,
+        }
+    )
 
     if config.tmdb_api_key:
         updates['tmdb_api_key'] = config.tmdb_api_key

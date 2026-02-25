@@ -48,7 +48,10 @@ services:
       retries: 3
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    build:
+      context: docker/qbittorrent
+      dockerfile: Dockerfile
+    image: telegram-rutor-bot-qbittorrent
     environment:
       - PUID=1000
       - PGID=1000
