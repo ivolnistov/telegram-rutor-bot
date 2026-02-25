@@ -171,7 +171,7 @@ async def send_digest() -> None:
 
     async with get_async_session() as session:
         # Get downloaded but not notified films
-        stmt = select(Film).where(Film.watch_status == 'downloaded', Film.notified == False)  # noqa: E712
+        stmt = select(Film).where(Film.watch_status == 'downloaded', Film.notified.is_(False))
         films = (await session.execute(stmt)).scalars().all()
 
         if not films:
@@ -198,7 +198,7 @@ async def send_digest() -> None:
         if token:
             bot = Bot(token=token)
             # Notify authorized users
-            stmt_users = select(User).where(User.is_authorized == True, User.chat_id.is_not(None))  # noqa: E712
+            stmt_users = select(User).where(User.is_authorized.is_(True), User.chat_id.is_not(None))
             users = (await session.execute(stmt_users)).scalars().all()
             for user in users:
                 with contextlib.suppress(Exception):
@@ -210,6 +210,7 @@ async def send_digest() -> None:
 # Workaround: Run every minute/hour, check if cron matches.
 @broker.task(schedule=[{'cron': '* * * * *'}])
 async def digest_scheduler() -> None:
+    """Check cron schedule and dispatch digest rendering task."""
     if croniter.match(settings.notification_cron, datetime.now(UTC)):
         await send_digest.kiq()
 
