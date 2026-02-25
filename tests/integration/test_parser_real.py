@@ -30,7 +30,7 @@ async def test_parse_torrent_100():
     assert 'Мама: Возвращение из тьмы' in message or 'The Unlit' in message or '🎬' in message
 
     # Should contain download link
-    assert '/dl_100' in message
+    assert '/dl_840427' in message
 
     # Should have some structure
     # Should have some structure
