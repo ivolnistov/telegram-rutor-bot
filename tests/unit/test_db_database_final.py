@@ -11,6 +11,9 @@ def test_init_db_full_v3(mocker):
     mocker.patch('telegram_rutor_bot.db.database.create_async_engine', return_value=mock_engine)
     mock_sm = MagicMock()
     mocker.patch('telegram_rutor_bot.db.database.async_sessionmaker', return_value=mock_sm)
+    # Reset state so init_db() runs fresh
+    db_state.engine = None
+    db_state.session_maker = None
     init_db()
     assert db_state.session_maker == mock_sm
 

@@ -1,3 +1,4 @@
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -38,7 +39,6 @@ def test_is_potential_series_variants():
 @pytest.mark.asyncio
 async def test_process_torrent_item_simple(mocker):
     mock_session = AsyncMock()
-    from datetime import date
 
     torrent_data = {
         'blake': 'b1',

@@ -580,16 +580,21 @@ const MediaModal = ({
   )
 }
 
+interface ProductionCountry {
+  iso_3166_1: string
+  name: string
+}
+
 // Start of DiscoveryPage
 
-const CountryFlags = ({ countries }: { countries?: any[] }) => {
+const CountryFlags = ({ countries }: { countries?: ProductionCountry[] }) => {
   if (!countries || countries.length === 0) return null
 
   return (
     <div className="flex -space-x-1">
       {countries.slice(0, 3).map((c, idx) => (
         <div
-          key={c.iso_3166_1 || c.name || `country-${idx}`}
+          key={c.iso_3166_1 || c.name || `country-${String(idx)}`}
           className="relative z-0 hover:z-10 transition-all transform hover:scale-110"
           title={c.name}
         >
@@ -785,7 +790,9 @@ const DiscoveryPage = () => {
               key={media.id}
               type="button"
               className="group relative aspect-[2/3] bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-violet-500/50 transition-all cursor-pointer text-left p-0"
-              onClick={() => setSelectedMedia(media)}
+              onClick={() => {
+                setSelectedMedia(media)
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
@@ -856,10 +863,16 @@ const DiscoveryPage = () => {
                   </div>
                 )}
                 {(() => {
-                  let countries: any[] = []
-                  if (media.production_countries && media.production_countries.length > 0) {
+                  let countries: ProductionCountry[] = []
+                  if (
+                    media.production_countries &&
+                    media.production_countries.length > 0
+                  ) {
                     countries = media.production_countries
-                  } else if (media.origin_country && media.origin_country.length > 0) {
+                  } else if (
+                    media.origin_country &&
+                    media.origin_country.length > 0
+                  ) {
                     countries = media.origin_country.map((c) => ({
                       iso_3166_1: c,
                       name: c,
@@ -870,12 +883,12 @@ const DiscoveryPage = () => {
 
                   let flagsCountries = countries
                   if (media.media_type === 'movie') {
-                    flagsCountries = (media as Movie).production_countries || countries
-                  } else {
-                    const origin = (media as TvShow).origin_country
-                    if (origin) {
-                      flagsCountries = origin.map((c) => ({ iso_3166_1: c }))
-                    }
+                    flagsCountries = media.production_countries || countries
+                  } else if (media.origin_country) {
+                    flagsCountries = media.origin_country.map((c) => ({
+                      iso_3166_1: c,
+                      name: c,
+                    }))
                   }
 
                   return <CountryFlags countries={flagsCountries} />

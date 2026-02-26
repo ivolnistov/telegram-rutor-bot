@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 
+from telegram_rutor_bot.rutor import constants
 from telegram_rutor_bot.rutor.constants import IMDB_V1_POSTER_REPLACE, IMDB_V1_TOKEN
 from telegram_rutor_bot.rutor.rating_parser import _extract_imdb_poster_src, _find_poster_element
 
@@ -27,7 +28,5 @@ def test_extract_imdb_poster_src():
 
 
 def test_constants():
-    from telegram_rutor_bot.rutor import constants
-
     assert constants.RUTOR_BASE_URL.startswith('https')
     assert constants.IMDB_V1_TOKEN == '._V1_'

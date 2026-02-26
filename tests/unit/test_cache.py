@@ -7,8 +7,7 @@ from telegram_rutor_bot.utils.cache import FilmInfoCache
 def temp_cache(tmp_path):
     # Reset singleton for testing
     FilmInfoCache._instance = None
-    cache = FilmInfoCache(cache_dir=str(tmp_path))
-    return cache
+    return FilmInfoCache(cache_dir=str(tmp_path))
 
 
 def test_cache_get_set(temp_cache):

@@ -8,6 +8,9 @@ from telegram_rutor_bot.db.database import db_state, get_async_session, init_db
 def test_init_db_multiple_times(mocker):
     mocker.patch('telegram_rutor_bot.db.database.create_async_engine')
     mocker.patch('telegram_rutor_bot.db.database.async_sessionmaker')
+    # Use PostgreSQL path to avoid @event.listens_for on a MagicMock
+    mock_settings = mocker.patch('telegram_rutor_bot.db.database.settings')
+    mock_settings.database_url = 'postgresql://test:test@localhost/testdb'
 
     # Reset state
     db_state.engine = None

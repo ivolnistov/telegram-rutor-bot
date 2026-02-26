@@ -615,7 +615,10 @@ export default function SettingsConfig() {
         <div className="space-y-4 border-t border-zinc-800 pt-6">
           <h2 className="text-lg font-medium text-zinc-200">Search Filters</h2>
           <div className="grid gap-2">
-            <label htmlFor="qualityFilters" className="text-sm font-medium text-zinc-400">
+            <label
+              htmlFor="qualityFilters"
+              className="text-sm font-medium text-zinc-400"
+            >
               Quality Filters (comma separated, e.g. 1080p, 2160p)
             </label>
             <Input
@@ -632,7 +635,10 @@ export default function SettingsConfig() {
             </p>
           </div>
           <div className="grid gap-2">
-            <label htmlFor="translationFilters" className="text-sm font-medium text-zinc-400">
+            <label
+              htmlFor="translationFilters"
+              className="text-sm font-medium text-zinc-400"
+            >
               Translation Filters (comma separated, e.g. Dubbed, MVO)
             </label>
             <Input
@@ -740,7 +746,10 @@ export default function SettingsConfig() {
                   />
                 </div>
                 <div>
-                  <label htmlFor={`search-cat-${String(index)}`} className="text-xs font-medium text-zinc-500 mb-1 block">
+                  <label
+                    htmlFor={`search-cat-${String(index)}`}
+                    className="text-xs font-medium text-zinc-500 mb-1 block"
+                  >
                     Category
                   </label>
                   <Input
@@ -755,7 +764,10 @@ export default function SettingsConfig() {
                   />
                 </div>
                 <div className="flex flex-col items-center justify-center pt-2">
-                  <label htmlFor={`search-series-${String(index)}`} className="text-xs font-medium text-zinc-500 mb-2 block">
+                  <label
+                    htmlFor={`search-series-${String(index)}`}
+                    className="text-xs font-medium text-zinc-500 mb-2 block"
+                  >
                     Сериалы
                   </label>
                   <Checkbox

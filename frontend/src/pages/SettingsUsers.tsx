@@ -78,14 +78,11 @@ const SettingsUsers = () => {
       is_authorized: role === 'authorized' || role === 'admin',
     }
 
-    toast.promise(
-      updateStatusMut.mutateAsync({ id: userId, ...updates }),
-      {
-        loading: t('users.role_update.loading'),
-        success: t('users.role_update.success'),
-        error: t('users.role_update.error'),
-      },
-    )
+    toast.promise(updateStatusMut.mutateAsync({ id: userId, ...updates }), {
+      loading: t('users.role_update.loading'),
+      success: t('users.role_update.success'),
+      error: t('users.role_update.error'),
+    })
   }
 
   const handlePasswordSave = () => {
@@ -218,64 +215,65 @@ const SettingsUsers = () => {
                 </div>
               </div>
 
-            <div className="flex gap-2">
-              <Tooltip
-                content={
-                  user.is_tfa_enabled
-                    ? t('users.tfa.disable')
-                    : t('users.tfa.enable')
-                }
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={clsx(
-                    'size-9  px-0',
+              <div className="flex gap-2">
+                <Tooltip
+                  content={
                     user.is_tfa_enabled
-                      ? 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10'
-                      : 'text-zinc-600 hover:text-zinc-400',
-                  )}
-                  onClick={() => {
-                    toggleTfa(user)
-                  }}
-                  isLoading={updateStatusMut.isPending}
+                      ? t('users.tfa.disable')
+                      : t('users.tfa.enable')
+                  }
                 >
-                  <Scan className="size-5 " />
-                </Button>
-              </Tooltip>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={clsx(
+                      'size-9  px-0',
+                      user.is_tfa_enabled
+                        ? 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10'
+                        : 'text-zinc-600 hover:text-zinc-400',
+                    )}
+                    onClick={() => {
+                      toggleTfa(user)
+                    }}
+                    isLoading={updateStatusMut.isPending}
+                  >
+                    <Scan className="size-5 " />
+                  </Button>
+                </Tooltip>
 
-              <Tooltip content={t('users.password.set_tooltip')}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={clsx(
-                    'size-9  px-0',
-                    user.password
-                      ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
-                      : 'text-zinc-600 hover:text-zinc-400',
-                  )}
-                  onClick={() => {
-                    setPasswordModalUser(user)
-                  }}
-                >
-                  <Lock className="size-5 " />
-                </Button>
-              </Tooltip>
+                <Tooltip content={t('users.password.set_tooltip')}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={clsx(
+                      'size-9  px-0',
+                      user.password
+                        ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
+                        : 'text-zinc-600 hover:text-zinc-400',
+                    )}
+                    onClick={() => {
+                      setPasswordModalUser(user)
+                    }}
+                  >
+                    <Lock className="size-5 " />
+                  </Button>
+                </Tooltip>
 
-              <div className="w-px h-6 bg-zinc-800 self-center mx-1" />
+                <div className="w-px h-6 bg-zinc-800 self-center mx-1" />
 
-              <div className="w-40">
-                <Select
-                  value={getUserRole(user)}
-                  onChange={(val) => {
-                    handleRoleChange(user.id, String(val))
-                  }}
-                  options={roleOptions}
-                />
+                <div className="w-40">
+                  <Select
+                    value={getUserRole(user)}
+                    onChange={(val) => {
+                      handleRoleChange(user.id, String(val))
+                    }}
+                    options={roleOptions}
+                  />
+                </div>
               </div>
-            </div>
-          </Card>
-        )})}
+            </Card>
+          )
+        })}
 
         {users?.length === 0 && (
           <div className="text-center py-12 text-zinc-500 bg-zinc-900/30 rounded-xl border border-dashed border-zinc-800">

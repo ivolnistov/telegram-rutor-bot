@@ -28,6 +28,9 @@ db_state = DatabaseState()
 
 def init_db() -> None:
     """Initialize database engines for both sync and async operations"""
+    if db_state.engine is not None:
+        return
+
     if hasattr(settings, 'database_url') and settings.database_url:
         # PostgreSQL for production
         async_url = str(settings.database_url).replace('postgresql://', 'postgresql+asyncpg://')

@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 from fastapi.testclient import TestClient
 
 from telegram_rutor_bot.web.app import app
+from telegram_rutor_bot.web.auth import get_current_admin_user
 
 client = TestClient(app)
 
@@ -13,8 +14,6 @@ def test_app_simple_gets(mocker):
     assert res.status_code == 200
 
     # Bypass auth for other tests
-    from telegram_rutor_bot.web.auth import get_current_admin_user
-
     app.dependency_overrides[get_current_admin_user] = lambda: MagicMock(is_admin=True)
 
     # Mock DB functions to return empty lists (simplest passing case)

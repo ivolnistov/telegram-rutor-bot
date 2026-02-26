@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from telegram_rutor_bot.db.models import User
 from telegram_rutor_bot.web.app import app
+from telegram_rutor_bot.web.auth import get_current_admin_if_configured
 
 client = TestClient(app)
 
@@ -19,8 +20,6 @@ def mock_admin_user():
 
 
 def test_get_config_api(mocker, mock_admin_user):
-    from telegram_rutor_bot.web.auth import get_current_admin_if_configured
-
     app.dependency_overrides[get_current_admin_if_configured] = lambda: mock_admin_user
 
     mock_db_config = MagicMock()
@@ -48,8 +47,6 @@ def test_get_config_api(mocker, mock_admin_user):
 
 
 def test_get_filters_api(mocker, mock_admin_user):
-    from telegram_rutor_bot.web.auth import get_current_admin_if_configured
-
     app.dependency_overrides[get_current_admin_if_configured] = lambda: mock_admin_user
 
     mock_db_config = MagicMock()
@@ -69,8 +66,6 @@ def test_get_filters_api(mocker, mock_admin_user):
 
 
 def test_save_config_api(mocker, mock_admin_user):
-    from telegram_rutor_bot.web.auth import get_current_admin_if_configured
-
     app.dependency_overrides[get_current_admin_if_configured] = lambda: mock_admin_user
 
     mocker.patch('telegram_rutor_bot.web.config_api.update_db_config', AsyncMock())

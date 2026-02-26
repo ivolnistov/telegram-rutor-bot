@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from telegram_rutor_bot.web.app import app
+from telegram_rutor_bot.web.auth import get_current_admin_if_configured
 
 client = TestClient(app)
 
@@ -17,8 +18,6 @@ def mock_admin():
 
 
 def test_config_api_full_save(mocker, mock_admin):
-    from telegram_rutor_bot.web.auth import get_current_admin_if_configured
-
     app.dependency_overrides[get_current_admin_if_configured] = lambda: mock_admin
 
     mocker.patch('telegram_rutor_bot.web.config_api.update_db_config', AsyncMock())

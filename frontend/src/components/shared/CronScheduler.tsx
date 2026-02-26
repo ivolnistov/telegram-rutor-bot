@@ -163,7 +163,10 @@ export const CronScheduler = ({
       {mode === 'scheduled' && (
         <div className="animate-in fade-in slide-in-from-top-2 duration-200 grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label htmlFor="cron_frequency" className="text-[10px] uppercase text-zinc-500 font-bold ml-1">
+            <label
+              htmlFor="cron_frequency"
+              className="text-[10px] uppercase text-zinc-500 font-bold ml-1"
+            >
               Frequency
             </label>
             <Select
@@ -176,7 +179,10 @@ export const CronScheduler = ({
             />
           </div>
           <div className="space-y-1">
-            <label htmlFor="cron_time" className="text-[10px] uppercase text-zinc-500 font-bold ml-1">
+            <label
+              htmlFor="cron_time"
+              className="text-[10px] uppercase text-zinc-500 font-bold ml-1"
+            >
               At Time
             </label>
             <Input

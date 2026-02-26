@@ -7,7 +7,6 @@ def test_parse_genre_from_lines():
 
 
 def test_extract_genre_from_movie_block():
-    html = '<table><tr><td>Genre</td><td>Sci-Fi</td></tr></table>'
     pass
 
 

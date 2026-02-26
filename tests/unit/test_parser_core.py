@@ -24,7 +24,7 @@ def test_extract_details_from_table_minimal():
 
 
 def test_extract_movie_info_from_blocks():
-    # Must contain "Информация о фильме" and newlines
+    # Must contain info block and newlines
     # The keys in parser.py are exact: 'Год выпуска', 'Страна', 'Жанр'
     html = """
     <table>
@@ -60,6 +60,6 @@ def test_parse_torrent_page_details_mock():
     </html>
     """
     soup = BeautifulSoup(html, 'lxml')
-    imdb, kp, res = _parse_torrent_page_details(soup)
+    imdb, _, res = _parse_torrent_page_details(soup)
     assert imdb == 'https://www.imdb.com/title/tt0133093/'
     assert res['quality'] == '1080p'

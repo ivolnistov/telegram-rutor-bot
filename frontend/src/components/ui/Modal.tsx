@@ -33,7 +33,7 @@ export const Modal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <button
         type="button"
-        className="absolute inset-0 w-full h-full cursor-default bg-transparent border-none"
+        className="absolute inset-0 size-full cursor-default bg-transparent border-none"
         onClick={onClose}
         aria-label="Close modal"
       />
@@ -53,7 +53,7 @@ export const Modal = ({
               onClick={onClose}
               className="text-zinc-500 hover:text-zinc-300 transition-colors p-1"
             >
-              <X className="size-5 " />
+              <X className="size-5" />
             </button>
           </div>
         )}

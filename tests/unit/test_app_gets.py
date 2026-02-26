@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from telegram_rutor_bot.web.app import app
+from telegram_rutor_bot.web.auth import get_current_admin_user
 
 client = TestClient(app)
 
@@ -18,8 +19,6 @@ def mock_admin():
 
 
 def test_app_all_get_endpoints(mocker, mock_admin):
-    from telegram_rutor_bot.web.auth import get_current_admin_user
-
     app.dependency_overrides[get_current_admin_user] = lambda: mock_admin
 
     # Session mock

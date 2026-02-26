@@ -3,13 +3,12 @@ from unittest.mock import AsyncMock, MagicMock
 from fastapi.testclient import TestClient
 
 from telegram_rutor_bot.web.app import app
+from telegram_rutor_bot.web.auth import get_current_admin_user
 
 client = TestClient(app)
 
 
 def test_app_more_get_endpoints(mocker):
-    from telegram_rutor_bot.web.auth import get_current_admin_user
-
     app.dependency_overrides[get_current_admin_user] = lambda: MagicMock(is_admin=True)
 
     mocker.patch(
