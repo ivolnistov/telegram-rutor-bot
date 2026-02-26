@@ -182,6 +182,12 @@ const SettingsCategory = () => {
         >
           {t('settings.title')}
         </Link>
+        <Link
+          to="/settings/searches"
+          className="px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-300 border-b-2 border-transparent hover:border-zinc-800 transition-colors"
+        >
+          {t('sidebar.searches')}
+        </Link>
       </div>
 
       <div className="flex justify-between items-center mb-8">
@@ -211,7 +217,7 @@ const SettingsCategory = () => {
             className="flex items-center justify-between p-4 group"
           >
             <div className="flex items-center gap-4">
-              <div className="size-10  rounded-full bg-zinc-800 flex items-center justify-center text-xl">
+              <div className="size-10  rounded-full bg-zinc-800 flex items-center justify-center text-xl overflow-hidden shrink-0">
                 {cat.icon || <Folder className="size-5  text-zinc-500" />}
               </div>
               <div>

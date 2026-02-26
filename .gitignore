@@ -41,3 +41,9 @@ sonar-project.properties
 
 # Misc
 cookie.txt
+
+# Moat task system
+.moat/
+
+# Claude Code configuration
+.claude/

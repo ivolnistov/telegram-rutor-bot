@@ -48,16 +48,24 @@ export const updateSearch = async ({
   url,
   cron,
   category,
+  quality_filters,
+  translation_filters,
 }: {
   id: number | string
   url?: string
   cron?: string
   category?: string
+  quality_filters?: string | null
+  translation_filters?: string | null
 }): Promise<Search> => {
   const formData = new FormData()
   if (url) formData.append('url', url)
   if (cron) formData.append('cron', cron)
   if (category !== undefined) formData.append('category', category)
+  if (quality_filters !== undefined)
+    formData.append('quality_filters', quality_filters ?? '')
+  if (translation_filters !== undefined)
+    formData.append('translation_filters', translation_filters ?? '')
   return (await api.patch(`/searches/${String(id)}`, formData))
     .data as unknown as Search
 }

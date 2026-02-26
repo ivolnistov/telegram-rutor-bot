@@ -72,7 +72,7 @@ class ConfigSetupRequest(BaseModel):
     seed_time_limit: int = 2880
     inactive_seeding_time_limit: int = 0
     seed_limit_action: int = 0  # Action: 0 for Pause, 1 for Remove
-    searches: list[SearchConfig] = []
+    searches: list[SearchConfig] | None = None
 
 
 @router.get('', response_model=ConfigCheckResponse, dependencies=[Depends(get_current_admin_if_configured)])
@@ -254,11 +254,12 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:
         if config.telegram.initial_users:
             await _init_users(session, config.telegram.initial_users)
 
-    # Save system searches
-    async with get_async_session() as session:
-        await _save_system_searches(session, config.searches)
+    # Save system searches (only if explicitly provided)
+    if config.searches is not None:
+        async with get_async_session() as session:
+            await _save_system_searches(session, config.searches)
+        settings.searches = config.searches
 
-    settings.searches = config.searches
     settings.refresh(**cast(AppConfigUpdate, updates))
 
     await _update_qbittorrent_prefs(config)

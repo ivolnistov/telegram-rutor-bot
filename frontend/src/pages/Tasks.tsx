@@ -8,28 +8,40 @@ import { useTranslation } from 'react-i18next'
 const TaskStatus = ({ status }: { status: TaskExecution['status'] }) => {
   const { t } = useTranslation()
 
-  const config = {
-    pending: {
-      dot: 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]',
-      text: 'text-yellow-500',
-      label: t('tasks.pending'),
-    },
-    running: {
-      dot: 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] animate-pulse',
-      text: 'text-blue-500',
-      label: t('tasks.running'),
-    },
-    success: {
-      dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]',
-      text: 'text-emerald-500',
-      label: t('tasks.success'),
-    },
-    failed: {
-      dot: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]',
-      text: 'text-red-500',
-      label: t('tasks.failed'),
-    },
-  }[status]
+  const configs: Record<string, { dot: string; text: string; label: string }> =
+    {
+      pending: {
+        dot: 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]',
+        text: 'text-yellow-500',
+        label: t('tasks.pending'),
+      },
+      running: {
+        dot: 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] animate-pulse',
+        text: 'text-blue-500',
+        label: t('tasks.running'),
+      },
+      success: {
+        dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]',
+        text: 'text-emerald-500',
+        label: t('tasks.success'),
+      },
+      failed: {
+        dot: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]',
+        text: 'text-red-500',
+        label: t('tasks.failed'),
+      },
+      cancelled: {
+        dot: 'bg-zinc-500 shadow-[0_0_8px_rgba(113,113,122,0.5)]',
+        text: 'text-zinc-400',
+        label: t('tasks.cancelled', 'Cancelled'),
+      },
+    }
+
+  const config = configs[status] ?? {
+    dot: 'bg-zinc-500',
+    text: 'text-zinc-400',
+    label: status,
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -53,12 +65,15 @@ const TaskItem = ({
   const { t } = useTranslation()
 
   const titleColor =
-    {
-      success: 'text-zinc-200',
-      failed: 'text-red-400',
-      pending: 'text-zinc-500',
-      running: 'text-blue-400',
-    }[task.status] || 'text-blue-400'
+    (
+      {
+        success: 'text-zinc-200',
+        failed: 'text-red-400',
+        pending: 'text-zinc-500',
+        running: 'text-blue-400',
+        cancelled: 'text-zinc-500',
+      } as Record<string, string>
+    )[task.status] ?? 'text-zinc-400'
 
   return (
     <Card className="flex items-center justify-between py-3 px-4">

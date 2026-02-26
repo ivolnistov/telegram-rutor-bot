@@ -306,23 +306,34 @@ async def parse_rutor(
     progress_callback: Callable[[int], Awaitable[None]] | None = None,
     film_id: int | None = None,
     is_series: bool = False,
+    quality_filters: str | None = None,
+    translation_filters: str | None = None,
 ) -> list[int]:
-    """Parse rutor.info search results and save to database."""
-    # Use session to fetch filters
+    """Parse rutor.info search results and save to database.
+
+    Per-search filters override global filters when provided.
+    """
+    # Per-search filters take priority, then fall back to global config
     q_filters = []
     t_filters = []
-    try:
-        config_result = await session.execute(select(AppConfig).where(AppConfig.id == 1))
-        config = config_result.scalar_one_or_none()
-        if config:
-            if config.search_quality_filters:
-                q_filters = [f.strip().lower() for f in config.search_quality_filters.split(',') if f.strip()]
-            if config.search_translation_filters:
-                t_filters = [f.strip().lower() for f in config.search_translation_filters.split(',') if f.strip()]
-    except Exception:  # pylint: disable=broad-exception-caught
-        pass
 
-    log.info('Filters loaded: Q=%s, T=%s', q_filters, t_filters)
+    if quality_filters is not None:
+        q_filters = [f.strip().lower() for f in quality_filters.split(',') if f.strip()]
+    if translation_filters is not None:
+        t_filters = [f.strip().lower() for f in translation_filters.split(',') if f.strip()]
+
+    # Fall back to global config for filters not set per-search
+    if not q_filters or not t_filters:
+        try:
+            config_result = await session.execute(select(AppConfig).where(AppConfig.id == 1))
+            config = config_result.scalar_one_or_none()
+            if config:
+                if not q_filters and config.search_quality_filters:
+                    q_filters = [f.strip().lower() for f in config.search_quality_filters.split(',') if f.strip()]
+                if not t_filters and config.search_translation_filters:
+                    t_filters = [f.strip().lower() for f in config.search_translation_filters.split(',') if f.strip()]
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
 
     log.info('Filters loaded: Q=%s, T=%s', q_filters, t_filters)
 

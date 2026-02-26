@@ -65,8 +65,10 @@ export interface Search {
   last_success?: string | null
   creator_id?: number | null
   query?: string | null
-  category?: string | null // category name, fetched as property or field? Property 'category' was added to Search model as string name.
+  category?: string | null
   category_id?: number | null
+  quality_filters?: string | null
+  translation_filters?: string | null
 }
 export interface TmdbMedia {
   id: number

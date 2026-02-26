@@ -10,6 +10,8 @@ from sqlalchemy.sql.functions import count
 
 from .models import Category, Search, TaskExecution, User, subscribes_table
 
+_UNSET: Any = object()  # sentinel for distinguishing "not provided" from None
+
 __all__ = (
     'add_search_to_db',
     'delete_search',
@@ -43,6 +45,8 @@ async def update_search(
     url: str | None = None,
     cron: str | None = None,
     category: str | None = None,
+    quality_filters: str | None = _UNSET,
+    translation_filters: str | None = _UNSET,
 ) -> bool:
     """Update search URL or cron"""
     result = await session.execute(select(Search).where(Search.id == search_id))
@@ -67,6 +71,11 @@ async def update_search(
             search.category_id = cat_obj.id
         else:
             search.category_id = None
+
+    if quality_filters is not _UNSET:
+        search.quality_filters = quality_filters or None
+    if translation_filters is not _UNSET:
+        search.translation_filters = translation_filters or None
 
     await session.commit()
     return True

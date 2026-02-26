@@ -2,16 +2,12 @@ import { Link } from '@tanstack/react-router'
 import {
   checkConfig,
   createTmdbSession,
-  getSearchFilters,
   getTmdbAuthUrl,
   saveConfig,
-  updateSearchFilters,
   type ConfigSetupRequest,
-  type SystemSearchConfig,
 } from 'api'
 import { Button } from 'components/ui/Button'
 import { Card } from 'components/ui/Card'
-import { Checkbox } from 'components/ui/Checkbox'
 import { Input } from 'components/ui/Input'
 import { Select } from 'components/ui/Select'
 import { Tooltip } from 'components/ui/Tooltip'
@@ -48,13 +44,6 @@ export default function SettingsConfig() {
   const [seedTimeLimit, setSeedTimeLimit] = useState(2880)
   const [inactiveSeedingTimeLimit, setInactiveSeedingTimeLimit] = useState(0)
   const [seedLimitAction, setSeedLimitAction] = useState(0)
-
-  // Search Filters
-  const [qualityFilters, setQualityFilters] = useState('')
-  const [translationFilters, setTranslationFilters] = useState('')
-
-  // Active System Searches
-  const [activeSearches, setActiveSearches] = useState<SystemSearchConfig[]>([])
 
   const handleConnectTmdb = async () => {
     try {
@@ -123,16 +112,6 @@ export default function SettingsConfig() {
         setSeedTimeLimit(Number(res.current_values.seed_time_limit || 2880))
         setSeedLimitAction(Number(res.current_values.seed_limit_action || 0))
         setEnvVars(res.env_vars)
-        if (res.searches) {
-          setActiveSearches(res.searches)
-        } else if (res.current_values.searches) {
-          setActiveSearches(res.current_values.searches)
-        }
-
-        // Load Filters
-        const filters = await getSearchFilters()
-        setQualityFilters(filters.quality || '')
-        setTranslationFilters(filters.translation || '')
       } catch (err) {
         console.error(err)
         toast.error(t('common.error'))
@@ -167,10 +146,6 @@ export default function SettingsConfig() {
 
     try {
       await saveConfig(config)
-      await updateSearchFilters({
-        quality: qualityFilters || null,
-        translation: translationFilters || null,
-      })
       toast.success(t('common.saved'))
     } catch (e: unknown) {
       if (e instanceof Error) {
@@ -207,6 +182,12 @@ export default function SettingsConfig() {
           className="px-4 py-2 text-sm font-medium border-b-2 border-violet-500 text-violet-400"
         >
           {t('settings.title')}
+        </Link>
+        <Link
+          to="/settings/searches"
+          className="px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-300 border-b-2 border-transparent hover:border-zinc-800 transition-colors"
+        >
+          {t('sidebar.searches')}
         </Link>
       </div>
 
@@ -609,198 +590,6 @@ export default function SettingsConfig() {
             <p className="text-xs text-zinc-500">
               {t('settings.inactive_seeding_time_limit_desc')}
             </p>
-          </div>
-        </div>
-
-        <div className="space-y-4 border-t border-zinc-800 pt-6">
-          <h2 className="text-lg font-medium text-zinc-200">Search Filters</h2>
-          <div className="grid gap-2">
-            <label
-              htmlFor="qualityFilters"
-              className="text-sm font-medium text-zinc-400"
-            >
-              Quality Filters (comma separated, e.g. 1080p, 2160p)
-            </label>
-            <Input
-              id="qualityFilters"
-              value={qualityFilters}
-              onChange={(e) => {
-                setQualityFilters(e.target.value)
-              }}
-              placeholder="e.g. 1080p, 2160p, HDR"
-            />
-            <p className="text-xs text-zinc-500">
-              Only torrents containing these keywords will be
-              notified/downloaded. Leave empty for all.
-            </p>
-          </div>
-          <div className="grid gap-2">
-            <label
-              htmlFor="translationFilters"
-              className="text-sm font-medium text-zinc-400"
-            >
-              Translation Filters (comma separated, e.g. Dubbed, MVO)
-            </label>
-            <Input
-              id="translationFilters"
-              value={translationFilters}
-              onChange={(e) => {
-                setTranslationFilters(e.target.value)
-              }}
-              placeholder="e.g. Dubbed, MVO, Original"
-            />
-            <p className="text-xs text-zinc-500">
-              Only torrents matching these translations will be
-              notified/downloaded.
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4 border-t border-zinc-800 pt-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-medium text-zinc-200">
-              Active Searches (System)
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setActiveSearches([
-                  ...activeSearches,
-                  {
-                    name: '',
-                    url: '',
-                    cron: '0 * * * *',
-                    category: '',
-                    is_series: false,
-                  },
-                ])
-              }}
-            >
-              Add Search
-            </Button>
-          </div>
-          <p className="text-xs text-zinc-500 mb-4">
-            These searches run automatically in the background. Use {'{year}'}{' '}
-            in the URL for dynamic substitution.
-          </p>
-
-          <div className="space-y-4">
-            {activeSearches.map((search, index) => (
-              <div
-                key={search.url || index}
-                className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr_1fr_auto_auto] gap-3 items-start bg-zinc-900/50 p-3 rounded-lg border border-zinc-800"
-              >
-                <div>
-                  <label
-                    htmlFor={`search-name-${String(index)}`}
-                    className="text-xs font-medium text-zinc-500 mb-1 block"
-                  >
-                    Name
-                  </label>
-                  <Input
-                    id={`search-name-${String(index)}`}
-                    value={search.name}
-                    onChange={(e) => {
-                      const newSearches = [...activeSearches]
-                      newSearches[index].name = e.target.value
-                      setActiveSearches(newSearches)
-                    }}
-                    placeholder="e.g. Top Movies {year}"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor={`search-url-${String(index)}`}
-                    className="text-xs font-medium text-zinc-500 mb-1 block"
-                  >
-                    Rutor URL
-                  </label>
-                  <Input
-                    id={`search-url-${String(index)}`}
-                    value={search.url}
-                    onChange={(e) => {
-                      const newSearches = [...activeSearches]
-                      newSearches[index].url = e.target.value
-                      setActiveSearches(newSearches)
-                    }}
-                    placeholder="http://rutor.info/search/0/0/000/0/{year}"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor={`search-cron-${String(index)}`}
-                    className="text-xs font-medium text-zinc-500 mb-1 block"
-                  >
-                    Cron Schedule
-                  </label>
-                  <Input
-                    id={`search-cron-${String(index)}`}
-                    value={search.cron}
-                    onChange={(e) => {
-                      const newSearches = [...activeSearches]
-                      newSearches[index].cron = e.target.value
-                      setActiveSearches(newSearches)
-                    }}
-                    placeholder="0 * * * *"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor={`search-cat-${String(index)}`}
-                    className="text-xs font-medium text-zinc-500 mb-1 block"
-                  >
-                    Category
-                  </label>
-                  <Input
-                    id={`search-cat-${String(index)}`}
-                    value={search.category || ''}
-                    onChange={(e) => {
-                      const newSearches = [...activeSearches]
-                      newSearches[index].category = e.target.value
-                      setActiveSearches(newSearches)
-                    }}
-                    placeholder="qbittorrent cat"
-                  />
-                </div>
-                <div className="flex flex-col items-center justify-center pt-2">
-                  <label
-                    htmlFor={`search-series-${String(index)}`}
-                    className="text-xs font-medium text-zinc-500 mb-2 block"
-                  >
-                    Сериалы
-                  </label>
-                  <Checkbox
-                    id={`search-series-${String(index)}`}
-                    checked={search.is_series || false}
-                    onCheckedChange={(checked) => {
-                      const newSearches = [...activeSearches]
-                      newSearches[index].is_series = checked
-                      setActiveSearches(newSearches)
-                    }}
-                  />
-                </div>
-                <div className="flex items-end justify-center h-full pt-6">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                    onClick={() => {
-                      const newSearches = [...activeSearches]
-                      newSearches.splice(index, 1)
-                      setActiveSearches(newSearches)
-                    }}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {activeSearches.length === 0 && (
-              <div className="text-center py-8 text-sm text-zinc-500 italic bg-zinc-900/30 rounded-lg border border-dashed border-zinc-800">
-                No active system searches configured.
-              </div>
-            )}
           </div>
         </div>
 

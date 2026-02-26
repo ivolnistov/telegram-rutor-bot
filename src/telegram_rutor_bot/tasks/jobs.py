@@ -103,6 +103,8 @@ async def _run_search_process(session: AsyncSession, task: TaskExecution, search
         session,
         category_id=search.category_id,
         progress_callback=update_progress,
+        quality_filters=search.quality_filters,
+        translation_filters=search.translation_filters,
     )
 
     # Passive Search: Check new torrents against watchlist
@@ -396,7 +398,13 @@ async def notify_about_new(search_id: int) -> None:
             resolved_url = search.url.replace('{year}', str(current_year))
 
             # Run the search
-            new = await parse_rutor(resolved_url, session, category_id=search.category_id)
+            new = await parse_rutor(
+                resolved_url,
+                session,
+                category_id=search.category_id,
+                quality_filters=search.quality_filters,
+                translation_filters=search.translation_filters,
+            )
             await update_last_success(session, search_id)
 
             if not new:

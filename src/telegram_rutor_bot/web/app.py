@@ -121,6 +121,8 @@ async def create_search(
     chat_id: Annotated[int | None, Form()] = None,
     new_chat_id: Annotated[int | None, Form()] = None,
     category: Annotated[str | None, Form()] = None,
+    quality_filters: Annotated[str | None, Form()] = None,
+    translation_filters: Annotated[str | None, Form()] = None,
 ) -> StatusResponse:
     """Create a new search."""
     target_chat_id = chat_id if chat_id else new_chat_id
@@ -131,6 +133,13 @@ async def create_search(
         try:
             user = await get_or_create_user_by_chat_id(session, target_chat_id)
             search_id = await add_search_to_db(session, url, cron, user.id, category)
+            if quality_filters or translation_filters:
+                await update_search(
+                    session,
+                    search_id,
+                    quality_filters=quality_filters or None,
+                    translation_filters=translation_filters or None,
+                )
             await subscribe(session, search_id, user.id)
             return StatusResponse(status='ok', id=search_id)
         except Exception as e:
@@ -146,11 +155,21 @@ async def update_search_api(
     url: Annotated[str | None, Form()] = None,
     cron: Annotated[str | None, Form()] = None,
     category: Annotated[str | None, Form()] = None,
+    quality_filters: Annotated[str | None, Form()] = None,
+    translation_filters: Annotated[str | None, Form()] = None,
 ) -> StatusResponse:
     """Update a search."""
     async with get_async_session() as session:
         try:
-            updated = await update_search(session, search_id, url=url, cron=cron, category=category)
+            updated = await update_search(
+                session,
+                search_id,
+                url=url,
+                cron=cron,
+                category=category,
+                quality_filters=quality_filters,
+                translation_filters=translation_filters,
+            )
             if not updated:
                 raise HTTPException(status_code=404, detail='Search not found')
             return StatusResponse(status='ok')

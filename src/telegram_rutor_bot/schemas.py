@@ -65,6 +65,8 @@ class SearchResponse(BaseModel):
     query: str | None
     category_id: int | None
     category: str | None
+    quality_filters: str | None = None
+    translation_filters: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
