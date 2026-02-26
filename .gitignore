@@ -29,9 +29,15 @@ env/
 Thumbs.db
 
 # uv
-uv.lock
 data
 ANTIGRAVITY.md
 .agent/
 .env
 *.tar.gz
+
+# SonarQube
+.scannerwork/
+sonar-project.properties
+
+# Misc
+cookie.txt

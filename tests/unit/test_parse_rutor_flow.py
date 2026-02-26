@@ -25,6 +25,9 @@ async def test_parse_flow_v3(mocker):
     mocker.patch('telegram_rutor_bot.rutor.parser.enrich_film_data', AsyncMock())
     mocker.patch('telegram_rutor_bot.rutor.parser.get_file_link', AsyncMock(return_value='l'))
     mocker.patch('telegram_rutor_bot.rutor.parser.map_rutor_category', return_value='1')
+    mocker.patch(
+        'telegram_rutor_bot.rutor.parser.localize', return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())
+    )
 
     res = await parse_rutor(mock_session, 'http://t', category_id=1)
     assert isinstance(res, list)
