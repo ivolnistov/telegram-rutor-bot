@@ -171,7 +171,11 @@ async def delete_search_api(search_id: int) -> StatusResponse:
 @api_router.post(
     '/api/searches/{search_id}/execute', response_model=StatusResponse, dependencies=[Depends(get_current_admin_user)]
 )
-async def execute_search_api(search_id: int, chat_id: Annotated[int, Form()]) -> StatusResponse:
+async def execute_search_api(
+    search_id: int,
+    chat_id: Annotated[int, Form()],
+    notify: Annotated[bool, Form()] = True,
+) -> StatusResponse:
     """Execute a search."""
     async with get_async_session() as session:
         # Check for running or pending tasks
@@ -187,7 +191,7 @@ async def execute_search_api(search_id: int, chat_id: Annotated[int, Form()]) ->
         await session.commit()
 
     try:
-        await execute_search.kiq(search_id, chat_id, task.id)
+        await execute_search.kiq(search_id, chat_id if notify else None, task.id)
         return StatusResponse(status='ok')
     except Exception as e:
         log.error('Failed to enqueue search %s: %s', search_id, e)

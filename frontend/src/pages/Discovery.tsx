@@ -4,6 +4,7 @@ import {
   createSearch,
   deleteRating,
   downloadTorrent,
+  getCategories,
   getLibrary,
   getMe,
   getMediaAccountStates,
@@ -21,6 +22,7 @@ import {
 import axios from 'axios'
 import { Button } from 'components/ui/Button'
 import { Modal } from 'components/ui/Modal'
+import { Select } from 'components/ui/Select'
 import { useDebounce } from 'hooks/useDebounce'
 import {
   Check,
@@ -53,6 +55,15 @@ const MediaModal = ({
   const [isPolling, setIsPolling] = useState(false)
   const [torrentSearch, setTorrentSearch] = useState('')
   const [isTorrentsExpanded, setIsTorrentsExpanded] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState(
+    media.media_type === 'tv' ? 'TV Shows' : 'Films',
+  )
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories,
+    staleTime: 1000 * 60 * 5,
+  })
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>
@@ -127,7 +138,7 @@ const MediaModal = ({
       const formData = new FormData()
       formData.append('url', url)
       formData.append('cron', cron)
-      formData.append('category', 'Films')
+      formData.append('category', selectedCategory)
       formData.append('chat_id', String(user.chat_id))
 
       await createSearch(formData)
@@ -406,19 +417,37 @@ const MediaModal = ({
               </>
             )}
           </Button>
-          <Button
-            onClick={() => {
-              void handleSubscribe()
-            }}
-            disabled={isSubmitting || !user}
-          >
-            {isSubmitting ? (
-              <Loader2 className="size-4 mr-2 animate-spin" />
-            ) : (
-              <Rss className="size-4 mr-2" />
-            )}
-            {t('discovery.subscribe') || 'Subscribe'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Select
+              value={selectedCategory}
+              onChange={(val) => {
+                setSelectedCategory(String(val))
+              }}
+              options={
+                categories?.map((c) => ({
+                  value: c.name,
+                  label: `${c.icon ? c.icon + ' ' : ''}${c.name}`,
+                })) || [
+                  { value: 'Films', label: 'Films' },
+                  { value: 'TV Shows', label: 'TV Shows' },
+                ]
+              }
+              className="w-40"
+            />
+            <Button
+              onClick={() => {
+                void handleSubscribe()
+              }}
+              disabled={isSubmitting || !user}
+            >
+              {isSubmitting ? (
+                <Loader2 className="size-4 mr-2 animate-spin" />
+              ) : (
+                <Rss className="size-4 mr-2" />
+              )}
+              {t('discovery.subscribe') || 'Subscribe'}
+            </Button>
+          </div>
           <Button
             variant="outline"
             onClick={() => {

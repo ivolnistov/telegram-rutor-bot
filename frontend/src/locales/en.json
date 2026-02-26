@@ -224,6 +224,10 @@
       "category_required": "Category is required",
       "subscribers_required": "At least one subscriber is required"
     },
+    "run_now": "Run Now",
+    "notify_on": "Notifications on",
+    "notify_off": "Notifications off",
+    "last_run": "Last run",
     "messages": {
       "created": "Search created successfully",
       "updated": "Changes saved successfully",

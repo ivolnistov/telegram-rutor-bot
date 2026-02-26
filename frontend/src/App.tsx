@@ -13,6 +13,7 @@ import {
   Download,
   Library,
   MonitorPlay,
+  Radar,
   Search,
   Settings,
 } from 'lucide-react'
@@ -64,6 +65,13 @@ const App = () => {
                 >
                   <Library className="size-4 " />
                   {t('sidebar.torrents')}
+                </Link>
+                <Link
+                  to="/searches"
+                  className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 [&.active]:bg-zinc-800 [&.active]:text-white [&.active]:shadow-sm"
+                >
+                  <Radar className="size-4 " />
+                  {t('sidebar.searches')}
                 </Link>
                 <Link
                   to="/tasks"

@@ -75,10 +75,19 @@ const downloadsRoute = createRoute({
   component: Downloads,
 })
 
+import Searches from './pages/Searches'
+
+const searchesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/searches',
+  component: Searches,
+})
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   libraryRoute,
   discoveryRoute,
+  searchesRoute,
   tasksRoute,
   downloadsRoute,
   settingsCategoryRoute,

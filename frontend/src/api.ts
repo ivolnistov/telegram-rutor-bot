@@ -66,9 +66,11 @@ export const deleteSearch = async (id: number | string): Promise<unknown> =>
 export const executeSearch = async (
   id: number | string,
   chatId: number | string,
+  notify: boolean = true,
 ): Promise<unknown> => {
   const formData = new FormData()
   formData.append('chat_id', String(chatId))
+  formData.append('notify', String(notify))
   return (await api.post(`/searches/${String(id)}/execute`, formData)).data
 }
 
