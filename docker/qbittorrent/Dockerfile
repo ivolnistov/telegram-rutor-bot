@@ -1,4 +1,4 @@
-FROM lscr.io/linuxserver/qbittorrent:latest
+FROM lscr.io/linuxserver/qbittorrent:5.0.3
 
 # Install python, pip, and mkvtoolnix
 RUN apk add --no-cache python3 py3-pip mkvtoolnix && \

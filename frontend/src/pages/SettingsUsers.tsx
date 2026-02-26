@@ -78,7 +78,7 @@ const SettingsUsers = () => {
       is_authorized: role === 'authorized' || role === 'admin',
     }
 
-    void toast.promise(
+    toast.promise(
       updateStatusMut.mutateAsync({ id: userId, ...updates }),
       {
         loading: t('users.role_update.loading'),
@@ -91,7 +91,7 @@ const SettingsUsers = () => {
   const handlePasswordSave = () => {
     if (!passwordModalUser) return
 
-    void toast.promise(
+    toast.promise(
       updateStatusMut.mutateAsync({
         id: passwordModalUser.id,
         password: newPassword,
@@ -108,7 +108,7 @@ const SettingsUsers = () => {
 
   const toggleTfa = (user: User) => {
     const newStatus = !user.is_tfa_enabled
-    void toast.promise(
+    toast.promise(
       updateStatusMut.mutateAsync({ id: user.id, is_tfa_enabled: newStatus }),
       {
         loading: t('users.tfa.updating'),
@@ -155,65 +155,68 @@ const SettingsUsers = () => {
       </div>
 
       <div className="grid gap-4">
-        {users?.map((user: User) => (
-          <Card
-            key={user.id}
-            className="flex items-center justify-between p-4 group"
-          >
-            <div className="flex items-center gap-4">
-              <div
-                className={clsx(
-                  'size-12  rounded-full flex items-center justify-center text-lg font-bold transition-colors',
-                  user.is_admin
-                    ? 'bg-violet-500/20 text-violet-400'
-                    : user.is_authorized
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-zinc-800 text-zinc-400',
-                )}
-              >
-                {user.name?.[0] || 'U'}
-              </div>
-              <div>
-                <h3 className="font-medium text-zinc-200 flex items-center gap-2 text-lg">
-                  {user.name || t('users.status.unknown')}
-                  {user.username && (
-                    <span className="text-zinc-500 text-sm font-normal">
-                      @{user.username}
-                    </span>
+        {users?.map((user: User) => {
+          let avatarBg = 'bg-zinc-800 text-zinc-400'
+          let roleBadgeBg = 'bg-zinc-800 text-zinc-400'
+          let roleText = t('users.status.guest')
+
+          if (user.is_admin) {
+            avatarBg = 'bg-violet-500/20 text-violet-400'
+            roleBadgeBg = 'bg-violet-500/10 text-violet-400'
+            roleText = t('users.status.admin')
+          } else if (user.is_authorized) {
+            avatarBg = 'bg-green-500/20 text-green-400'
+            roleBadgeBg = 'bg-green-500/10 text-green-400'
+            roleText = t('users.status.authorized')
+          }
+
+          return (
+            <Card
+              key={user.id}
+              className="flex items-center justify-between p-4 group"
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className={clsx(
+                    'size-12  rounded-full flex items-center justify-center text-lg font-bold transition-colors',
+                    avatarBg,
                   )}
-                  {user.is_admin && (
-                    <ShieldCheck className="size-4  text-violet-400" />
-                  )}
-                  {!user.is_admin && user.is_authorized && (
-                    <UserCheck className="size-4  text-green-400" />
-                  )}
-                </h3>
-                <div className="text-xs text-zinc-500 font-mono mt-0.5 flex items-center gap-2">
-                  ID: {user.chat_id}
-                  <span
-                    className={clsx(
-                      'px-1.5 rounded text-[10px] uppercase font-bold tracking-wider',
-                      user.is_admin
-                        ? 'bg-violet-500/10 text-violet-400'
-                        : user.is_authorized
-                          ? 'bg-green-500/10 text-green-400'
-                          : 'bg-zinc-800 text-zinc-400',
+                >
+                  {user.name?.[0] || 'U'}
+                </div>
+                <div>
+                  <h3 className="font-medium text-zinc-200 flex items-center gap-2 text-lg">
+                    {user.name || t('users.status.unknown')}
+                    {user.username && (
+                      <span className="text-zinc-500 text-sm font-normal">
+                        @{user.username}
+                      </span>
                     )}
-                  >
-                    {user.is_admin
-                      ? t('users.status.admin')
-                      : user.is_authorized
-                        ? t('users.status.authorized')
-                        : t('users.status.guest')}
-                  </span>
-                  {user.is_tfa_enabled && (
-                    <span className="bg-sky-500/10 text-sky-400 px-1.5 rounded text-[10px] uppercase font-bold tracking-wider">
-                      {t('users.tfa.on')}
+                    {user.is_admin && (
+                      <ShieldCheck className="size-4  text-violet-400" />
+                    )}
+                    {!user.is_admin && user.is_authorized && (
+                      <UserCheck className="size-4  text-green-400" />
+                    )}
+                  </h3>
+                  <div className="text-xs text-zinc-500 font-mono mt-0.5 flex items-center gap-2">
+                    ID: {user.chat_id}
+                    <span
+                      className={clsx(
+                        'px-1.5 rounded text-[10px] uppercase font-bold tracking-wider',
+                        roleBadgeBg,
+                      )}
+                    >
+                      {roleText}
                     </span>
-                  )}
+                    {user.is_tfa_enabled && (
+                      <span className="bg-sky-500/10 text-sky-400 px-1.5 rounded text-[10px] uppercase font-bold tracking-wider">
+                        {t('users.tfa.on')}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
             <div className="flex gap-2">
               <Tooltip
@@ -272,7 +275,7 @@ const SettingsUsers = () => {
               </div>
             </div>
           </Card>
-        ))}
+        )})}
 
         {users?.length === 0 && (
           <div className="text-center py-12 text-zinc-500 bg-zinc-900/30 rounded-xl border border-dashed border-zinc-800">

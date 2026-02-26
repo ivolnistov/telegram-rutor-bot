@@ -1,5 +1,13 @@
 import { Link, Outlet, useLocation } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+import React from 'react'
+
+const TanStackRouterDevtools = import.meta.env.PROD
+  ? () => null
+  : React.lazy(() =>
+      import('@tanstack/router-devtools').then((res) => ({
+        default: res.TanStackRouterDevtools,
+      })),
+    )
 import {
   Clock,
   Download,
@@ -88,7 +96,9 @@ const App = () => {
           <Outlet />
         </main>
       </div>
-      <TanStackRouterDevtools />
+      <React.Suspense fallback={null}>
+        <TanStackRouterDevtools />
+      </React.Suspense>
       <Toaster theme="dark" position="top-right" richColors />
     </div>
   )

@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
-from sqlalchemy import CursorResult, select, update
+from sqlalchemy import CursorResult, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -67,7 +67,9 @@ async def add_torrent(
     except IntegrityError:
         await session.rollback()
         # Retry fetch
-        result = await session.execute(select(Torrent).where((Torrent.blake == blake) | (Torrent.magnet == magnet)))
+        result = await session.execute(
+            select(Torrent).where(or_(Torrent.blake == blake, Torrent.magnet == magnet))
+        )
         existing = result.scalars().first()
         if existing:
             return existing

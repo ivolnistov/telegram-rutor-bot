@@ -17,11 +17,14 @@ RUN apt-get update &&\
     sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen &&\
     sed -i 's/# ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen &&\
     locale-gen &&\
-    mkdir /app && mkdir /app/var
+    mkdir /app && mkdir /app/var &&\
+    useradd -m rutor && \
+    chown -R rutor:rutor /app
 ENV LC_ALL "en_US.UTF-8"
-COPY ./ /app
+COPY --chown=rutor:rutor ./ /app
 # Copy built frontend from stage 1
-COPY --from=frontend-builder /frontend/dist /app/frontend/dist
+COPY --from=frontend-builder --chown=rutor:rutor /frontend/dist /app/frontend/dist
+USER rutor
 RUN cd /app && uv sync
 VOLUME [ "/app/var" ]
 WORKDIR "/app"

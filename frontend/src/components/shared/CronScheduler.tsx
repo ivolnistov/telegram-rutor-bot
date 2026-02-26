@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { Button } from 'components/ui/Button'
-import { Select } from 'components/ui/Select'
 import { Input } from 'components/ui/Input'
+import { Select } from 'components/ui/Select'
+import { useState } from 'react'
 
 interface CronSchedulerProps {
   name?: string
@@ -59,8 +59,8 @@ export const CronScheduler = ({
   // Generate cron from UI state
   const generateCron = (freq: string, t: string) => {
     const [h, m] = t.split(':')
-    const mm = parseInt(m, 10)
-    const hh = parseInt(h, 10)
+    const mm = Number.parseInt(m, 10)
+    const hh = Number.parseInt(h, 10)
 
     switch (freq) {
       case '1_day':
@@ -163,10 +163,11 @@ export const CronScheduler = ({
       {mode === 'scheduled' && (
         <div className="animate-in fade-in slide-in-from-top-2 duration-200 grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="text-[10px] uppercase text-zinc-500 font-bold ml-1">
+            <label htmlFor="cron_frequency" className="text-[10px] uppercase text-zinc-500 font-bold ml-1">
               Frequency
             </label>
             <Select
+              id="cron_frequency"
               value={frequency}
               onChange={(val) => {
                 handleUIChange(String(val), time)
@@ -175,10 +176,11 @@ export const CronScheduler = ({
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] uppercase text-zinc-500 font-bold ml-1">
+            <label htmlFor="cron_time" className="text-[10px] uppercase text-zinc-500 font-bold ml-1">
               At Time
             </label>
             <Input
+              id="cron_time"
               type="time"
               value={time}
               onChange={(e) => {

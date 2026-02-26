@@ -50,12 +50,7 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if not success:
         # Try to localize common errors
-        if message == 'Already subscribed':
-            # We don't have a key for this yet, so maybe just show it or fallback?
-            # Let's just output the message for now to avoid complexity without updating i18n
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
-        else:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
         return
 
     await context.bot.send_message(

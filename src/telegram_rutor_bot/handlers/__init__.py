@@ -8,7 +8,7 @@ from .commons import (
     start,
     unknown,
 )
-from .search import search_add, search_callback_handler, search_delete, search_execute, search_list
+from .search import search_callback_handler, search_delete, search_execute, search_list
 from .subscribe import subscribe, subscriptions_list, unsubscribe
 from .torrents import (
     callback_query_handler,
@@ -28,7 +28,6 @@ __all__ = [
     'download_torrent',
     'help_handler',
     'language_handler',
-    'search_add',
     'search_callback_handler',
     'search_delete',
     'search_execute',

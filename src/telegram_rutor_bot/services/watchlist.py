@@ -74,60 +74,50 @@ def select_best_torrent(
     return candidates[0]
 
 
-async def check_matches(session: AsyncSession, new_torrents: list[Torrent]) -> None:
-    """
-    Check if any of the new torrents match pending watchlist items.
-    If match found -> Download and set film to downloaded.
-    """
-    if not new_torrents:
+def _find_relevant_torrents(film: Film, torrents: list[Torrent]) -> list[Torrent]:
+    """Filter torrents relevant to this film using fuzzy matching"""
+    relevant_torrents = []
+    film_query = (film.original_title or film.name).lower()
+
+    for t in torrents:
+        score = fuzz.partial_ratio(film_query, t.name.lower())
+        if score >= 90:  # High confidence
+            relevant_torrents.append(t)
+    return relevant_torrents
+
+
+async def _download_best_torrent_for_film(session: AsyncSession, film: Film, torrents: list[Torrent]) -> None:
+    """Find and download the best torrent for a given film"""
+    relevant_torrents = _find_relevant_torrents(film, torrents)
+    if not relevant_torrents:
         return
 
-    # Get all watching films
-    # We delay imports to avoid circular deps if necessary,
-    # but db imports are generally safe here.
+    best = select_best_torrent(relevant_torrents, film)
+    if not best:
+        return
+
+    log.info('Auto-match found for watchlist item %s: %s', film.name, best.name)
+    client = get_torrent_client()
+    await client.connect()
+    try:
+        tags = f'tmdb:{film.tmdb_id}' if film.tmdb_id else None
+        await client.add_torrent(best.magnet, tags=tags)
+        film.watch_status = 'downloaded'
+        film.notified = False  # To be picked up by digest
+        await session.commit()
+    except Exception as e:
+        log.error('Failed to auto-download watchlist item %s: %s', film.name, e)
+    finally:
+        await client.disconnect()
+
+
+async def check_matches(session: AsyncSession, new_torrents: list[Torrent]) -> None:
+    """Check if any of the new torrents match pending watchlist items."""
+    if not new_torrents:
+        return
 
     stmt = select(Film).where(Film.watch_status == 'watching')
     watching_films = (await session.execute(stmt)).scalars().all()
 
-    if not watching_films:
-        return
-
-    # Check each film against new torrents
     for film in watching_films:
-        # Filter new torrents relevant to this film (by fuzzy name)
-        # Optimization: We check "potential matches"
-        # Since we rely on passive search, we just checking everything?
-        # Ideally we only check torrents that match the film name.
-
-        relevant_torrents = []
-        film_query = film.name.lower()
-        if film.original_title:
-            film_query = film.original_title.lower()
-
-        for t in new_torrents:
-            # Fuzzy match title
-            score = fuzz.partial_ratio(film_query, t.name.lower())
-            if score >= 90:  # High confidence that this torrent is about this film
-                relevant_torrents.append(t)
-
-        if not relevant_torrents:
-            continue
-
-        best = select_best_torrent(relevant_torrents, film)
-        if best:
-            log.info('Auto-match found for watchlist item %s: %s', film.name, best.name)
-
-            # Download
-            client = get_torrent_client()
-            await client.connect()
-            try:
-                # Pass TMDB ID as tag if available
-                tags = f'tmdb:{film.tmdb_id}' if film.tmdb_id else None
-                await client.add_torrent(best.magnet, tags=tags)
-                film.watch_status = 'downloaded'
-                film.notified = False  # To be picked up by digest
-                await session.commit()
-            except Exception as e:
-                log.error('Failed to auto-download watchlist item %s: %s', film.name, e)
-            finally:
-                await client.disconnect()
+        await _download_best_torrent_for_film(session, film, new_torrents)

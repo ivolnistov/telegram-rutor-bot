@@ -7,43 +7,44 @@ import httpx
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
+from .constants import IMDB_V1_POSTER_REPLACE, IMDB_V1_TOKEN
+
+IMDB_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Accept-Language': 'en-US,en;q=0.9',
+}
+
 
 async def get_imdb_rating(imdb_url: str) -> dict[str, str]:
     """Get rating from IMDB page"""
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9',
-            }
-            response = await client.get(imdb_url, headers=headers)
+            response = await client.get(imdb_url, headers=IMDB_HEADERS)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, 'lxml')
-
-            # Try multiple selectors for different IMDB layouts
-            selectors = [
-                {'name': 'span', 'attrs': {'itemprop': 'ratingValue'}},
-                {'name': 'span', 'attrs': {'class': 'sc-bde20123-1'}},
-                {'name': 'span', 'attrs': {'data-testid': 'ratingGroup--imdb-rating'}},
-                {'name': 'div', 'attrs': {'data-testid': 'hero-rating-bar__aggregate-rating__score'}},
-                {'name': 'span', 'attrs': {'class': re.compile(r'AggregateRatingButton__RatingScore')}},
-            ]
-
-            for selector in selectors:
-                element = soup.find(selector['name'], selector.get('attrs', {}))
-                if element:
-                    # Extract rating text
-                    rating_text = element.get_text(strip=True)
-                    # Extract just the number (e.g., "8.5/10" -> "8.5")
-                    match = re.search(r'(\d+\.?\d*)', rating_text)
-                    if match:
-                        return {'rating': match.group(1), 'source': 'IMDB'}
-
-    except httpx.HTTPError, AttributeError, ValueError:
-        # COMMENT: Silently ignore HTTP errors, parsing errors, and missing attributes
+            return _extract_imdb_rating_from_soup(soup)
+    except (httpx.HTTPError, AttributeError, ValueError):
         pass
 
+    return {}
+
+
+def _extract_imdb_rating_from_soup(soup: BeautifulSoup) -> dict[str, str]:
+    selectors = [
+        {'name': 'span', 'attrs': {'itemprop': 'ratingValue'}},
+        {'name': 'span', 'attrs': {'class': 'sc-bde20123-1'}},
+        {'name': 'span', 'attrs': {'data-testid': 'ratingGroup--imdb-rating'}},
+        {'name': 'div', 'attrs': {'data-testid': 'hero-rating-bar__aggregate-rating__score'}},
+        {'name': 'span', 'attrs': {'class': re.compile(r'AggregateRatingButton__RatingScore')}},
+    ]
+    for selector in selectors:
+        element = soup.find(selector['name'], selector.get('attrs', {}))
+        if element:
+            rating_text = element.get_text(strip=True)
+            match = re.search(r'(\d+\.?\d*)', rating_text)
+            if match:
+                return {'rating': match.group(1), 'source': 'IMDB'}
     return {}
 
 
@@ -66,54 +67,59 @@ async def get_kinopoisk_rating(kp_url: str) -> dict[str, str]:
                 rating = rating_element.text.strip()
                 return {'rating': rating, 'source': 'Кинопоиск'}
 
-    except httpx.HTTPError, AttributeError, ValueError:
+    except (httpx.HTTPError, AttributeError, ValueError):
         # COMMENT: Silently ignore HTTP errors, parsing errors, and missing attributes
         pass
 
     return {}
 
 
+def _find_poster_element(soup: BeautifulSoup) -> Tag | None:
+    """Find the img element containing the poster"""
+    poster_img = soup.find('img', {'class': re.compile('ipc-image')})
+    if not poster_img:
+        poster_div = soup.find('div', {'class': 'ipc-poster'})
+        if poster_div and hasattr(poster_div, 'find'):
+            img_tag = poster_div.find('img')
+            if isinstance(img_tag, Tag):
+                poster_img = img_tag
+    return poster_img if isinstance(poster_img, Tag) else None
+
+
+def _extract_imdb_poster_src(soup: BeautifulSoup) -> str | None:
+    """Extract poster image source URL from IMDB soup"""
+    poster_img = _find_poster_element(soup)
+    if not poster_img:
+        return None
+
+    src_raw = poster_img.get('src')
+    if not src_raw:
+        return None
+
+    src: str | None = None
+    if isinstance(src_raw, list):
+        src = src_raw[0] if src_raw else None
+    else:
+        src = str(src_raw)
+
+    if src and IMDB_V1_TOKEN in src:
+        src = src.split(IMDB_V1_TOKEN)[0] + IMDB_V1_POSTER_REPLACE
+    return src
+
+
 async def get_imdb_poster(imdb_url: str) -> tuple[bytes | None, str | None]:
     """Get poster from IMDB page"""
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9',
-            }
-            response = await client.get(imdb_url, headers=headers)
+            response = await client.get(imdb_url, headers=IMDB_HEADERS)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, 'lxml')
+            poster_url = _extract_imdb_poster_src(soup)
+            if poster_url:
+                return None, poster_url
 
-            # Find poster image
-            poster_img = soup.find('img', {'class': re.compile('ipc-image')})
-            if not poster_img:
-                # Try alternate selector
-                poster_div = soup.find('div', {'class': 'ipc-poster'})
-                if poster_div and hasattr(poster_div, 'find'):
-                    img_tag = poster_div.find('img')
-                    if isinstance(img_tag, Tag):
-                        poster_img = img_tag
-
-            if poster_img and isinstance(poster_img, Tag) and poster_img.get('src'):
-                poster_url_raw = poster_img['src']
-                # Handle case where BeautifulSoup returns a list
-                poster_url: str | None = None
-                if isinstance(poster_url_raw, list):
-                    poster_url = poster_url_raw[0] if poster_url_raw else None
-                elif isinstance(poster_url_raw, str):
-                    poster_url = poster_url_raw
-
-                if poster_url:
-                    # Get higher resolution version
-                    if '._V1_' in poster_url:
-                        poster_url = poster_url.split('._V1_')[0] + '._V1_FMjpg_UX600_.jpg'
-
-                    # Return URL without downloading
-                    return None, poster_url
-
-    except httpx.HTTPError, AttributeError, ValueError:
+    except (httpx.HTTPError, AttributeError, ValueError):
         # COMMENT: Silently ignore HTTP errors, parsing errors, and missing attributes
         pass
 
@@ -146,10 +152,6 @@ async def get_imdb_details(imdb_url: str) -> dict[str, Any] | None:
     """Get detailed movie info from IMDB page"""
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9',
-            }
             # Ensure URL is complete
             if not imdb_url.startswith('http'):
                 if imdb_url.startswith('tt'):
@@ -157,7 +159,7 @@ async def get_imdb_details(imdb_url: str) -> dict[str, Any] | None:
                 else:
                     return None
 
-            response = await client.get(imdb_url, headers=headers)
+            response = await client.get(imdb_url, headers=IMDB_HEADERS)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, 'lxml')
@@ -171,7 +173,7 @@ async def get_imdb_details(imdb_url: str) -> dict[str, Any] | None:
 
             return data
 
-    except httpx.HTTPError, AttributeError, ValueError:
+    except (httpx.HTTPError, AttributeError, ValueError):
         # log.warning(f"Error fetching IMDB details: {e}")
         pass
 
@@ -211,8 +213,8 @@ def _parse_imdb_poster(soup: BeautifulSoup, data: dict[str, Any]) -> None:
     if poster_img and isinstance(poster_img, Tag) and poster_img.get('src'):
         src = poster_img['src']
         if isinstance(src, str):
-            if '._V1_' in src:
-                src = src.split('._V1_')[0] + '._V1_FMjpg_UX600_.jpg'
+            if IMDB_V1_TOKEN in src:
+                src = src.split(IMDB_V1_TOKEN)[0] + IMDB_V1_POSTER_REPLACE
             data['poster_url'] = src
 
 

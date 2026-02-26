@@ -134,14 +134,14 @@ async def get_current_admin_if_configured(
     return user
 
 
-async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]) -> User:
     """Get current active user."""
     if not current_user.is_authorized:
         raise HTTPException(status_code=400, detail='Inactive user')
     return current_user
 
 
-async def get_current_admin_user(current_user: Annotated[User, Depends(get_current_active_user)]) -> User:
+def get_current_admin_user(current_user: Annotated[User, Depends(get_current_active_user)]) -> User:
     """Get current admin user."""
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail='Not enough permissions')
@@ -197,7 +197,6 @@ async def login(
             await send_telegram_code(user.chat_id, code)
         except Exception as e:  # pylint: disable=broad-exception-caught
             log.error('Failed to send TFA code: %s', e)
-            # raise HTTPException(status_code=500, detail="Failed to send 2FA code")
 
         return {'tfa_required': True, 'username': user.username}
 

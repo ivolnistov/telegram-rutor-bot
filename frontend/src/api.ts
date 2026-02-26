@@ -28,8 +28,8 @@ api.interceptors.response.use(
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
         localStorage.removeItem('token')
-        if (!window.location.pathname.startsWith('/login')) {
-          window.location.href = '/login'
+        if (!globalThis.location.pathname.startsWith('/login')) {
+          globalThis.location.href = '/login'
         }
       }
     }

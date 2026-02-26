@@ -1,10 +1,12 @@
 import logging
 import re
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from telegram_rutor_bot.clients.tmdb import TmdbClient
 from telegram_rutor_bot.db.films import get_unlinked_films, update_film_metadata
+from telegram_rutor_bot.db.models import Film
 
 log = logging.getLogger(__name__)
 
@@ -24,44 +26,7 @@ class TmdbMatcher:
 
         for film in films:
             try:
-                # Try to search specifically by year first if available
-                # Assuming film.year is reliable.
-                # If film.name is Russian, search might fail if TMDB expects English or user language?
-                # TmdbClient uses 'ru-RU' by default via config, so searching Russian name is fine.
-
-                query = film.name
-
-                # Check if it's likely a show or movie?
-                # We don't know, default to movie logic first? Or search multi?
-                # Let's try search_multi to be safe, or just search_movie if most are movies.
-                # However, many items on rutor are movies.
-
-                # Let's use search_movie first with year match
-                results = await self.tmdb.search_movie(query, year=film.year)
-
-                if not results:
-                    # Try cleaning name (remove 3D, 4K, etc)
-
-                    # Remove common quality/edition markers (case insensitive)
-                    # 3D, 3Д, 4K, 4K (cyrillic K), IMAX, Extended, Director's Cut
-                    cleaned = re.sub(
-                        r'(?i)(3d|3д|4k|4к|imax|extended|directors?[\s\.]*cut|unrated|\btheatrical\b)', '', query
-                    )
-                    # Remove excess whitespace
-                    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-
-                    if cleaned and cleaned != query:
-                        log.info(f"Retrying match with cleaned name: '{cleaned}' (was '{query}')")
-                        results = await self.tmdb.search_movie(cleaned, year=film.year)
-
-                if not results and film.ru_name:
-                    results = await self.tmdb.search_movie(film.ru_name, year=film.year)
-
-                match = None
-                if results:
-                    # Pick the best match.
-                    # If searched with year, first result is likely good.
-                    match = results[0]
+                match = await self._try_find_tmdb_match(film)
 
                 if match:
                     await update_film_metadata(
@@ -81,3 +46,22 @@ class TmdbMatcher:
                 log.error(f'Error matching film {film.id}: {e}')
 
         return matched_count
+
+    async def _try_find_tmdb_match(self, film: Film) -> dict[str, Any] | None:
+        query = film.name
+        results = await self.tmdb.search_movie(query, year=film.year)
+
+        if not results:
+            cleaned = re.sub(r'(?i)(3d|3д|4k|4к|imax|extended|directors?[\s\.]*cut|unrated|\btheatrical\b)', '', query)
+            cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+
+            if cleaned and cleaned != query:
+                log.info(f"Retrying match with cleaned name: '{cleaned}' (was '{query}')")
+                results = await self.tmdb.search_movie(cleaned, year=film.year)
+
+        if not results and film.ru_name:
+            results = await self.tmdb.search_movie(film.ru_name, year=film.year)
+
+        if results:
+            return results[0]
+        return None

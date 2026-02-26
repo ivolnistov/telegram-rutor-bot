@@ -44,7 +44,7 @@ export default function SettingsConfig() {
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('')
   const [showTorrentPassword, setShowTorrentPassword] = useState(false)
-  const [seedRatioLimit, setSeedRatioLimit] = useState(1.0)
+  const [seedRatioLimit, setSeedRatioLimit] = useState(1)
   const [seedTimeLimit, setSeedTimeLimit] = useState(2880)
   const [inactiveSeedingTimeLimit, setInactiveSeedingTimeLimit] = useState(0)
   const [seedLimitAction, setSeedLimitAction] = useState(0)
@@ -60,8 +60,8 @@ export default function SettingsConfig() {
     try {
       // Ensure key is saved to backend before requesting token
       await handleSave()
-      const { auth_url } = await getTmdbAuthUrl(window.location.href)
-      window.location.href = auth_url
+      const { auth_url } = await getTmdbAuthUrl(globalThis.location.href)
+      globalThis.location.href = auth_url
     } catch (e) {
       console.error(e)
       toast.error('Failed to get TMDB auth URL (Ensure API Key is valid)')
@@ -71,7 +71,7 @@ export default function SettingsConfig() {
   const processedToken = useRef<string | null>(null)
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
+    const params = new URLSearchParams(globalThis.location.search)
     const requestToken = params.get('request_token')
     const approved = params.get('approved')
 
@@ -90,7 +90,7 @@ export default function SettingsConfig() {
           toast.success('Connected to TMDB!')
 
           // Clear URL
-          window.history.replaceState({}, '', window.location.pathname)
+          globalThis.history.replaceState({}, '', globalThis.location.pathname)
 
           // Refresh config
           const res = await checkConfig()
@@ -119,7 +119,7 @@ export default function SettingsConfig() {
         setUsername(String(res.current_values.qbittorrent_username || 'admin'))
         setPassword(String(res.current_values.qbittorrent_password || ''))
 
-        setSeedRatioLimit(Number(res.current_values.seed_ratio_limit || 1.0))
+        setSeedRatioLimit(Number(res.current_values.seed_ratio_limit || 1))
         setSeedTimeLimit(Number(res.current_values.seed_time_limit || 2880))
         setSeedLimitAction(Number(res.current_values.seed_limit_action || 0))
         setEnvVars(res.env_vars)
@@ -163,7 +163,6 @@ export default function SettingsConfig() {
       seed_time_limit: seedTimeLimit,
       inactive_seeding_time_limit: inactiveSeedingTimeLimit,
       seed_limit_action: seedLimitAction,
-      searches: activeSearches.filter((s) => s.name && s.url),
     }
 
     try {
@@ -616,10 +615,11 @@ export default function SettingsConfig() {
         <div className="space-y-4 border-t border-zinc-800 pt-6">
           <h2 className="text-lg font-medium text-zinc-200">Search Filters</h2>
           <div className="grid gap-2">
-            <label className="text-sm font-medium text-zinc-400">
+            <label htmlFor="qualityFilters" className="text-sm font-medium text-zinc-400">
               Quality Filters (comma separated, e.g. 1080p, 2160p)
             </label>
             <Input
+              id="qualityFilters"
               value={qualityFilters}
               onChange={(e) => {
                 setQualityFilters(e.target.value)
@@ -632,10 +632,11 @@ export default function SettingsConfig() {
             </p>
           </div>
           <div className="grid gap-2">
-            <label className="text-sm font-medium text-zinc-400">
+            <label htmlFor="translationFilters" className="text-sm font-medium text-zinc-400">
               Translation Filters (comma separated, e.g. Dubbed, MVO)
             </label>
             <Input
+              id="translationFilters"
               value={translationFilters}
               onChange={(e) => {
                 setTranslationFilters(e.target.value)
@@ -681,14 +682,18 @@ export default function SettingsConfig() {
           <div className="space-y-4">
             {activeSearches.map((search, index) => (
               <div
-                key={index}
+                key={search.url || index}
                 className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr_1fr_auto_auto] gap-3 items-start bg-zinc-900/50 p-3 rounded-lg border border-zinc-800"
               >
                 <div>
-                  <label className="text-xs font-medium text-zinc-500 mb-1 block">
+                  <label
+                    htmlFor={`search-name-${String(index)}`}
+                    className="text-xs font-medium text-zinc-500 mb-1 block"
+                  >
                     Name
                   </label>
                   <Input
+                    id={`search-name-${String(index)}`}
                     value={search.name}
                     onChange={(e) => {
                       const newSearches = [...activeSearches]
@@ -699,10 +704,14 @@ export default function SettingsConfig() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-zinc-500 mb-1 block">
+                  <label
+                    htmlFor={`search-url-${String(index)}`}
+                    className="text-xs font-medium text-zinc-500 mb-1 block"
+                  >
                     Rutor URL
                   </label>
                   <Input
+                    id={`search-url-${String(index)}`}
                     value={search.url}
                     onChange={(e) => {
                       const newSearches = [...activeSearches]
@@ -713,10 +722,14 @@ export default function SettingsConfig() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-zinc-500 mb-1 block">
+                  <label
+                    htmlFor={`search-cron-${String(index)}`}
+                    className="text-xs font-medium text-zinc-500 mb-1 block"
+                  >
                     Cron Schedule
                   </label>
                   <Input
+                    id={`search-cron-${String(index)}`}
                     value={search.cron}
                     onChange={(e) => {
                       const newSearches = [...activeSearches]
@@ -727,10 +740,11 @@ export default function SettingsConfig() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-zinc-500 mb-1 block">
+                  <label htmlFor={`search-cat-${String(index)}`} className="text-xs font-medium text-zinc-500 mb-1 block">
                     Category
                   </label>
                   <Input
+                    id={`search-cat-${String(index)}`}
                     value={search.category || ''}
                     onChange={(e) => {
                       const newSearches = [...activeSearches]
@@ -741,10 +755,11 @@ export default function SettingsConfig() {
                   />
                 </div>
                 <div className="flex flex-col items-center justify-center pt-2">
-                  <label className="text-xs font-medium text-zinc-500 mb-2 block">
+                  <label htmlFor={`search-series-${String(index)}`} className="text-xs font-medium text-zinc-500 mb-2 block">
                     Сериалы
                   </label>
                   <Checkbox
+                    id={`search-series-${String(index)}`}
                     checked={search.is_series || false}
                     onCheckedChange={(checked) => {
                       const newSearches = [...activeSearches]

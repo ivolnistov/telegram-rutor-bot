@@ -256,10 +256,6 @@ async def list_torrents(q: str | None = None, limit: int = 50) -> list[TorrentRe
             torrents = await search_torrents(session, q, limit=limit)
         else:
             torrents = await get_recent_torrents(session, limit=limit)
-        if q:
-            torrents = await search_torrents(session, q, limit=limit)
-        else:
-            torrents = await get_recent_torrents(session, limit=limit)
         return [TorrentResponse.model_validate(t) for t in torrents]
 
 
@@ -473,52 +469,39 @@ async def get_downloads() -> list[dict[str, Any]]:
         raise HTTPException(status_code=500, detail=f'Failed to fetch downloads: {e}') from e
 
 
-@api_router.delete('/api/downloads/{torrent_hash}', dependencies=[Depends(get_current_admin_user)])
-async def delete_download(torrent_hash: str) -> dict[str, str]:
-    """Delete a torrent and its files"""
+async def _execute_torrent_action(action_fn, torrent_hash: str, action_name: str) -> dict[str, str]:
+    """Helper to execute an action on a torrent client."""
     try:
         client = get_torrent_client()
         await client.connect()
         try:
-            await client.remove_torrent(torrent_hash, delete_files=True)
+            await action_fn(client)
             return {'status': 'ok', 'hash': torrent_hash}
         finally:
             await client.disconnect()
     except Exception as e:
-        log.error('Failed to delete download %s: %s', torrent_hash, e)
-        raise HTTPException(status_code=500, detail=f'Failed to delete download: {e}') from e
+        log.error('Failed to %s download %s: %s', action_name, torrent_hash, e)
+        raise HTTPException(status_code=500, detail=f'Failed to {action_name} download: {e}') from e
+
+
+@api_router.delete('/api/downloads/{torrent_hash}', dependencies=[Depends(get_current_admin_user)])
+async def delete_download(torrent_hash: str) -> dict[str, str]:
+    """Delete a torrent and its files."""
+    return await _execute_torrent_action(
+        lambda client: client.remove_torrent(torrent_hash, delete_files=True), torrent_hash, 'delete'
+    )
 
 
 @api_router.post('/api/downloads/{torrent_hash}/pause', dependencies=[Depends(get_current_admin_user)])
 async def pause_download(torrent_hash: str) -> dict[str, str]:
-    """Pause a torrent"""
-    try:
-        client = get_torrent_client()
-        await client.connect()
-        try:
-            await client.pause_torrent(torrent_hash)
-            return {'status': 'ok', 'hash': torrent_hash}
-        finally:
-            await client.disconnect()
-    except Exception as e:
-        log.error('Failed to pause download %s: %s', torrent_hash, e)
-        raise HTTPException(status_code=500, detail=f'Failed to pause download: {e}') from e
+    """Pause a torrent."""
+    return await _execute_torrent_action(lambda client: client.pause_torrent(torrent_hash), torrent_hash, 'pause')
 
 
 @api_router.post('/api/downloads/{torrent_hash}/resume', dependencies=[Depends(get_current_admin_user)])
 async def resume_download(torrent_hash: str) -> dict[str, str]:
-    """Resume a torrent"""
-    try:
-        client = get_torrent_client()
-        await client.connect()
-        try:
-            await client.resume_torrent(torrent_hash)
-            return {'status': 'ok', 'hash': torrent_hash}
-        finally:
-            await client.disconnect()
-    except Exception as e:
-        log.error('Failed to resume download %s: %s', torrent_hash, e)
-        raise HTTPException(status_code=500, detail=f'Failed to resume download: {e}') from e
+    """Resume a torrent."""
+    return await _execute_torrent_action(lambda client: client.resume_torrent(torrent_hash), torrent_hash, 'resume')
 
 
 @app.get('/api/health')
@@ -577,16 +560,8 @@ if _frontend_assets_path.exists():
     app.mount('/assets', StaticFiles(directory=_frontend_assets_path), name='assets')
 
 
-@app.get('/{full_path:path}', response_model=None)
-async def serve_spa(full_path: str) -> FileResponse | HTMLResponse:
-    """Serve Single Page Application or Wizard."""
-    # Pass through API calls
-    if full_path.startswith('api'):
-        raise HTTPException(status_code=404, detail='API endpoint not found')
-
-    response: FileResponse | HTMLResponse
-    # Serve static files if they exist
-    base_dir = Path('frontend/dist').resolve()
+def _handle_static_file(base_dir: Path, full_path: str) -> FileResponse | None:
+    """Attempt to serve a static file."""
     file_path = (base_dir / full_path).resolve()
 
     # Prevent path traversal
@@ -594,33 +569,42 @@ async def serve_spa(full_path: str) -> FileResponse | HTMLResponse:
         raise HTTPException(status_code=400, detail='Invalid path')
 
     if file_path.exists() and file_path.is_file():
-        # Prevent accessing wizard.html directly if configured
         if full_path == 'wizard.html' and settings.is_configured:
             raise HTTPException(status_code=404, detail='Not Found')
+        return FileResponse(file_path)
+    return None
 
-        response = FileResponse(file_path)
+def _serve_wizard() -> FileResponse:
+    """Serve the setup wizard."""
+    wizard_path = Path('frontend/dist/wizard.html')
+    if not wizard_path.exists():
+        wizard_path = Path('frontend/public/wizard.html')
+
+    if wizard_path.exists():
+        response = FileResponse(wizard_path)
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         return response
+    raise HTTPException(status_code=404, detail='Wizard not found')
 
-    # Logic for Root/SPA routing
+@app.get('/{full_path:path}', response_model=None)
+async def serve_spa(full_path: str) -> FileResponse | HTMLResponse:
+    """Serve Single Page Application or Wizard."""
+    if full_path.startswith('api'):
+        raise HTTPException(status_code=404, detail='API endpoint not found')
+
+    base_dir = Path('frontend/dist').resolve()
+    static_resp = _handle_static_file(base_dir, full_path)
+    if static_resp:
+        return static_resp
+
     is_wizard_request = full_path in ('wizard', 'wizard.html')
 
     if settings.is_configured:
         if is_wizard_request:
             raise HTTPException(status_code=404, detail='Not Found')
     else:
-        # Unconfigured: Force Wizard
-        wizard_path = Path('frontend/dist/wizard.html')
-        # Fallback for local dev without build
-        if not wizard_path.exists():
-            wizard_path = Path('frontend/public/wizard.html')
+        return _serve_wizard()
 
-        if wizard_path.exists():
-            # Serve directly with no-cache headers
-            response = FileResponse(wizard_path)
-            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-            return response
-
-    # Serve Main App (SPA)
     index_path = Path('frontend/dist/index.html')
     if index_path.exists():
         response = FileResponse(index_path)

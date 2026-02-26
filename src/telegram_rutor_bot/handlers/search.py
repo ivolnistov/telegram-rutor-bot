@@ -26,7 +26,6 @@ from telegram_rutor_bot.tasks.jobs import execute_search
 from telegram_rutor_bot.utils import DEFAULT_LANGUAGE, get_cron_description, get_text, security
 
 __all__ = (
-    'search_add',
     'search_callback_handler',
     'search_delete',
     'search_execute',
@@ -193,46 +192,3 @@ async def search_delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text=get_text('search_deleted', lang))
 
-
-@security()
-async def search_add(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Add a new search"""
-    assert update.message is not None  # Checked by security decorator
-    assert update.effective_chat is not None  # Checked by security decorator
-    assert update.message.text is not None  # Commands always have text
-
-    lang = await _get_lang(update)
-
-    # Remove command from text
-    text = update.message.text
-    if text.startswith('/add_search '):
-        text = text[12:]  # Remove '/add_search '
-    elif text == '/add_search':
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id, text=get_text('usage_add_search', lang), disable_web_page_preview=True
-        )
-        return
-
-    # Split into URL and cron parts
-    parts = text.split()
-    if len(parts) < 6:  # URL + 5 cron fields
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id, text=get_text('invalid_format', lang), disable_web_page_preview=True
-        )
-        return
-
-    search_url = parts[0]
-    cron = ' '.join(parts[1:6])  # Take exactly 5 cron fields
-
-    try:
-        async with get_async_session() as session:
-            user = await get_or_create_user_by_chat_id(session, update.effective_chat.id)
-            search_id = await add_search_to_db(session, search_url, cron, user.id)
-    except (ValueError, OSError) as e:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Error: {e!s}')
-        return
-
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=get_text('search_added', lang, search_id=search_id),
-    )

@@ -1,4 +1,5 @@
 import pytest
+from pytest import approx
 
 from telegram_rutor_bot.api.routes.discovery import get_library
 from telegram_rutor_bot.db.models import Film, User
@@ -9,7 +10,15 @@ async def test_get_library_vote_average_logic(async_session):
     # 1. Setup Data
     # Film with both ratings
     film_both = Film(
-        name='Both Ratings', kp_rating=8.5, rating=7.0, tmdb_media_type='movie', tmdb_id=1, blake='hash1', year=2023
+        name='Both Ratings',
+        kp_rating=8.5,
+        rating=7.0,
+        tmdb_media_type='movie',
+        tmdb_id=1,
+        blake='hash1',
+        year=2023,
+        original_title='Interstellar 2',
+        country='USA',
     )
     # Film with only Rutor/TMDB rating
     film_rating_only = Film(
@@ -40,17 +49,17 @@ async def test_get_library_vote_average_logic(async_session):
     res_map = {r['title']: r for r in results}
 
     # Case 1: Both -> Should use KP (8.5)
-    assert res_map['Both Ratings']['vote_average'] == 8.5
-    assert res_map['Both Ratings']['kp_rating'] == 8.5
+    assert res_map['Both Ratings']['vote_average'] == approx(8.5)
+    assert res_map['Both Ratings']['kp_rating'] == approx(8.5)
 
     # Case 2: Rating Only -> Should use Rating (6.5)
-    assert res_map['Rating Only']['vote_average'] == 6.5
+    assert res_map['Rating Only']['vote_average'] == approx(6.5)
     assert res_map['Rating Only']['kp_rating'] is None
 
     # Case 3: KP Only -> Should use KP (7.8)
-    assert res_map['KP Only']['vote_average'] == 7.8
-    assert res_map['KP Only']['kp_rating'] == 7.8
+    assert res_map['KP Only']['vote_average'] == approx(7.8)
+    assert res_map['KP Only']['kp_rating'] == approx(7.8)
 
     # Case 4: None -> Should allow 0.0 or None, code says 0.0
-    assert res_map['No Rating']['vote_average'] == 0.0
+    assert res_map['No Rating']['vote_average'] == approx(0.0)
     assert res_map['No Rating']['kp_rating'] is None

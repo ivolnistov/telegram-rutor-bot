@@ -21,9 +21,10 @@ from telegram_rutor_bot.db import (
 )
 from telegram_rutor_bot.helpers import format_films
 from telegram_rutor_bot.rutor import download_torrent, get_torrent_info
+from telegram_rutor_bot.rutor.constants import RUTOR_BASE_URL
 from telegram_rutor_bot.rutor.rating_parser import get_imdb_details
 from telegram_rutor_bot.torrent_clients import get_torrent_client
-from telegram_rutor_bot.utils import DEFAULT_LANGUAGE, get_text, security
+from telegram_rutor_bot.utils import DEFAULT_LANGUAGE, get_text, security, send_notifications
 
 __all__ = (
     'callback_query_handler',
@@ -102,7 +103,7 @@ async def torrent_info(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
 
         # Link buttons
         links_row = []
-        rutor_url = urljoin('http://rutor.info', torrent.link)
+        rutor_url = urljoin(RUTOR_BASE_URL, torrent.link)
         links_row.append(InlineKeyboardButton(get_text('btn_rutor_link', lang), url=rutor_url))
 
         if metadata.get('imdb_url'):
@@ -157,23 +158,7 @@ async def torrent_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             await context.bot.send_message(chat_id=update.effective_chat.id, text=get_text('no_messages', lang))
             return
 
-        for note in notifications:
-            with contextlib.suppress(Exception):
-                if note['type'] == 'photo' and note['media']:
-                    await context.bot.send_photo(
-                        chat_id=update.effective_chat.id,
-                        photo=note['media'],
-                        caption=note['caption'],
-                        parse_mode=ParseMode.HTML,
-                        reply_markup=note['reply_markup'],
-                    )
-                else:
-                    await context.bot.send_message(
-                        chat_id=update.effective_chat.id,
-                        text=note['caption'],  # caption field holds text for text-only messages
-                        parse_mode=ParseMode.HTML,
-                        reply_markup=note['reply_markup'],
-                    )
+        await send_notifications(context.bot, update.effective_chat.id, notifications)
 
     except (OSError, ValueError) as e:
         error_msg = f'Error in torrent_list: {e!s}\n\n{traceback.format_exc()}'
@@ -211,7 +196,6 @@ async def torrent_downloads(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             status_icon = '🔴'
 
         progress = f'{torrent["progress"]:.1f}%'
-        # 1024**3 = 1073741824 (GiB)
         size_gb = torrent['size'] / 1073741824
 
         caption = (
@@ -339,23 +323,7 @@ async def _handle_text_search(update: Update, context: ContextTypes.DEFAULT_TYPE
         await context.bot.send_message(chat_id=update.effective_chat.id, text=get_text('no_films_found', lang))
         return
 
-    for note in notifications:
-        with contextlib.suppress(Exception):
-            if note['type'] == 'photo' and note['media']:
-                await context.bot.send_photo(
-                    chat_id=update.effective_chat.id,
-                    photo=note['media'],
-                    caption=note['caption'],
-                    parse_mode=ParseMode.HTML,
-                    reply_markup=note['reply_markup'],
-                )
-            else:
-                await context.bot.send_message(
-                    chat_id=update.effective_chat.id,
-                    text=note['caption'],
-                    parse_mode=ParseMode.HTML,
-                    reply_markup=note['reply_markup'],
-                )
+    await send_notifications(context.bot, update.effective_chat.id, notifications)
 
 
 @security()
@@ -381,23 +349,7 @@ async def torrent_recommend(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         chat_id=update.effective_chat.id, text='🎬 <b>Recommended for you:</b>', parse_mode=ParseMode.HTML
     )
 
-    for note in notifications:
-        with contextlib.suppress(Exception):
-            if note['type'] == 'photo' and note['media']:
-                await context.bot.send_photo(
-                    chat_id=update.effective_chat.id,
-                    photo=note['media'],
-                    caption=note['caption'],
-                    parse_mode=ParseMode.HTML,
-                    reply_markup=note['reply_markup'],
-                )
-            else:
-                await context.bot.send_message(
-                    chat_id=update.effective_chat.id,
-                    text=note['caption'],
-                    parse_mode=ParseMode.HTML,
-                    reply_markup=note['reply_markup'],
-                )
+    await send_notifications(context.bot, update.effective_chat.id, notifications)
 
 
 @security()

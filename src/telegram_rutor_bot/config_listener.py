@@ -19,65 +19,35 @@ async def refresh_settings_from_db() -> None:
         async with get_async_session() as session:
             db_config = await get_db_config(session)
 
-            updates: dict[str, Any] = {}
-            updates['is_configured'] = db_config.is_configured
-
-            if db_config.telegram_token:
-                updates['telegram_token'] = db_config.telegram_token
-            if db_config.unauthorized_message:
-                updates['unauthorized_message'] = db_config.unauthorized_message
-
-            updates['torrent_client'] = db_config.torrent_client
-
-            updates['qbittorrent_host'] = db_config.qbittorrent_host
-            updates['qbittorrent_port'] = db_config.qbittorrent_port
-            updates['qbittorrent_username'] = db_config.qbittorrent_username
-            if db_config.qbittorrent_password:
-                updates['qbittorrent_password'] = db_config.qbittorrent_password
-
-            updates['transmission_host'] = db_config.transmission_host
-            updates['transmission_port'] = db_config.transmission_port
-            if db_config.transmission_username:
-                updates['transmission_username'] = db_config.transmission_username
-            if db_config.transmission_password:
-                updates['transmission_password'] = db_config.transmission_password
-
-            if db_config.proxy:
-                updates['proxy'] = db_config.proxy
-
-            updates['seed_ratio_limit'] = db_config.seed_ratio_limit
-            updates['seed_time_limit'] = db_config.seed_time_limit
-            updates['inactive_seeding_time_limit'] = db_config.inactive_seeding_time_limit
-
-            if db_config.tmdb_api_key:
-                updates['tmdb_api_key'] = db_config.tmdb_api_key
-            if db_config.tmdb_session_id:
-                updates['tmdb_session_id'] = db_config.tmdb_session_id
+            updates: dict[str, Any] = {'is_configured': db_config.is_configured}
+            fields_to_check = [
+                'telegram_token',
+                'unauthorized_message',
+                'torrent_client',
+                'qbittorrent_host',
+                'qbittorrent_port',
+                'qbittorrent_username',
+                'qbittorrent_password',
+                'transmission_host',
+                'transmission_port',
+                'transmission_username',
+                'transmission_password',
+                'proxy',
+                'seed_ratio_limit',
+                'seed_time_limit',
+                'inactive_seeding_time_limit',
+                'tmdb_api_key',
+                'tmdb_session_id',
+            ]
+            for field in fields_to_check:
+                val = getattr(db_config, field, None)
+                if val is not None:
+                    updates[field] = val
 
             # Respect Env Vars (Locking)
             # Pydantic Settings usually handles this priority (Env > File).
             # But here we are overwriting manually.
             # We must NOT overwrite if Env Var is present.
-
-            def apply_if_no_env(field: str, env_var: str) -> None:
-                if env_var not in os.environ and field in updates:
-                    # No op needed since 'updates' has new value, just ensure we don't accidentally ignore env
-                    pass
-                elif env_var in os.environ:
-                    # Env var is present, remove from updates
-                    # (assuming current 'settings' already has env var value loaded at startup)
-                    # BUT if 'settings' was modified strictly in-memory?
-                    # Pydantic BaseSettings loads env vars once.
-                    # We should probably trust that 'settings' has the env var value.
-                    updates.pop(field, None)
-
-            apply_if_no_env('telegram_token', 'RUTOR_BOT_TELEGRAM_TOKEN')
-            apply_if_no_env('torrent_client', 'RUTOR_BOT_TORRENT_CLIENT')
-
-            # ... repeat for all ...
-            # Actually, simpler:
-            # If we update 'settings' in-place, we are mutating it.
-            # If we want to respect Env, we should check before mutating.
 
             # Map of Field -> EnvVar
             env_map = {

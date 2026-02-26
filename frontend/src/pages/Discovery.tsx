@@ -273,11 +273,12 @@ const MediaModal = ({
                 <div className="flex items-center gap-1.5 ml-1">
                   {displayMedia.production_countries.map((c) => {
                     const flag = c.iso_3166_1
-                      ? c.iso_3166_1
-                          .toUpperCase()
-                          .replace(/./g, (char) =>
-                            String.fromCodePoint(127397 + char.charCodeAt(0)),
-                          )
+                      ? c.iso_3166_1.toUpperCase().replaceAll(/./g, (char) => {
+                          const codePoint = char.codePointAt(0)
+                          return codePoint
+                            ? String.fromCodePoint(127397 + codePoint)
+                            : ''
+                        })
                       : ''
                     return (
                       <span
@@ -442,9 +443,10 @@ const MediaModal = ({
             </h4>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
               {recommendations.slice(0, 4).map((rec) => (
-                <div
+                <button
                   key={rec.id}
-                  className="aspect-[2/3] bg-zinc-800 rounded overflow-hidden relative group cursor-pointer"
+                  type="button"
+                  className="aspect-[2/3] bg-zinc-800 rounded overflow-hidden relative group cursor-pointer border-none p-0"
                   title={rec.title || rec.name}
                   onClick={() => {
                     // Logic to switch modal content would be needed here,
@@ -463,7 +465,7 @@ const MediaModal = ({
                       <Check className="size-2.5" />
                     </div>
                   )}
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -579,6 +581,33 @@ const MediaModal = ({
 }
 
 // Start of DiscoveryPage
+
+const CountryFlags = ({ countries }: { countries?: any[] }) => {
+  if (!countries || countries.length === 0) return null
+
+  return (
+    <div className="flex -space-x-1">
+      {countries.slice(0, 3).map((c, idx) => (
+        <div
+          key={c.iso_3166_1 || c.name || `country-${idx}`}
+          className="relative z-0 hover:z-10 transition-all transform hover:scale-110"
+          title={c.name}
+        >
+          <span className="text-base drop-shadow-md filter cursor-help">
+            {c.iso_3166_1
+              ? c.iso_3166_1.toUpperCase().replaceAll(/./g, (char) => {
+                  const codePoint = char.codePointAt(0)
+                  return codePoint
+                    ? String.fromCodePoint(127397 + codePoint)
+                    : ''
+                })
+              : ''}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 const DiscoveryPage = () => {
   const { t } = useTranslation()
@@ -752,11 +781,16 @@ const DiscoveryPage = () => {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {displayData?.map((media) => (
-            <div
+            <button
               key={media.id}
-              className="group relative aspect-[2/3] bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-violet-500/50 transition-all cursor-pointer"
-              onClick={() => {
-                setSelectedMedia(media)
+              type="button"
+              className="group relative aspect-[2/3] bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-violet-500/50 transition-all cursor-pointer text-left p-0"
+              onClick={() => setSelectedMedia(media)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSelectedMedia(media)
+                }
               }}
             >
               {media.poster_path ? (
@@ -822,45 +856,32 @@ const DiscoveryPage = () => {
                   </div>
                 )}
                 {(() => {
-                  const countries =
-                    media.production_countries &&
-                    media.production_countries.length > 0
-                      ? media.production_countries
-                      : media.origin_country && media.origin_country.length > 0
-                        ? media.origin_country.map((c) => ({
-                            iso_3166_1: c,
-                            name: c,
-                          }))
-                        : []
+                  let countries: any[] = []
+                  if (media.production_countries && media.production_countries.length > 0) {
+                    countries = media.production_countries
+                  } else if (media.origin_country && media.origin_country.length > 0) {
+                    countries = media.origin_country.map((c) => ({
+                      iso_3166_1: c,
+                      name: c,
+                    }))
+                  }
 
                   if (countries.length === 0) return null
 
-                  return (
-                    <div className="flex -space-x-1">
-                      {countries.slice(0, 3).map((c, i) => (
-                        <div
-                          key={i}
-                          className="relative z-0 hover:z-10 transition-all transform hover:scale-110"
-                          title={c.name}
-                        >
-                          <span className="text-base drop-shadow-md filter cursor-help">
-                            {c.iso_3166_1
-                              ? c.iso_3166_1
-                                  .toUpperCase()
-                                  .replace(/./g, (char) =>
-                                    String.fromCodePoint(
-                                      127397 + char.charCodeAt(0),
-                                    ),
-                                  )
-                              : ''}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )
+                  let flagsCountries = countries
+                  if (media.media_type === 'movie') {
+                    flagsCountries = (media as Movie).production_countries || countries
+                  } else {
+                    const origin = (media as TvShow).origin_country
+                    if (origin) {
+                      flagsCountries = origin.map((c) => ({ iso_3166_1: c }))
+                    }
+                  }
+
+                  return <CountryFlags countries={flagsCountries} />
                 })()}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

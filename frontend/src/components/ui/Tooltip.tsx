@@ -32,10 +32,12 @@ export const Tooltip = ({
   }
 
   return (
-    <div
+    <div // NOSONAR
       className="relative inline-flex"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onFocusCapture={handleMouseEnter}
+      onBlurCapture={handleMouseLeave}
     >
       {children}
       {isVisible && (

@@ -188,6 +188,10 @@ async def get_library(
     # Convert to TMDB-like format
     results = []
     for film in films:
+        kp_val = film.kp_rating if film.kp_rating is not None else None
+        rating_fallback = float(film.rating) if film.rating else 0.0
+        final_rating = float(kp_val) if kp_val is not None else rating_fallback
+
         # Map Film model to partial TmdbMedia
         media = {
             'id': film.tmdb_id or film.id,  # Fallback to local ID if no TMDB ID
@@ -195,9 +199,7 @@ async def get_library(
             'title': film.name,
             'original_title': film.original_title,
             'poster_path': film.poster,
-            'vote_average': float(film.kp_rating)
-            if film.kp_rating is not None
-            else (float(film.rating) if film.rating else 0.0),
+            'vote_average': final_rating,
             'release_date': f'{film.year}-01-01' if film.year else None,
             'media_type': film.tmdb_media_type or 'movie',
             'in_library': True,
@@ -320,7 +322,6 @@ async def search_on_rutor(
         if not film:
             raise HTTPException(status_code=404, detail=f'TMDB error: {e}') from e
         # If we have the film, we can proceed without fresh details, but won't be able to search for original title
-        pass
 
     if not film and not details:
         raise HTTPException(status_code=404, detail='Media not found in TMDB')
@@ -369,15 +370,22 @@ async def search_on_rutor(
         )
 
     # Now we have a film, trigger search
+    queries = _build_search_queries(film, details)
 
-    # 1. Search with localized name
+    # Queue tasks
+    for q in queries:
+        await search_film_on_rutor.kiq(film.id, q, requester_chat_id=user.chat_id)
+
+    return {'status': 'search_started'}
+
+
+def _build_search_queries(film: Film, details: dict[str, Any]) -> set[str]:
     queries = set()
     query_localized = film.name
     if film.year:
         query_localized += f' ({film.year})'
     queries.add(query_localized)
 
-    # 2. Search with original name if available and different
     original_name = details.get('original_title') or details.get('original_name')
     if original_name and original_name != film.name:
         query_original = original_name
@@ -385,8 +393,4 @@ async def search_on_rutor(
             query_original += f' ({film.year})'
         queries.add(query_original)
 
-    # Queue tasks
-    for q in queries:
-        await search_film_on_rutor.kiq(film.id, q, requester_chat_id=user.chat_id)
-
-    return {'status': 'search_started'}
+    return queries

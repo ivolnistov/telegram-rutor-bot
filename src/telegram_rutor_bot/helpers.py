@@ -12,6 +12,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from telegram_rutor_bot.db import get_async_session, get_torrents_by_film, update_film_metadata
 from telegram_rutor_bot.rutor import get_torrent_info
+from telegram_rutor_bot.rutor.constants import RUTOR_BASE_URL
 from telegram_rutor_bot.schemas import Notification
 
 log = logging.getLogger(__name__)
@@ -77,7 +78,7 @@ def _format_torrents_buttons(
         row = [InlineKeyboardButton(text, callback_data=f'dl_{t.id}')]
 
         # Add Rutor button
-        rutor_url = urljoin('http://rutor.info', t.link)
+        rutor_url = urljoin(RUTOR_BASE_URL, t.link)
         row.append(InlineKeyboardButton('🔗', url=rutor_url))
 
         buttons.append(row)

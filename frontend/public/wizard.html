@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rutor Bot Setup</title>
     <link rel="icon" type="image/png" href="/icon.png" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous"></script>
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -226,12 +226,12 @@
             Telegram
           </div>
           <div>
-            <label class="block text-sm font-medium text-zinc-400 mb-1"
+            <label for="telegram_token" class="block text-sm font-medium text-zinc-400 mb-1"
               >Bot Token</label
             >
             <input
               type="text"
-              name="telegram_token"
+              id="telegram_token" name="telegram_token"
               required
               placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
               class="input-field"
@@ -263,23 +263,23 @@
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-medium text-zinc-500 mb-1"
+                <label for="init_admin_id" class="block text-xs font-medium text-zinc-500 mb-1"
                   >Telegram ID</label
                 >
                 <input
                   type="number"
-                  name="init_admin_id"
+                  id="init_admin_id" name="init_admin_id"
                   placeholder="e.g. 12345678"
                   class="input-field text-sm"
                 />
               </div>
               <div>
-                <label class="block text-xs font-medium text-zinc-500 mb-1"
+                <label for="init_admin_username" class="block text-xs font-medium text-zinc-500 mb-1"
                   >Username</label
                 >
                 <input
                   type="text"
-                  name="init_admin_username"
+                  id="init_admin_username" name="init_admin_username"
                   placeholder="@username"
                   class="input-field text-sm"
                 />
@@ -287,12 +287,12 @@
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-zinc-500 mb-1"
+              <label for="init_admin_password" class="block text-xs font-medium text-zinc-500 mb-1"
                 >Dashboard Password</label
               >
               <input
                 type="password"
-                name="init_admin_password"
+                id="init_admin_password" name="init_admin_password"
                 placeholder="Secure password"
                 class="input-field text-sm"
               />
@@ -300,10 +300,10 @@
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-medium text-zinc-500 mb-1"
+                <label for="init_admin_language" class="block text-xs font-medium text-zinc-500 mb-1"
                   >Language</label
                 >
-                <select name="init_admin_language" class="input-field text-sm">
+                <select id="init_admin_language" name="init_admin_language" class="input-field text-sm">
                   <option value="en">English (en)</option>
                   <option value="ru">Russian (ru)</option>
                 </select>
@@ -345,33 +345,33 @@
             Torrent Client
           </div>
           <div>
-            <label class="block text-sm font-medium text-zinc-400 mb-1"
+            <label for="torrent_client" class="block text-sm font-medium text-zinc-400 mb-1"
               >Downloader</label
             >
-            <select name="torrent_client" class="input-field">
+            <select id="torrent_client" name="torrent_client" class="input-field">
               <option value="qbittorrent">qBittorrent</option>
               <option value="transmission">Transmission</option>
             </select>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-zinc-400 mb-1"
+              <label for="torrent_host" class="block text-sm font-medium text-zinc-400 mb-1"
                 >Host</label
               >
               <input
                 type="text"
-                name="torrent_host"
+                id="torrent_host" name="torrent_host"
                 value="localhost"
                 class="input-field"
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-zinc-400 mb-1"
+              <label for="torrent_port" class="block text-sm font-medium text-zinc-400 mb-1"
                 >Port</label
               >
               <input
                 type="number"
-                name="torrent_port"
+                id="torrent_port" name="torrent_port"
                 value="8080"
                 class="input-field"
               />
@@ -379,23 +379,23 @@
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-zinc-400 mb-1"
+              <label for="torrent_username" class="block text-sm font-medium text-zinc-400 mb-1"
                 >Username</label
               >
               <input
                 type="text"
-                name="torrent_username"
+                id="torrent_username" name="torrent_username"
                 value="admin"
                 class="input-field"
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-zinc-400 mb-1"
+              <label for="torrent_password" class="block text-sm font-medium text-zinc-400 mb-1"
                 >Password</label
               >
               <input
                 type="password"
-                name="torrent_password"
+                id="torrent_password" name="torrent_password"
                 value="adminadmin"
                 class="input-field"
               />
@@ -563,7 +563,7 @@
               'API requires auth, assuming configured. Redirecting to login...',
             )
             // Optional: Show message instead of redirect
-            window.location.href = '/login'
+            globalThis.location.href = '/login'
             return
           }
           const data = await res.json()
@@ -593,8 +593,8 @@
 
           // Construct Initial Users
           const initialUsers = []
-          const adminId = parseInt(form.init_admin_id.value)
-          if (!isNaN(adminId)) {
+          const adminId = Number.parseInt(form.init_admin_id.value)
+          if (!Number.isNaN(adminId)) {
             initialUsers.push({
               id: adminId,
               username: form.init_admin_username.value || undefined,
@@ -612,7 +612,7 @@
             torrent: {
               client: form.torrent_client.value,
               host: form.torrent_host.value,
-              port: parseInt(form.torrent_port.value),
+              port: Number.parseInt(form.torrent_port.value),
               username: form.torrent_username.value,
               password: form.torrent_password.value,
             },
@@ -647,11 +647,12 @@
               try {
                 const r = await fetch('/api/health')
                 if (r.ok) {
-                  window.location.href = '/'
+                  globalThis.location.href = '/'
                 } else {
                   setTimeout(checkHealth, 1000)
                 }
               } catch (e) {
+                console.debug('Health check failed:', e)
                 setTimeout(checkHealth, 1000)
               }
             }

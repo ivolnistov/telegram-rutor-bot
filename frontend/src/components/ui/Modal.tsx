@@ -31,17 +31,20 @@ export const Modal = ({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} />
-      <div
+      <button
+        type="button"
+        className="absolute inset-0 w-full h-full cursor-default bg-transparent border-none"
+        onClick={onClose}
+        aria-label="Close modal"
+      />
+      <dialog
+        open
         className={`
                     bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-lg p-6
                     shadow-2xl scale-100 animate-in zoom-in-95 duration-200 relative z-10
-                    max-h-[85vh] overflow-y-auto custom-scrollbar
+                    max-h-[85vh] overflow-y-auto custom-scrollbar text-left
                     ${className}
                 `}
-        onClick={(e) => {
-          e.stopPropagation()
-        }}
       >
         {title && (
           <div className="flex items-center justify-between mb-4">
@@ -55,7 +58,7 @@ export const Modal = ({
           </div>
         )}
         {children}
-      </div>
+      </dialog>
     </div>,
     document.body,
   )

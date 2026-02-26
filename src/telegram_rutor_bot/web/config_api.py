@@ -70,7 +70,7 @@ class ConfigSetupRequest(BaseModel):
     seed_ratio_limit: float = 1.0
     seed_time_limit: int = 2880
     inactive_seeding_time_limit: int = 0
-    seed_limit_action: int = 0  # 0 = Pause, 1 = Remove
+    seed_limit_action: int = 0  # Action: 0 for Pause, 1 for Remove
     searches: list[SearchConfig] = []
 
 
@@ -150,7 +150,7 @@ async def get_config() -> ConfigCheckResponse:
         current_vals['qbittorrent_username'] = settings.qbittorrent_username
     if 'RUTOR_BOT_QBITTORRENT_PASSWORD' in os.environ:
         env_vars.append('qbittorrent_password')
-        current_vals['qbittorrent_password'] = '***'
+        current_vals['qbittorrent_password'] = '[PROTECTED]'
 
     missing = []
     if not current_vals.get('telegram_token'):
@@ -169,81 +169,50 @@ async def get_config() -> ConfigCheckResponse:
     )
 
 
-@router.post('', response_model=ConfigCheckResponse, dependencies=[Depends(get_current_admin_if_configured)])
-async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:  # noqa: PLR0912,PLR0915
-    """Save configuration to Database and initialize users."""
+async def _init_users(session: AsyncSession, initial_users: list[UserConfig]) -> None:
+    """Initialize admin users during setup"""
+    for user_data in initial_users:
+        try:
+            user = await get_or_create_user_by_chat_id(session, user_data.id)
+            user.is_authorized = True
+            user.is_admin = True
+            if user_data.username:
+                user.username = user_data.username
+            if user_data.password:
+                user.password = user_data.password
+            if user_data.is_tfa_enabled:
+                user.is_tfa_enabled = True
+            if user_data.language:
+                user.language = user_data.language
+        except Exception as e:
+            log.error('Failed to init user %s: %s', user_data.id, e)
+    await session.commit()
 
-    updates = {
-        'is_configured': True,
-        'telegram_token': config.telegram.token,
-    }
 
-    updates.update(
-        {
-            'qbittorrent_host': config.torrent.host,
-            'qbittorrent_port': config.torrent.port,
-            'qbittorrent_username': config.torrent.username,
-            'qbittorrent_password': config.torrent.password,
-        }
-    )
+async def _save_system_searches(session: AsyncSession, searches: list[SearchConfig]) -> None:
+    """Replace system searches in DB"""
+    await session.execute(delete(Search).where(Search.creator_id.is_(None)))
 
-    if config.tmdb_api_key:
-        updates['tmdb_api_key'] = config.tmdb_api_key
-    if config.tmdb_session_id:
-        updates['tmdb_session_id'] = config.tmdb_session_id
+    for idx, s in enumerate(searches):
+        category_id = None
+        if s.category:
+            cat_obj = await _get_or_create_category(session, s.category)
+            category_id = cat_obj.id
 
-    # Save to DB
-    async with get_async_session() as session:
-        # Cast to AppConfigUpdate to satisfy mypy
-        config_updates = cast(AppConfigUpdate, updates)
-        await update_db_config(session, **config_updates)
+        db_search = Search(
+            url=s.url,
+            cron=s.cron,
+            creator_id=None,
+            query=s.name or f'System Search {idx + 1}',
+            category_id=category_id,
+            is_series=s.is_series,
+        )
+        session.add(db_search)
+    await session.commit()
 
-        # Init Users
-        if config.telegram.initial_users:
-            for user_data in config.telegram.initial_users:
-                try:
-                    user = await get_or_create_user_by_chat_id(session, user_data.id)
-                    user.is_authorized = True
-                    user.is_admin = True
-                    if user_data.username:
-                        user.username = user_data.username
-                    if user_data.password:
-                        user.password = user_data.password
-                    if user_data.is_tfa_enabled:
-                        user.is_tfa_enabled = True
-                    if user_data.language:
-                        user.language = user_data.language
-                except Exception as e:
-                    log.error('Failed to init user %s: %s', user_data.id, e)
-            await session.commit()
 
-    # Save system searches to DB instead of config.toml
-    async with get_async_session() as session:
-        await session.execute(delete(Search).where(Search.creator_id.is_(None)))
-
-        for idx, s in enumerate(config.searches):
-            category_id = None
-            if s.category:
-                cat_obj = await _get_or_create_category(session, s.category)
-                category_id = cat_obj.id
-
-            db_search = Search(
-                url=s.url,
-                cron=s.cron,
-                creator_id=None,
-                query=s.name or f'System Search {idx + 1}',
-                category_id=category_id,
-                is_series=s.is_series,
-            )
-            session.add(db_search)
-        await session.commit()
-
-    settings.searches = config.searches
-
-    # Trigger Reload (In-process)
-    settings.refresh(**cast(AppConfigUpdate, updates))
-
-    # Save preferences to qBittorrent
+async def _update_qbittorrent_prefs(config: ConfigSetupRequest) -> None:
+    """Update qBittorrent global preferences"""
     try:
         client = get_torrent_client()
         await client.connect()
@@ -258,10 +227,40 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:  # noq
         await client.disconnect()
     except Exception as e:
         log.error('Failed to save qBittorrent preferences: %s', e)
-        # We don't fail the request, but logging is important
 
-    # Trigger Reload (In-process)
+
+@router.post('', response_model=ConfigCheckResponse, dependencies=[Depends(get_current_admin_if_configured)])
+async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:
+    """Save configuration to Database and initialize users."""
+
+    updates = {
+        'is_configured': True,
+        'telegram_token': config.telegram.token,
+        'qbittorrent_host': config.torrent.host,
+        'qbittorrent_port': config.torrent.port,
+        'qbittorrent_username': config.torrent.username,
+        'qbittorrent_password': config.torrent.password,
+    }
+
+    if config.tmdb_api_key:
+        updates['tmdb_api_key'] = config.tmdb_api_key
+    if config.tmdb_session_id:
+        updates['tmdb_session_id'] = config.tmdb_session_id
+
+    # Save to DB
+    async with get_async_session() as session:
+        await update_db_config(session, **cast(AppConfigUpdate, updates))
+        if config.telegram.initial_users:
+            await _init_users(session, config.telegram.initial_users)
+
+    # Save system searches
+    async with get_async_session() as session:
+        await _save_system_searches(session, config.searches)
+
+    settings.searches = config.searches
     settings.refresh(**cast(AppConfigUpdate, updates))
+
+    await _update_qbittorrent_prefs(config)
 
     # Trigger Reload (Cluster)
     if settings.redis_url:

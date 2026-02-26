@@ -12,6 +12,7 @@ from telegram_rutor_bot.config import settings
 from telegram_rutor_bot.db import get_films_by_ids
 from telegram_rutor_bot.db.models import Film, User
 from telegram_rutor_bot.rutor import parse_rutor
+from telegram_rutor_bot.rutor.constants import RUTOR_BASE_URL
 
 log = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ class WatchlistMonitor:
                 # Search by original title + year to be specific, or just name?
                 # Using name from DB.
                 query = film.name
-                url = f'http://rutor.info/search/0/0/0/0/{quote(query)}'
+                url = f'{RUTOR_BASE_URL}/search/0/0/0/0/{quote(query)}'
 
                 # parse_rutor handles filtering (via settings) and DB saving
                 new_ids = await parse_rutor(url, self.session, is_series=(film.tmdb_media_type == 'tv'))
@@ -108,38 +109,40 @@ class WatchlistMonitor:
                 if new_ids:
                     log.info(f'Found {len(new_ids)} new items for {film.name}')
                     if bot:
-                        # Fetch full film/torrent info for notification
-                        found_films = await get_films_by_ids(self.session, new_ids)
-                        for f in found_films:
-                            for torrent in f.torrents:
-                                # Simple notification
-                                msg = (
-                                    f'🎬 <b>Found Watchlist Item:</b> {f.name} ({f.year})\n'
-                                    f'💾 {torrent.name}\n'
-                                    f'📦 {torrent.sz / 1024 / 1024 / 1024:.2f} GB\n'
-                                    f"🔗 <a href='{torrent.magnet}'>Magnet</a>"
-                                )
-                                try:
-                                    # Notify all users
-                                    stmt_users = select(User)
-                                    users_result = await self.session.execute(stmt_users)
-                                    users = users_result.scalars().all()
-
-                                    for user in users:
-                                        if not user.chat_id:
-                                            continue
-                                        try:
-                                            await bot.send_message(
-                                                chat_id=user.chat_id, text=msg, parse_mode=ParseMode.HTML
-                                            )
-                                        except Exception as e:
-                                            log.warning(f'Failed to send to {user.chat_id}: {e}')
-
-                                except Exception as e:
-                                    log.error(f'Failed to notify: {e}')
+                        await self._notify_users_about_found_items(bot, new_ids, film.name)
 
                 film.last_search = datetime.now(UTC)
                 await self.session.commit()
 
             except Exception as e:
                 log.error(f'Error searching for {film.name}: {e}')
+
+    async def _send_notification_to_all_users(self, bot: Bot, msg: str) -> None:
+        """Send a single message to all registered users"""
+        stmt_users = select(User)
+        users_result = await self.session.execute(stmt_users)
+        users = users_result.scalars().all()
+
+        for user in users:
+            if not user.chat_id:
+                continue
+            try:
+                await bot.send_message(chat_id=user.chat_id, text=msg, parse_mode=ParseMode.HTML)
+            except Exception as e:
+                log.warning(f'Failed to send notification to user {user.chat_id}: {e}')
+
+    async def _notify_users_about_found_items(self, bot: Bot, new_ids: list[int], original_name: str) -> None:
+        """Notify users about new films found in search"""
+        found_films = await get_films_by_ids(self.session, new_ids)
+        for f in found_films:
+            for torrent in f.torrents:
+                msg = (
+                    f'🎬 <b>Found Watchlist Item:</b> {f.name} ({f.year})\n'
+                    f'💾 {torrent.name}\n'
+                    f'📦 {torrent.sz / 1024 / 1024 / 1024:.2f} GB\n'
+                    f"🔗 <a href='{torrent.magnet}'>Magnet</a>"
+                )
+                try:
+                    await self._send_notification_to_all_users(bot, msg)
+                except Exception as e:
+                    log.error(f'Failed to notify for film {original_name}: {e}')

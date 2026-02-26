@@ -12,6 +12,7 @@ class TmdbClient:
     BASE_URL = 'https://api.themoviedb.org/3'
 
     def __init__(self) -> None:
+        """Initialize TmdbClient with global config"""
         pass
 
     @property
@@ -127,7 +128,6 @@ class TmdbClient:
             try:
                 # Need to construct URL + query params manually for session_id because _get is for GET
                 url = f'{self.BASE_URL}{endpoint}'
-                # slash = '&' if '?' in url else '?' # Removed unused variable
 
                 # We need API KEY in params too
                 query_params = {

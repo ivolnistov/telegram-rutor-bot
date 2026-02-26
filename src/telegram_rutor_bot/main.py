@@ -62,7 +62,6 @@ async def run_bot() -> None:
     application.add_handler(CommandHandler('list', h.torrent_list))
     application.add_handler(CommandHandler('search', h.torrent_search))
     application.add_handler(CommandHandler('watch', h.watch_command))
-    application.add_handler(CommandHandler('add_search', h.search_add))
     application.add_handler(CommandHandler('list_search', h.search_list))
     application.add_handler(CommandHandler('list_subscriptions', h.subscriptions_list))
     application.add_handler(CommandHandler('downloads', h.torrent_downloads))
@@ -183,6 +182,9 @@ def main() -> int:
 
         with suppress(KeyboardInterrupt):
             asyncio.run(run_bot())
+    elif args.mode == 'api':
+        import uvicorn
+        uvicorn.run('telegram_rutor_bot.web.app:app', host='0.0.0.0', port=8000, reload=True)
     elif args.mode == 'scheduler':
         with suppress(KeyboardInterrupt):
             asyncio.run(run_scheduler())

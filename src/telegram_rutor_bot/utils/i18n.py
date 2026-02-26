@@ -11,7 +11,6 @@ TRANSLATIONS = {
         'help_text': (
             '🤖 *Rutor Bot Help*\n\n'
             '*/search <text>* - Find and download torrent\n'
-            '*/add_search <text>* - Subscribe to search (new torrents)\n'
             '*/list_search* - List your saved searches\n'
             '*/list_subscriptions* - List your series subscriptions\n'
             '*/list* - List active torrents in client\n'
@@ -28,9 +27,6 @@ TRANSLATIONS = {
         'menu_help': 'ℹ️ Help',
         'no_searches': 'No searches defined',
         'search_deleted': 'Search was deleted',
-        'usage_add_search': 'Usage: /add_search <url> <cron>\nExample: /add_search http://rutor.info/search/0/0/100/0/matrix * * * * *',
-        'invalid_format': 'Invalid format. Must be: /add_search <url> <minute> <hour> <day> <month> <day_of_week>\nExample: /add_search http://rutor.info/search/0/0/100/0/matrix * * * * *',
-        'search_added': '✅ Search added with ID {search_id}\n\nNow you can:\n/subscribe_{search_id} - Subscribe to notifications\n/es_{search_id} - Execute search now',
         'subscribed': 'You subscribed to search {search_id}',
         'unsubscribed': 'You unsubscribed from search {search_id}',
         'no_subscriptions': 'No subscriptions',
@@ -63,7 +59,6 @@ TRANSLATIONS = {
         'help_text': (
             '🤖 *Помощь по Rutor Bot*\n\n'
             '*/search <text>* - Найти и скачать торрент\n'
-            '*/add_search <text>* - Подписаться на поиск (новые торренты)\n'
             '*/list_search* - Список ваших поисков\n'
             '*/list_subscriptions* - Список подписок на сериалы\n'
             '*/list* - Список активных закачек в клиенте\n'
@@ -80,9 +75,6 @@ TRANSLATIONS = {
         'menu_help': 'ℹ️ Помощь',
         'no_searches': 'Нет сохраненных поисков',
         'search_deleted': 'Поиск удален',
-        'usage_add_search': 'Использование: /add_search <url> <cron>\nПример: /add_search http://rutor.info/search/0/0/100/0/matrix * * * * *',
-        'invalid_format': 'Неверный формат. Должно быть: /add_search <url> <минута> <час> <день> <месяц> <день_недели>\nПример: /add_search http://rutor.info/search/0/0/100/0/matrix * * * * *',
-        'search_added': '✅ Поиск добавлен с ID {search_id}\n\nТеперь вы можете:\n/subscribe_{search_id} - Подписаться на уведомления\n/es_{search_id} - Выполнить поиск сейчас',
         'subscribed': 'Вы подписались на поиск {search_id}',
         'unsubscribed': 'Вы отписались от поиска {search_id}',
         'no_subscriptions': 'Нет подписок',

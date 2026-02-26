@@ -4,6 +4,8 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
+from .constants import QUALITY_LABEL, RUTOR_BASE_URL
+
 
 def _format_title_section(result: dict[str, Any], soup: BeautifulSoup) -> list[str]:
     """Format title section of the message"""
@@ -73,7 +75,7 @@ def _format_technical_details(result: dict[str, Any]) -> list[str]:
     message_parts = ['📀 Технические детали:']
 
     if 'quality' in result:
-        message_parts.append(f'💎 Качество: {result["quality"]}')
+        message_parts.append(f'💎 {QUALITY_LABEL}: {result["quality"]}')
     if 'video_quality' in result:
         message_parts.append(f'📹 Видео: {result["video_quality"]}')
     if 'audio' in result:
@@ -135,7 +137,7 @@ def format_torrent_message(
     if torrent_link.startswith('http'):
         page_link = torrent_link
     else:
-        page_link = f'http://www.rutor.info{torrent_link if torrent_link.startswith("/") else "/" + torrent_link}'
+        page_link = f'{RUTOR_BASE_URL}{torrent_link if torrent_link.startswith("/") else "/" + torrent_link}'
 
     message_parts.extend(
         _format_links_section(download_command, result.get('imdb_url'), result.get('kp_url'), page_link)

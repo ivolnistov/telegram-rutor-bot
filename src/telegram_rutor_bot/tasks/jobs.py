@@ -26,9 +26,11 @@ from telegram_rutor_bot.db import (
 from telegram_rutor_bot.db.models import Film, Search, TaskExecution, User, subscribes_table
 from telegram_rutor_bot.helpers import format_films
 from telegram_rutor_bot.rutor import parse_rutor
+from telegram_rutor_bot.rutor.constants import RUTOR_BASE_URL
 from telegram_rutor_bot.schemas import Notification
 from telegram_rutor_bot.services.watchlist import check_matches
 from telegram_rutor_bot.torrent_clients import get_torrent_client
+from telegram_rutor_bot.utils import send_notifications
 
 from .broker import broker
 
@@ -282,9 +284,9 @@ async def search_film_on_rutor(
 
     # Construct Rutor URL
     # We need a proper URL construction logic.
-    # Usually it is http://rutor.info/search/0/0/000/0/{query}
+    # Usually it is https://rutor.info/search/0/0/000/0/{query}
     safe_query = query.replace(' ', '+')  # simple encoding
-    url = f'http://rutor.info/search/0/0/000/0/{safe_query}'
+    url = f'{RUTOR_BASE_URL}/search/0/0/000/0/{safe_query}'
 
     async with get_async_session() as session:
         try:
@@ -336,52 +338,7 @@ async def notify_subscribers(search_id: int, new_film_ids: list[int]) -> None:
         subscribers = await get_search_subscribers(session, search_id)
 
         for subscriber in subscribers:
-            log.info('Notifying chat %s', subscriber.chat_id)
-
-            for note in notifications:
-                try:
-                    if note['type'] == 'photo' and note['media']:
-                        await bot.send_photo(
-                            subscriber.chat_id,
-                            photo=note['media'],
-                            caption=note['caption'],
-                            parse_mode=ParseMode.HTML,
-                            reply_markup=note['reply_markup'],
-                        )
-                    else:
-                        await bot.send_message(
-                            subscriber.chat_id,
-                            text=note['caption'],
-                            parse_mode=ParseMode.HTML,
-                            reply_markup=note['reply_markup'],
-                        )
-                except telegram_error.TelegramError as e:
-                    log.error('Failed to send notification to %s: %s', subscriber.chat_id, e)
-
-
-async def _notify_single_subscriber(bot: Bot, subscriber: User, notifications: list[Notification]) -> None:
-    """Notify a single subscriber"""
-    log.info('Notifying chat %s', subscriber.chat_id)
-
-    for note in notifications:
-        try:
-            if note['type'] == 'photo' and note['media']:
-                await bot.send_photo(
-                    subscriber.chat_id,
-                    photo=note['media'],
-                    caption=note['caption'],
-                    parse_mode=ParseMode.HTML,
-                    reply_markup=note['reply_markup'],
-                )
-            else:
-                await bot.send_message(
-                    subscriber.chat_id,
-                    text=note['caption'],
-                    parse_mode=ParseMode.HTML,
-                    reply_markup=note['reply_markup'],
-                )
-        except telegram_error.TelegramError as e:
-            log.error('Failed to send notification to %s: %s', subscriber.chat_id, e)
+            await send_notifications(bot, subscriber.chat_id, notifications)
 
 
 async def _handle_connection_error(bot: Bot, search: Search, user: User, search_id: int, e: ConnectionError) -> None:
@@ -451,7 +408,7 @@ async def notify_about_new(search_id: int) -> None:
             notifications = await format_films(films)
 
             for subscriber in subscribers:
-                await _notify_single_subscriber(bot, subscriber, notifications)
+                await send_notifications(bot, subscriber.chat_id, notifications)
 
         except ValueError as e:
             log.exception(e)

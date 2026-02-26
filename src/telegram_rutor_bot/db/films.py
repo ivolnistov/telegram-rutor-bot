@@ -38,23 +38,24 @@ async def get_or_create_film(
 
     if film:
         # Update fields if provided
-        if year and not film.year:
-            film.year = year
-        if name and not film.name:
-            film.name = name
-        if ru_name and not film.ru_name:
-            film.ru_name = ru_name
-        if poster and not film.poster:
-            film.poster = poster
-        if rating and not film.rating:
-            film.rating = str(rating)
-        if category_id and not film.category_id:
-            film.category_id = category_id
-        if original_title and not film.original_title:
-            film.original_title = original_title
-        if country and not film.country:
-            film.country = country
-        await session.commit()
+        fields = {
+            'year': year,
+            'name': name,
+            'ru_name': ru_name,
+            'poster': poster,
+            'rating': str(rating) if rating is not None else None,
+            'category_id': category_id,
+            'original_title': original_title,
+            'country': country,
+        }
+        updated = False
+        for k, v in fields.items():
+            if v is not None and not getattr(film, k):
+                setattr(film, k, v)
+                updated = True
+
+        if updated:
+            await session.commit()
         return film
 
     # Create new film
@@ -64,7 +65,7 @@ async def get_or_create_film(
         name=name,
         ru_name=ru_name,
         poster=poster,
-        rating=str(rating) if rating else None,
+        rating=str(rating) if rating is not None else None,
         category_id=category_id,
         original_title=original_title,
         country=country,
