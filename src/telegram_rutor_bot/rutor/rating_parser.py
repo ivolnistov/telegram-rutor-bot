@@ -96,11 +96,7 @@ def _extract_imdb_poster_src(soup: BeautifulSoup) -> str | None:
     if not src_raw:
         return None
 
-    src: str | None = None
-    if isinstance(src_raw, list):
-        src = src_raw[0] if src_raw else None
-    else:
-        src = str(src_raw)
+    src: str | None = (src_raw[0] if src_raw else None) if isinstance(src_raw, list) else str(src_raw)
 
     if src and IMDB_V1_TOKEN in src:
         src = src.split(IMDB_V1_TOKEN)[0] + IMDB_V1_POSTER_REPLACE

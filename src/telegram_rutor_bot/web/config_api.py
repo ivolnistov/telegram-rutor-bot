@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from telegram_rutor_bot.clients.tmdb import TmdbClient
 from telegram_rutor_bot.config import SearchConfig, settings

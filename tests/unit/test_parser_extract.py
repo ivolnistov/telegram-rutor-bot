@@ -1,6 +1,7 @@
-import pytest
 from bs4 import BeautifulSoup
-from telegram_rutor_bot.rutor.parser import _extract_torrent_data, _extract_movie_links
+
+from telegram_rutor_bot.rutor.parser import _extract_movie_links, _extract_torrent_data
+
 
 def test_extract_torrent_data_full():
     html = """
@@ -15,14 +16,15 @@ def test_extract_torrent_data_full():
         <td>5</td>
     </tr>
     """
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, 'html.parser')
     # lnk must be the magnet link
     lnk = soup.find_all('a', href=lambda h: h and h.startswith('magnet'))[0]
-    
+
     data = _extract_torrent_data(lnk)
     assert data is not None
-    assert data["name"] == "The Matrix"
-    assert data["year"] == 1999
+    assert data['name'] == 'The Matrix'
+    assert data['year'] == 1999
+
 
 def test_extract_movie_links_extended():
     html = """
@@ -31,7 +33,7 @@ def test_extract_movie_links_extended():
         <a href="https://www.kinopoisk.ru/film/123/">KP</a>
     </div>
     """
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, 'html.parser')
     imdb, kp = _extract_movie_links(soup)
-    assert "tt0133093" in imdb
-    assert "123" in kp
+    assert 'tt0133093' in imdb
+    assert '123' in kp

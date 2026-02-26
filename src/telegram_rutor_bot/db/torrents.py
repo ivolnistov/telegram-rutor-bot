@@ -67,9 +67,7 @@ async def add_torrent(
     except IntegrityError:
         await session.rollback()
         # Retry fetch
-        result = await session.execute(
-            select(Torrent).where(or_(Torrent.blake == blake, Torrent.magnet == magnet))
-        )
+        result = await session.execute(select(Torrent).where(or_(Torrent.blake == blake, Torrent.magnet == magnet)))
         existing = result.scalars().first()
         if existing:
             return existing

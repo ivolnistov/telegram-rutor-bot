@@ -27,7 +27,6 @@ from telegram_rutor_bot.db.models import Film, Search, TaskExecution, User, subs
 from telegram_rutor_bot.helpers import format_films
 from telegram_rutor_bot.rutor import parse_rutor
 from telegram_rutor_bot.rutor.constants import RUTOR_BASE_URL
-from telegram_rutor_bot.schemas import Notification
 from telegram_rutor_bot.services.watchlist import check_matches
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.utils import send_notifications

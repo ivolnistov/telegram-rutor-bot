@@ -7,10 +7,8 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from telegram_rutor_bot.db import (
-    add_search_to_db,
     delete_search,
     get_async_session,
-    get_or_create_user_by_chat_id,
     get_search,
     get_searches,
     get_subscriptions,
@@ -191,4 +189,3 @@ async def search_delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await delete_search(session, search_id)
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text=get_text('search_deleted', lang))
-

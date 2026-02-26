@@ -38,8 +38,8 @@ from telegram_rutor_bot.utils.category_mapper import (
     map_rutor_category,
 )
 
-from .formatter import format_torrent_message
 from .constants import QUALITY_LABEL, RUTOR_BASE_URL
+from .formatter import format_torrent_message
 from .rating_parser import get_imdb_details, get_imdb_poster, get_movie_ratings
 
 if TYPE_CHECKING:
@@ -823,7 +823,7 @@ async def _enrich_metadata_from_imdb(
         return poster_url
     await _enrich_from_imdb(result, imdb_url)
     if result.get('poster_url'):
-        return result['poster_url']
+        return cast(str | None, result['poster_url'])
     return poster_url
 
 

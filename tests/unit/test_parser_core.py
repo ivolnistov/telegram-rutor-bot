@@ -1,10 +1,11 @@
-import pytest
 from bs4 import BeautifulSoup
+
 from telegram_rutor_bot.rutor.parser import (
     _extract_details_from_table,
     _extract_movie_info_from_blocks,
-    _parse_torrent_page_details
+    _parse_torrent_page_details,
 )
+
 
 def test_extract_details_from_table_minimal():
     # Must have id="details"
@@ -20,6 +21,7 @@ def test_extract_details_from_table_minimal():
     res = _extract_details_from_table(soup)
     assert res['quality'] == 'BDRip 1080p'
     assert res['video_quality'] == 'MPEG-4 AVC'
+
 
 def test_extract_movie_info_from_blocks():
     # Must contain "Информация о фильме" and newlines
@@ -42,6 +44,7 @@ def test_extract_movie_info_from_blocks():
     assert res['country'] == 'США'
     assert res['genre'] == 'Боевик'
 
+
 def test_parse_torrent_page_details_mock():
     html = """
     <html>
@@ -58,5 +61,5 @@ def test_parse_torrent_page_details_mock():
     """
     soup = BeautifulSoup(html, 'lxml')
     imdb, kp, res = _parse_torrent_page_details(soup)
-    assert imdb == "https://www.imdb.com/title/tt0133093/"
+    assert imdb == 'https://www.imdb.com/title/tt0133093/'
     assert res['quality'] == '1080p'

@@ -10,6 +10,7 @@ from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import uvicorn
 from sqlalchemy import update
 from taskiq import InMemoryBroker
 from taskiq.receiver import Receiver
@@ -183,7 +184,6 @@ def main() -> int:
         with suppress(KeyboardInterrupt):
             asyncio.run(run_bot())
     elif args.mode == 'api':
-        import uvicorn
         uvicorn.run('telegram_rutor_bot.web.app:app', host='0.0.0.0', port=8000, reload=True)
     elif args.mode == 'scheduler':
         with suppress(KeyboardInterrupt):

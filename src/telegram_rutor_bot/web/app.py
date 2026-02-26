@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -61,6 +61,7 @@ from telegram_rutor_bot.tasks.jobs import (
 
 # Import torrent clients
 from telegram_rutor_bot.torrent_clients import get_torrent_client
+from telegram_rutor_bot.torrent_clients.base import TorrentClient
 from telegram_rutor_bot.web import auth, config_api
 
 # Import authentication dependency
@@ -469,7 +470,9 @@ async def get_downloads() -> list[dict[str, Any]]:
         raise HTTPException(status_code=500, detail=f'Failed to fetch downloads: {e}') from e
 
 
-async def _execute_torrent_action(action_fn, torrent_hash: str, action_name: str) -> dict[str, str]:
+async def _execute_torrent_action(
+    action_fn: Callable[[TorrentClient], Any], torrent_hash: str, action_name: str
+) -> dict[str, str]:
     """Helper to execute an action on a torrent client."""
     try:
         client = get_torrent_client()
@@ -574,6 +577,7 @@ def _handle_static_file(base_dir: Path, full_path: str) -> FileResponse | None:
         return FileResponse(file_path)
     return None
 
+
 def _serve_wizard() -> FileResponse:
     """Serve the setup wizard."""
     wizard_path = Path('frontend/dist/wizard.html')
@@ -585,6 +589,7 @@ def _serve_wizard() -> FileResponse:
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         return response
     raise HTTPException(status_code=404, detail='Wizard not found')
+
 
 @app.get('/{full_path:path}', response_model=None)
 async def serve_spa(full_path: str) -> FileResponse | HTMLResponse:
