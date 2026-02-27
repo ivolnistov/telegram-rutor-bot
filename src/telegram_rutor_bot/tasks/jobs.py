@@ -105,6 +105,7 @@ async def _run_search_process(session: AsyncSession, task: TaskExecution, search
         progress_callback=update_progress,
         quality_filters=search.quality_filters,
         translation_filters=search.translation_filters,
+        is_series=search.is_series,
     )
 
     # Passive Search: Check new torrents against watchlist
@@ -404,6 +405,7 @@ async def notify_about_new(search_id: int) -> None:
                 category_id=search.category_id,
                 quality_filters=search.quality_filters,
                 translation_filters=search.translation_filters,
+                is_series=search.is_series,
             )
             await update_last_success(session, search_id)
 

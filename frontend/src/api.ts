@@ -50,6 +50,7 @@ export const updateSearch = async ({
   category,
   quality_filters,
   translation_filters,
+  is_series,
 }: {
   id: number | string
   url?: string
@@ -57,6 +58,7 @@ export const updateSearch = async ({
   category?: string
   quality_filters?: string | null
   translation_filters?: string | null
+  is_series?: boolean
 }): Promise<Search> => {
   const formData = new FormData()
   if (url) formData.append('url', url)
@@ -66,6 +68,7 @@ export const updateSearch = async ({
     formData.append('quality_filters', quality_filters ?? '')
   if (translation_filters !== undefined)
     formData.append('translation_filters', translation_filters ?? '')
+  if (is_series !== undefined) formData.append('is_series', String(is_series))
   return (await api.patch(`/searches/${String(id)}`, formData))
     .data as unknown as Search
 }

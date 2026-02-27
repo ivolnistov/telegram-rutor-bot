@@ -37,6 +37,8 @@ async def add_torrent(
     downloaded: bool = False,
     date: datetime | None = None,
     seeds: int | None = None,
+    season: int | None = None,
+    episode: int | None = None,
 ) -> Torrent:
     """Add a new torrent"""
     # Check if torrent already exists
@@ -57,6 +59,8 @@ async def add_torrent(
         downloaded=downloaded,
         date=date or datetime.now(UTC),
         seeds=seeds or 0,
+        season=season,
+        episode=episode,
     )
 
     session.add(new_torrent)

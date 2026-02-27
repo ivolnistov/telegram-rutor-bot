@@ -67,6 +67,7 @@ class SearchResponse(BaseModel):
     category: str | None
     quality_filters: str | None = None
     translation_filters: str | None = None
+    is_series: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -102,6 +103,8 @@ class TorrentResponse(BaseModel):
     downloaded: bool
     seeds: int | None
     date: datetime | None
+    season: int | None = None
+    episode: int | None = None
 
     film: FilmSummaryResponse | None = None
 

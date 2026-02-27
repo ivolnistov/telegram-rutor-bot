@@ -50,6 +50,7 @@ const SearchModal = ({
   const [category, setCategory] = useState(search?.category ?? '')
   const [qFilters, setQFilters] = useState(search?.quality_filters ?? '')
   const [tFilters, setTFilters] = useState(search?.translation_filters ?? '')
+  const [isSeries, setIsSeries] = useState(search?.is_series ?? false)
 
   const isEdit = !!search
 
@@ -103,6 +104,7 @@ const SearchModal = ({
         category,
         quality_filters: qFilters || null,
         translation_filters: tFilters || null,
+        is_series: isSeries,
       })
     } else {
       const fd = new FormData()
@@ -110,6 +112,7 @@ const SearchModal = ({
       fd.append('cron', cron)
       fd.append('category', category)
       fd.append('chat_id', String(chatId))
+      fd.append('is_series', String(isSeries))
       if (qFilters) fd.append('quality_filters', qFilters)
       if (tFilters) fd.append('translation_filters', tFilters)
       createMut.mutate(fd)
@@ -166,6 +169,15 @@ const SearchModal = ({
             className="text-zinc-200 font-mono"
             placeholder="0 */4 * * *"
           />
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <Checkbox checked={isSeries} onCheckedChange={setIsSeries} />
+          <label className="text-xs font-medium text-zinc-400">
+            {t('searches.is_series')}
+          </label>
+          <span className="text-[10px] text-zinc-600">
+            {t('searches.is_series_hint')}
+          </span>
         </div>
         <div className="border-t border-zinc-800 pt-4 mt-4 space-y-3">
           <p className="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
@@ -361,6 +373,11 @@ const SettingsSearches = () => {
                 {search.category && (
                   <span className="bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">
                     {search.category}
+                  </span>
+                )}
+                {search.is_series && (
+                  <span className="bg-violet-900/50 px-2 py-0.5 rounded text-violet-400">
+                    {t('searches.series_badge')}
                   </span>
                 )}
                 <span className="flex items-center gap-1">

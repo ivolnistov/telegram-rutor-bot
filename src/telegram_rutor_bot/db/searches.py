@@ -47,6 +47,7 @@ async def update_search(
     category: str | None = None,
     quality_filters: str | None = _UNSET,
     translation_filters: str | None = _UNSET,
+    is_series: bool | None = None,
 ) -> bool:
     """Update search URL or cron"""
     result = await session.execute(select(Search).where(Search.id == search_id))
@@ -77,12 +78,20 @@ async def update_search(
     if translation_filters is not _UNSET:
         search.translation_filters = translation_filters or None
 
+    if is_series is not None:
+        search.is_series = is_series
+
     await session.commit()
     return True
 
 
 async def add_search_to_db(
-    session: AsyncSession, url: str, cron: str, creator_id: int, category: str | None = None
+    session: AsyncSession,
+    url: str,
+    cron: str,
+    creator_id: int,
+    category: str | None = None,
+    is_series: bool = False,
 ) -> int:
     """Add a new search to the database"""
     # Parse cron expression
@@ -108,6 +117,7 @@ async def add_search_to_db(
         cron=' '.join(cron_parts),
         creator_id=creator_id,
         category_id=category_id,
+        is_series=is_series,
     )
 
     session.add(new_search)

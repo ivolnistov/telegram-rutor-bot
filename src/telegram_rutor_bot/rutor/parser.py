@@ -37,6 +37,7 @@ from telegram_rutor_bot.utils.category_mapper import (
     map_genre_to_category,
     map_rutor_category,
 )
+from telegram_rutor_bot.utils.episode_parser import parse_episode
 
 from .constants import QUALITY_LABEL, RUTOR_BASE_URL
 from .formatter import format_torrent_message
@@ -215,17 +216,22 @@ async def _process_torrent_item(
         pass
 
     try:
+        torrent_name = torrent_data['torrent'].get_text()
+        ep_info = parse_episode(torrent_name) if is_series else None
+
         await add_torrent(
             session,
             film_id=target_film_id,
             blake=torrent_data['torrent_lnk_blake'],
-            name=torrent_data['torrent'].get_text(),
+            name=torrent_name,
             magnet=torrent_data['magnet'],
             created=datetime.combine(torrent_data['date'], datetime.min.time()).replace(tzinfo=UTC),
             link=torrent_data['torrent_lnk'],
             sz=torrent_data['size'],
             approved=False,
             downloaded=False,
+            season=ep_info.season if ep_info else None,
+            episode=ep_info.episode if ep_info else None,
         )
         # If it's a series, every new torrent is considered a fresh notification event
         if is_series and target_film_id not in new:

@@ -69,6 +69,7 @@ export interface Search {
   category_id?: number | null
   quality_filters?: string | null
   translation_filters?: string | null
+  is_series?: boolean
 }
 export interface TmdbMedia {
   id: number

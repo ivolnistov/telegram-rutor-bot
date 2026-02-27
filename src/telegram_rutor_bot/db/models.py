@@ -76,6 +76,8 @@ class Torrent(Base):
     downloaded: Mapped[bool] = mapped_column(Boolean, default=False)
     seeds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    season: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    episode: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     film: Mapped[Film] = relationship('Film', back_populates='torrents')
 
