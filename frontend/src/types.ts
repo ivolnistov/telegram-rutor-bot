@@ -34,6 +34,11 @@ export interface Torrent {
   film?: Film | null
 }
 
+export interface PaginatedTorrents {
+  items: Torrent[]
+  total: number
+}
+
 export interface RutorTorrent {
   name: string
   size: number

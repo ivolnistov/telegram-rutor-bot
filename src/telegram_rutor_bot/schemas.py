@@ -111,6 +111,13 @@ class TorrentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PaginatedTorrentResponse(BaseModel):
+    """Paginated torrent list"""
+
+    items: list[TorrentResponse]
+    total: int
+
+
 class FilmResponse(FilmSummaryResponse):
     """Film response model (with torrents)"""
 

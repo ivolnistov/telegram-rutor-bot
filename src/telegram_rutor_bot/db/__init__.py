@@ -37,6 +37,7 @@ from .subscriptions import get_subscriptions, is_subscribed, subscribe, unsubscr
 # Torrent operations
 from .torrents import (
     add_torrent,
+    count_torrents,
     get_recent_torrents,
     get_torrent_by_blake,
     get_torrent_by_id,
@@ -67,6 +68,7 @@ __all__ = [
     'User',
     'add_search_to_db',
     'add_torrent',
+    'count_torrents',
     'create_category',
     'delete_category',
     'delete_search',

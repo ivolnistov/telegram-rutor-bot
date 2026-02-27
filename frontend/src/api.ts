@@ -3,6 +3,7 @@ import type {
   Category,
   Download,
   Film,
+  PaginatedTorrents,
   Search,
   TaskExecution,
   TmdbMedia,
@@ -107,13 +108,15 @@ export const removeSearchSubscriber = async (
 
 export const getTorrents = async (
   limit: number = 50,
+  offset: number = 0,
   query?: string,
-): Promise<Torrent[]> => {
+): Promise<PaginatedTorrents> => {
   const params = new URLSearchParams()
   params.append('limit', String(limit))
+  params.append('offset', String(offset))
   if (query) params.append('q', query)
   return (await api.get(`/torrents?${params.toString()}`))
-    .data as unknown as Torrent[]
+    .data as unknown as PaginatedTorrents
 }
 export const downloadTorrent = async (id: number | string): Promise<unknown> =>
   (await api.post(`/torrents/${String(id)}/download`)).data
