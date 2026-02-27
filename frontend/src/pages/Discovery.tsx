@@ -38,7 +38,13 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import type { TmdbMedia } from 'types'
-// ... imports
+
+const tmdbImg = (path: string | undefined | null, size: string) =>
+  !path
+    ? ''
+    : path.startsWith('http')
+      ? path
+      : `https://image.tmdb.org/t/p/${size}${path}`
 
 const MediaModal = ({
   media,
@@ -243,7 +249,7 @@ const MediaModal = ({
       <div className="space-y-5">
         <div className="aspect-video w-full rounded-lg overflow-hidden bg-black/20 relative">
           <img
-            src={`https://image.tmdb.org/t/p/w780${media.backdrop_path || media.poster_path || ''}`}
+            src={tmdbImg(media.backdrop_path || media.poster_path, 'w780')}
             alt={media.title || media.name}
             className="size-full  object-cover"
           />
@@ -485,7 +491,7 @@ const MediaModal = ({
                   }}
                 >
                   <img
-                    src={`https://image.tmdb.org/t/p/w300${rec.poster_path || ''}`}
+                    src={tmdbImg(rec.poster_path, 'w300')}
                     alt={rec.title || rec.name}
                     className="size-full  object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                   />
@@ -831,7 +837,7 @@ const DiscoveryPage = () => {
             >
               {media.poster_path ? (
                 <img
-                  src={`https://image.tmdb.org/t/p/w500${media.poster_path}`}
+                  src={tmdbImg(media.poster_path, 'w500')}
                   alt={media.title || media.name}
                   className="size-full  object-cover transition-transform duration-500 group-hover:scale-110"
                 />
