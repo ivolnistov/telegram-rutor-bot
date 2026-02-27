@@ -208,12 +208,6 @@ async def _process_torrent_item(
         )
         target_film_id = film.id
         film_cache[torrent_data['blake']] = target_film_id
-        if film.id not in new:
-            new.append(target_film_id)
-    else:
-        # If film_id was forced, we might want to ensure we have the film object for enrichment later?
-        # But existing code fetches it if 'film' key is in locals or if we just have ID.
-        pass
 
     try:
         torrent_name = torrent_data['torrent'].get_text()
@@ -233,8 +227,8 @@ async def _process_torrent_item(
             season=ep_info.season if ep_info else None,
             episode=ep_info.episode if ep_info else None,
         )
-        # If it's a series, every new torrent is considered a fresh notification event
-        if is_series and target_film_id not in new:
+        # Torrent was actually new — mark film for notification
+        if target_film_id not in new:
             new.append(target_film_id)
     except IntegrityError:
         # Torrent with this magnet already exists, update it
