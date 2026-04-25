@@ -1,6 +1,7 @@
 """TaskIQ tasks for scheduled jobs"""
 
 import contextlib
+import html
 import logging
 import traceback
 from datetime import UTC, datetime
@@ -21,6 +22,7 @@ from telegram_rutor_bot.db import (
     get_search_subscribers,
     get_searches,
     get_user,
+    get_user_by_chat,
     update_last_success,
 )
 from telegram_rutor_bot.db.models import Film, Search, TaskExecution, User, subscribes_table
@@ -29,7 +31,7 @@ from telegram_rutor_bot.rutor import parse_rutor
 from telegram_rutor_bot.rutor.constants import RUTOR_BASE_URL
 from telegram_rutor_bot.services.watchlist import check_matches
 from telegram_rutor_bot.torrent_clients import get_torrent_client
-from telegram_rutor_bot.utils import send_notifications
+from telegram_rutor_bot.utils import DEFAULT_LANGUAGE, get_text, send_notifications
 
 from .broker import broker
 
@@ -279,34 +281,84 @@ async def execute_search(
 async def search_film_on_rutor(
     film_id: int,
     query: str,
-    requester_chat_id: int | None = None,  # pylint: disable=unused-argument
+    requester_chat_id: int | None = None,
 ) -> None:
     """Execute a search for a specific film on Rutor"""
     log.info('Executing film search for film %s with query "%s"', film_id, query)
 
-    # Construct Rutor URL
-    # We need a proper URL construction logic.
-    # Usually it is https://rutor.info/search/0/0/000/0/{query}
+    # Construct Rutor URL.
+    # The 3rd path segment is rutor's category code: /100/ matches "all categories"
+    # AND surfaces real torrents; /000/ and /0/ silently exclude HD video releases
+    # (rutor returns admin posts only).
     safe_query = query.replace(' ', '+')  # simple encoding
-    url = f'{RUTOR_BASE_URL}/search/0/0/000/0/{safe_query}'
+    url = f'{RUTOR_BASE_URL}/search/0/0/100/0/{safe_query}'
 
     async with get_async_session() as session:
         try:
-            # We don't track this as a "Search" entity in DB (which is for subscribed searches),
-            # but we could track it as a TaskExecution if we had a generic task model.
-            # For now, just run it.
+            # Pull tmdb_media_type so the parser extracts S01E02 markers for TV titles
+            # (movies skip episode parsing — same flag drives the watchlist monitor too).
+            film_row = await session.get(Film, film_id)
+            is_series = bool(film_row and film_row.tmdb_media_type == 'tv')
 
-            new_ids = await parse_rutor(url, session, film_id=film_id)
+            new_ids = await parse_rutor(url, session, film_id=film_id, is_series=is_series)
 
             log.info('Film search %s finished. Found %s torrents.', film_id, len(new_ids))
 
-            # Notify requester if needed?
-            # The UI triggers this, so maybe just log it.
-            # If we want to notify via ws, we need a mechanism.
-            # For now, rely on simply adding to DB.
+            await _notify_film_search_requester(session, film_id, new_ids, requester_chat_id)
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             log.exception('Film search failed: %s', e)
+
+
+async def _notify_film_search_requester(
+    session: AsyncSession,
+    film_id: int,
+    new_ids: list[int],
+    requester_chat_id: int | None,
+) -> None:
+    """DM the discovery requester about the rutor refresh — only on net-new finds or empty result."""
+    if requester_chat_id is None:
+        return
+
+    token = settings.telegram_token
+    if not token:
+        log.info('Telegram token not set, skipping film search notification for film %s', film_id)
+        return
+
+    bot = Bot(token=token)
+
+    user = await get_user_by_chat(session, requester_chat_id)
+    lang = user.language if user else DEFAULT_LANGUAGE
+
+    film = await session.get(Film, film_id)
+
+    if not new_ids:
+        if film is None:
+            message = get_text('discovery_refresh_no_new_no_film', lang)
+            await _notify_requester(bot, requester_chat_id, message)
+            return
+        # Plain-text path via _notify_requester — keep film name raw, no HTML escaping needed.
+        plain_title = film.name or ''
+        year_str = str(film.year) if film.year else '—'
+        message = get_text('discovery_refresh_no_new', lang, title=plain_title, year=year_str)
+        await _notify_requester(bot, requester_chat_id, message)
+        return
+
+    if film is None:
+        log.warning('Film %s vanished while building rutor refresh notification', film_id)
+        return
+
+    # Header is sent with ParseMode.HTML, so escape the film name once at the boundary.
+    safe_title = html.escape(film.name or '')
+    year_str = str(film.year) if film.year else '—'
+    header = get_text('discovery_refresh_new_header', lang, title=safe_title, year=year_str, count=len(new_ids))
+
+    with contextlib.suppress(telegram_error.TelegramError):
+        await bot.send_message(requester_chat_id, header, parse_mode=ParseMode.HTML)
+
+    notifications = await format_films([film])
+    with contextlib.suppress(telegram_error.TelegramError):
+        await send_notifications(bot, requester_chat_id, notifications)
 
 
 async def _notify_requester(bot: Bot, chat_id: int | None, message: str) -> None:

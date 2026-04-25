@@ -228,6 +228,7 @@ class AppConfigUpdate(TypedDict, total=False):
     tmdb_session_id: str | None
     search_quality_filters: str | None
     search_translation_filters: str | None
+    torrent_sort_keywords: str | None
     seed_ratio_limit: float
     seed_time_limit: int
     inactive_seeding_time_limit: int
@@ -270,6 +271,9 @@ class AppConfig(Base):
     # Search Filters
     search_quality_filters: Mapped[str | None] = mapped_column(String, nullable=True)
     search_translation_filters: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Display sort: comma-separated keywords; releases matching more of these float to the top
+    torrent_sort_keywords: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Seed limits
     seed_ratio_limit: Mapped[float] = mapped_column(Float, default=1.0)

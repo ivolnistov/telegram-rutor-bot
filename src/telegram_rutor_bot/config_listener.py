@@ -38,6 +38,7 @@ async def refresh_settings_from_db() -> None:
                 'inactive_seeding_time_limit',
                 'tmdb_api_key',
                 'tmdb_session_id',
+                'torrent_sort_keywords',
             ]
             for field in fields_to_check:
                 val = getattr(db_config, field, None)

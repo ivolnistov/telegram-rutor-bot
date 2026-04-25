@@ -155,6 +155,7 @@ def _extract_torrent_data(lnk: Tag) -> dict[str, Any] | None:
         return None
     tds = row.find_all('td')
     size = size_to_bytes_converter(tds[-2].get_text())
+    seeds = _extract_seeds(tds[-1])
 
     try:
         date = datetime.strptime(tds[0].get_text(), '%d\xa0%b\xa0%y').replace(tzinfo=UTC).date()
@@ -186,7 +187,26 @@ def _extract_torrent_data(lnk: Tag) -> dict[str, Any] | None:
         'name': name,
         'original_name': original_name,
         'blake': blake,
+        'seeds': seeds,
     }
+
+
+def _extract_seeds(td: Any) -> int:  # noqa: ANN401 - BeautifulSoup Tag-or-NavigableString boundary
+    """Pull the seed count from a search-result row's last td.
+
+    Layout: `<span class="green">N</span> ... <span class="red">M</span>`
+    where green = seeds, red = leechers. Returns 0 when the cell is missing
+    or unparseable so callers can rely on an int.
+    """
+    if not hasattr(td, 'find'):
+        return 0
+    span = td.find('span', class_='green')
+    if not span:
+        return 0
+    try:
+        return int(span.get_text(strip=True))
+    except (TypeError, ValueError):
+        return 0
 
 
 async def _process_torrent_item(
@@ -222,6 +242,7 @@ async def _process_torrent_item(
             created=datetime.combine(torrent_data['date'], datetime.min.time()).replace(tzinfo=UTC),
             link=torrent_data['torrent_lnk'],
             sz=torrent_data['size'],
+            seeds=torrent_data.get('seeds'),
             approved=False,
             downloaded=False,
             season=ep_info.season if ep_info else None,
@@ -239,6 +260,7 @@ async def _process_torrent_item(
                 torrent_id=existing.id,
                 name=torrent_data['torrent'].get_text(),
                 sz=torrent_data['size'],
+                seeds=torrent_data.get('seeds') or 0,
             )
         await session.commit()
 
@@ -246,8 +268,13 @@ async def _process_torrent_item(
     # We do this after committing the torrent to ensure basic data is saved
     # even if enrichment fails or is slow.
     # We only enrich if we have the film object (i.e. it wasn't cached)
-    if 'film' in locals() and film and not film.poster:
-        await enrich_film_data(session, film, torrent_data['torrent_lnk'])
+    if 'film' in locals() and film:
+        if not film.poster:
+            await enrich_film_data(session, film, torrent_data['torrent_lnk'])
+        # Also try TMDB match for the freshly-created film so the discovery /
+        # search rendering paths get a poster + original_title + ratings.
+        if not film.tmdb_id:
+            await _try_match_tmdb(session, film)
 
 
 async def fetch_rutor_torrents(
@@ -403,6 +430,17 @@ async def _handle_single_torrent(
     # Check if torrent already exists
     existing_torrent = await get_torrent_by_blake(session, torrent_data['torrent_lnk_blake'])
     if existing_torrent:
+        # Refresh seeds + size on every parse so the library always shows current numbers,
+        # even though we don't re-create the torrent or notify subscribers.
+        new_seeds = torrent_data.get('seeds') or 0
+        if existing_torrent.seeds != new_seeds or existing_torrent.sz != torrent_data['size']:
+            await modify_torrent(
+                session,
+                torrent_id=existing_torrent.id,
+                seeds=new_seeds,
+                sz=torrent_data['size'],
+            )
+            await session.commit()
         log.info('Skipping %s: Already exists', torrent_data['name'])
         return
 
@@ -430,6 +468,36 @@ async def _handle_single_torrent(
 
     await _process_torrent_item(session, torrent_data, film_cache, new, category_id, film_id, is_series)
     log.info('Processed %s: Added/Updated', torrent_data['name'])
+
+
+async def _try_match_tmdb(session: AsyncSession, film: Film) -> None:
+    """Best-effort TMDB lookup for a fresh film row — fills tmdb_id/original_title/poster/rating."""
+    # Imported here to avoid a circular import (services.matcher imports db.films which
+    # ends up importing this parser via the db package's __init__ chain).
+    from telegram_rutor_bot.services.matcher import TmdbMatcher  # noqa: PLC0415
+
+    try:
+        matcher = TmdbMatcher(session)
+        match = await matcher._try_find_tmdb_match(film)
+    except Exception as e:
+        log.warning('TMDB match skipped for film %s (%r): %s', film.id, film.name, e)
+        return
+
+    if not match:
+        return
+
+    rating = match.get('vote_average')
+    # Prefer the TMDB poster path even if rutor already supplied one — TMDB is the
+    # canonical, higher-quality source and Discovery rendering already understands it.
+    await update_film_metadata(
+        session,
+        film_id=film.id,
+        tmdb_id=match['id'],
+        tmdb_media_type='movie',
+        original_title=match.get('original_title') or match.get('original_name'),
+        poster=match.get('poster_path'),
+        rating=float(rating) if rating is not None else None,
+    )
 
 
 async def enrich_film_data(session: AsyncSession, film: Film, torrent_link: str) -> None:

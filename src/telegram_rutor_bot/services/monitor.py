@@ -97,11 +97,13 @@ class WatchlistMonitor:
         for film in films:
             log.info(f'Checking monitored film: {film.name}')
             try:
-                # Construct search URL
-                # Search by original title + year to be specific, or just name?
-                # Using name from DB.
-                query = film.name
-                url = f'{RUTOR_BASE_URL}/search/0/0/0/0/{quote(query)}'
+                # Construct search URL.
+                # 3rd path segment must be /100/ — /0/ and /000/ silently exclude
+                # HD video releases on rutor (admin posts only get returned).
+                query = film.original_title or film.name
+                if film.year:
+                    query = f'{query} {film.year}'
+                url = f'{RUTOR_BASE_URL}/search/0/0/100/0/{quote(query)}'
 
                 # parse_rutor handles filtering (via settings) and DB saving
                 new_ids = await parse_rutor(url, self.session, is_series=(film.tmdb_media_type == 'tv'))

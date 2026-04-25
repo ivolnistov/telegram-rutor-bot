@@ -98,6 +98,15 @@ export interface TmdbMedia {
   imdb_id?: string // Shortcut or computed
   runtime?: number
   origin_country?: string[]
+  original_title?: string
+  original_name?: string
+  number_of_seasons?: number
+  number_of_episodes?: number
+  episode_run_time?: number[]
+  credits?: {
+    cast?: { id: number; name: string; character?: string; order?: number }[]
+    crew?: { id: number; name: string; job?: string; department?: string }[]
+  }
 }
 
 export interface TaskExecution {

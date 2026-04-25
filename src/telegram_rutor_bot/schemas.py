@@ -14,7 +14,7 @@ class Notification(TypedDict):
     type: Literal['photo', 'text']
     media: bytes | str | None
     caption: str
-    reply_markup: InlineKeyboardMarkup
+    reply_markup: InlineKeyboardMarkup | None
 
 
 class UserResponse(BaseModel):

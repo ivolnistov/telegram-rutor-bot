@@ -23,6 +23,7 @@ import axios from 'axios'
 import { Button } from 'components/ui/Button'
 import { Modal } from 'components/ui/Modal'
 import { Select } from 'components/ui/Select'
+import { Tooltip } from 'components/ui/Tooltip'
 import { useDebounce } from 'hooks/useDebounce'
 import {
   Check,
@@ -240,12 +241,17 @@ const MediaModal = ({
     }
   }
 
+  const localizedTitle = displayMedia.title || displayMedia.name || 'Unknown'
+  const originalTitle =
+    displayMedia.original_title || displayMedia.original_name
+  // Modal title: `original / ru_ru` when distinct, single title otherwise.
+  const modalTitle =
+    originalTitle && originalTitle !== localizedTitle
+      ? `${originalTitle} / ${localizedTitle}`
+      : localizedTitle
+
   return (
-    <Modal
-      isOpen={true}
-      onClose={onClose}
-      title={displayMedia.title || displayMedia.name || 'Unknown'}
-    >
+    <Modal isOpen={true} onClose={onClose} title={modalTitle}>
       <div className="space-y-5">
         <div className="aspect-video w-full rounded-lg overflow-hidden bg-black/20 relative">
           <img
@@ -283,6 +289,21 @@ const MediaModal = ({
 
             {displayMedia.runtime ? (
               <span>{formatRuntime(displayMedia.runtime)}</span>
+            ) : displayMedia.episode_run_time &&
+              displayMedia.episode_run_time[0] ? (
+              <span>{formatRuntime(displayMedia.episode_run_time[0])}/ep</span>
+            ) : null}
+
+            {displayMedia.number_of_seasons ? (
+              <span>
+                {`📺 ${displayMedia.number_of_seasons} ${
+                  displayMedia.number_of_seasons === 1 ? 'season' : 'seasons'
+                }${
+                  displayMedia.number_of_episodes
+                    ? `, ${displayMedia.number_of_episodes} ep.`
+                    : ''
+                }`}
+              </span>
             ) : null}
 
             {displayMedia.production_countries &&
@@ -297,14 +318,18 @@ const MediaModal = ({
                             : ''
                         })
                       : ''
+                    // Use the project Tooltip component instead of the HTML `title` —
+                    // gives a styled bubble matching the rest of the UI rather than
+                    // the OS default that briefly flashed an empty `?` indicator.
                     return (
-                      <span
+                      <Tooltip
                         key={c.iso_3166_1 || c.name}
-                        title={c.name}
-                        className="cursor-help text-base leading-none select-none opacity-80 hover:opacity-100 transition-opacity"
+                        content={c.name || c.iso_3166_1 || 'Unknown'}
                       >
-                        {flag}
-                      </span>
+                        <span className="text-base leading-none select-none opacity-80 hover:opacity-100 transition-opacity">
+                          {flag || '🏳️'}
+                        </span>
+                      </Tooltip>
                     )
                   })}
                 </div>
@@ -373,6 +398,34 @@ const MediaModal = ({
           <p className="text-zinc-300 text-sm leading-relaxed">
             {displayMedia.overview || t('discovery.no_overview')}
           </p>
+
+          {(() => {
+            const directors = (displayMedia.credits?.crew || [])
+              .filter((c) => c.job === 'Director')
+              .map((c) => c.name)
+              .filter(Boolean)
+            if (!directors.length) return null
+            return (
+              <div className="text-sm text-zinc-300">
+                <span className="text-zinc-500">🎭 Director: </span>
+                {directors.join(', ')}
+              </div>
+            )
+          })()}
+
+          {(() => {
+            const cast = (displayMedia.credits?.cast || [])
+              .slice(0, 6)
+              .map((c) => c.name)
+              .filter(Boolean)
+            if (!cast.length) return null
+            return (
+              <div className="text-sm text-zinc-300">
+                <span className="text-zinc-500">👥 Cast: </span>
+                {cast.join(', ')}
+              </div>
+            )
+          })()}
         </div>
 
         {/* Rating Section */}
@@ -401,29 +454,30 @@ const MediaModal = ({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
-          <Button variant="ghost" onClick={onClose}>
-            {t('common.close')}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              void handleWatchlist()
-            }}
+        {/* Action row: square icon-only buttons with tooltips. Modal has its own
+            close ✕ in the top-right, so we drop the redundant Close text button.
+            The category dropdown is needed for Subscribe (it picks a target category) —
+            kept slim and tucked next to the rss icon. */}
+        <div className="flex flex-wrap justify-end items-center gap-2 pt-4 border-t border-zinc-800">
+          <Tooltip
+            content={inWatchlist ? 'In Watchlist' : 'Add to Watchlist'}
           >
-            {inWatchlist ? (
-              <>
-                <Check className="size-4 mr-2" />
-                In Watchlist
-              </>
-            ) : (
-              <>
-                <Eye className="size-4 mr-2" />
-                Add to Watchlist
-              </>
-            )}
-          </Button>
-          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                void handleWatchlist()
+              }}
+            >
+              {inWatchlist ? (
+                <Check className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
+            </Button>
+          </Tooltip>
+
+          <Tooltip content="Category for downloads">
             <Select
               value={selectedCategory}
               onChange={(val) => {
@@ -438,36 +492,42 @@ const MediaModal = ({
                   { value: 'TV Shows', label: 'TV Shows' },
                 ]
               }
-              className="w-40"
+              className="w-32"
             />
+          </Tooltip>
+
+          <Tooltip content={t('discovery.subscribe') || 'Subscribe'}>
             <Button
+              size="icon"
               onClick={() => {
                 void handleSubscribe()
               }}
               disabled={isSubmitting || !user}
             >
               {isSubmitting ? (
-                <Loader2 className="size-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : (
-                <Rss className="size-4 mr-2" />
+                <Rss className="size-4" />
               )}
-              {t('discovery.subscribe') || 'Subscribe'}
             </Button>
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => {
-              void handleSearchOnRutor()
-            }}
-            disabled={isSearchingLive}
-          >
-            {isSearchingLive ? (
-              <Loader2 className="size-4 mr-2 animate-spin" />
-            ) : (
-              <Search className="size-4 mr-2" />
-            )}
-            {t('discovery.search_on_rutor')}
-          </Button>
+          </Tooltip>
+
+          <Tooltip content={t('discovery.search_on_rutor')}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                void handleSearchOnRutor()
+              }}
+              disabled={isSearchingLive}
+            >
+              {isSearchingLive ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Search className="size-4" />
+              )}
+            </Button>
+          </Tooltip>
         </div>
 
         {/* Recommendations */}

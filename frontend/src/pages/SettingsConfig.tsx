@@ -33,6 +33,7 @@ export default function SettingsConfig() {
   const [telegramToken, setTelegramToken] = useState('')
   const [tmdbApiKey, setTmdbApiKey] = useState('')
   const [tmdbSessionId, setTmdbSessionId] = useState('')
+  const [torrentSortKeywords, setTorrentSortKeywords] = useState('')
 
   // Torrent Client State
   const [host, setHost] = useState('localhost')
@@ -102,6 +103,9 @@ export default function SettingsConfig() {
         setTelegramToken(String(res.current_values.telegram_token || ''))
         setTmdbApiKey(String(res.current_values.tmdb_api_key || ''))
         setTmdbSessionId(String(res.current_values.tmdb_session_id || ''))
+        setTorrentSortKeywords(
+          String(res.current_values.torrent_sort_keywords || ''),
+        )
 
         setHost(String(res.current_values.qbittorrent_host || 'localhost'))
         setPort(Number(res.current_values.qbittorrent_port || 8080))
@@ -131,6 +135,7 @@ export default function SettingsConfig() {
       },
       tmdb_api_key: tmdbApiKey,
       tmdb_session_id: tmdbSessionId,
+      torrent_sort_keywords: torrentSortKeywords,
       torrent: {
         client: 'qbittorrent',
         host,
@@ -330,6 +335,35 @@ export default function SettingsConfig() {
                 </Button>
               )}
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="torrentSortKeywords"
+                className="text-sm font-medium text-zinc-400"
+              >
+                Torrent sort keywords
+              </label>
+              <Tooltip
+                content={
+                  'Comma-separated. Releases matching MORE keywords float to the top, ' +
+                  'then by seeds, then smallest size. Example: LostFilm, Кубик в Кубе, BDRip'
+                }
+              >
+                <div className="p-1 cursor-help rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300">
+                  <Info className="size-4" />
+                </div>
+              </Tooltip>
+            </div>
+            <Input
+              id="torrentSortKeywords"
+              value={torrentSortKeywords}
+              onChange={(e) => {
+                setTorrentSortKeywords(e.target.value)
+              }}
+              placeholder="LostFilm, Кубик в Кубе, BDRip"
+            />
           </div>
         </div>
 

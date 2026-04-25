@@ -262,6 +262,7 @@ export interface ConfigSetupRequest {
   torrent: TorrentConfig
   tmdb_api_key?: string
   tmdb_session_id?: string
+  torrent_sort_keywords?: string
   seed_ratio_limit?: number
   seed_time_limit?: number
   inactive_seeding_time_limit?: number
