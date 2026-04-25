@@ -31,6 +31,7 @@ from telegram_rutor_bot.db import (
     update_film_metadata,
 )
 from telegram_rutor_bot.db.models import AppConfig, Film, Torrent
+from telegram_rutor_bot.services.matcher import TmdbMatcher
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.utils.cache import FilmInfoCache
 from telegram_rutor_bot.utils.category_mapper import (
@@ -471,10 +472,6 @@ async def _handle_single_torrent(
 
 async def _try_match_tmdb(session: AsyncSession, film: Film) -> None:
     """Best-effort TMDB lookup for a fresh film row — fills tmdb_id/original_title/poster/rating."""
-    # Imported here to avoid a circular import (services.matcher imports db.films which
-    # ends up importing this parser via the db package's __init__ chain).
-    from telegram_rutor_bot.services.matcher import TmdbMatcher  # noqa: PLC0415
-
     try:
         matcher = TmdbMatcher(session)
         # Reuse the matcher's best-match heuristic — duplicating it here would drift.
