@@ -65,9 +65,11 @@ repos:
 
       - id: pylint
         name: pylint
+        # Match CI: invoke with no extra args so any warning fails the hook,
+        # not just scores under a threshold. Local linters mirroring CI prevents
+        # surprise pylint failures after merge.
         entry: uv run pylint src/telegram_rutor_bot
         language: system
         types: [python]
-        args: [--rcfile=pyproject.toml, --fail-under=9.9]
         exclude: ^(alembic/|tests/)
         pass_filenames: false

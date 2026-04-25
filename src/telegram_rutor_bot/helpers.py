@@ -198,9 +198,9 @@ async def _fetch_tmdb_details(film: Film) -> dict[str, Any]:
     media_type = film.tmdb_media_type or 'movie'
     try:
         return await _tmdb.get_details(media_type, film.tmdb_id, append_to_response='credits')
-    except Exception as e:
-        # We log at debug because every rendered card hits TMDB; transport hiccups
-        # shouldn't spam warnings while users are browsing.
+    # External API; debug-log only — transport hiccups shouldn't spam warnings
+    # while users are browsing the library.
+    except Exception as e:  # pylint: disable=broad-exception-caught
         log.debug('TMDB details fetch failed for film %s: %s', film.id, e)
         return {}
 

@@ -135,6 +135,10 @@ ignore = [".git", "__pycache__", ".venv", "alembic", "var"]
 ignore-patterns = ["test_.*\\.py", "conftest\\.py"]
 
 [tool.pylint."MESSAGES CONTROL"]
+# Anything ruff already enforces via its PL selection is disabled here so we
+# do not have to write two suppression comments per offence. Ruff stays the
+# primary checker for those rules; pylint covers the gaps (broad-except,
+# protected-access, not-callable, too-many-lines, etc.).
 disable = [
     "raw-checker-failed",
     "bad-inline-option",
@@ -148,12 +152,16 @@ disable = [
     "too-many-arguments",
     "too-many-locals",
     "too-many-branches",
+    "too-many-statements",
+    "too-many-return-statements",
     "duplicate-code",
     "line-too-long",
     "too-many-positional-arguments",
     "wrong-import-order",
     "wrong-import-position",
     "ungrouped-imports",
+    # Covered by ruff (ruff's PL selection)
+    "import-outside-toplevel",
 ]
 
 [tool.pylint.FORMAT]
