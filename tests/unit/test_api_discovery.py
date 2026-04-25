@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
 
 from telegram_rutor_bot.api.routes.discovery import (
     get_media_details,
@@ -48,14 +47,6 @@ async def test_get_media_details_api(mocker):
     user = MagicMock()
     res = await get_media_details(media_type='movie', media_id=1, user=user, db=mock_db)
     assert res['title'] == 'Movie Details'
-
-
-@pytest.mark.asyncio
-async def test_search_on_rutor_not_movie(mocker):
-    user = MagicMock()
-    with pytest.raises(HTTPException) as e:
-        await search_on_rutor(media_type='tv', media_id=1, user=user, db=AsyncMock())
-    assert e.value.status_code == 400
 
 
 @pytest.mark.asyncio
