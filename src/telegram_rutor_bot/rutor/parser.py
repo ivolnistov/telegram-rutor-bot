@@ -191,17 +191,15 @@ def _extract_torrent_data(lnk: Tag) -> dict[str, Any] | None:
     }
 
 
-def _extract_seeds(td: Any) -> int:  # noqa: ANN401 - BeautifulSoup Tag-or-NavigableString boundary
+def _extract_seeds(td: Tag) -> int:
     """Pull the seed count from a search-result row's last td.
 
     Layout: `<span class="green">N</span> ... <span class="red">M</span>`
     where green = seeds, red = leechers. Returns 0 when the cell is missing
     or unparseable so callers can rely on an int.
     """
-    if not hasattr(td, 'find'):
-        return 0
     span = td.find('span', class_='green')
-    if not span:
+    if not isinstance(span, Tag):
         return 0
     try:
         return int(span.get_text(strip=True))

@@ -296,11 +296,11 @@ const MediaModal = ({
 
             {displayMedia.number_of_seasons ? (
               <span>
-                {`📺 ${displayMedia.number_of_seasons} ${
+                {`📺 ${String(displayMedia.number_of_seasons)} ${
                   displayMedia.number_of_seasons === 1 ? 'season' : 'seasons'
                 }${
                   displayMedia.number_of_episodes
-                    ? `, ${displayMedia.number_of_episodes} ep.`
+                    ? `, ${String(displayMedia.number_of_episodes)} ep.`
                     : ''
                 }`}
               </span>
@@ -459,9 +459,7 @@ const MediaModal = ({
             The category dropdown is needed for Subscribe (it picks a target category) —
             kept slim and tucked next to the rss icon. */}
         <div className="flex flex-wrap justify-end items-center gap-2 pt-4 border-t border-zinc-800">
-          <Tooltip
-            content={inWatchlist ? 'In Watchlist' : 'Add to Watchlist'}
-          >
+          <Tooltip content={inWatchlist ? 'In Watchlist' : 'Add to Watchlist'}>
             <Button
               variant="outline"
               size="icon"

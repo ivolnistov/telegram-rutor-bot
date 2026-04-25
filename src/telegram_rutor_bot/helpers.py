@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from telegram_rutor_bot.db.models import Film
+    from telegram_rutor_bot.db.models import Film, Torrent
 
 
 def gen_hash(text: str, prefix: str | None = None) -> str:
@@ -80,7 +80,7 @@ def _keyword_match_count(name: str, keywords: list[str]) -> int:
     return sum(1 for kw in keywords if kw in lowered)
 
 
-def _sorted_torrents(torrents: list[Any], film: Film | None = None) -> list[Any]:
+def _sorted_torrents(torrents: list[Torrent], film: Film | None = None) -> list[Torrent]:
     """Sort torrents for display.
 
     Primary axis (configurable, applied within season/episode for tv):
@@ -96,30 +96,30 @@ def _sorted_torrents(torrents: list[Any], film: Film | None = None) -> list[Any]
     """
     keywords = _sort_keywords()
 
-    def _quality_key(t: Any) -> tuple[int, int, int]:  # noqa: ANN401 - SQLAlchemy Torrent row, attribute-based access
+    def _quality_key(t: Torrent) -> tuple[int, int, int]:
         # Negate "more is better" axes so Python's ascending sort puts them first.
-        score = _keyword_match_count(getattr(t, 'name', '') or '', keywords)
-        seeds = getattr(t, 'seeds', None) or 0
-        size = getattr(t, 'sz', 0) or 0
+        score = _keyword_match_count(t.name or '', keywords)
+        seeds = t.seeds or 0
+        size = t.sz or 0
         return (-score, -seeds, size)
 
-    is_tv = bool(film and getattr(film, 'tmdb_media_type', None) == 'tv')
+    is_tv = bool(film and film.tmdb_media_type == 'tv')
     if is_tv:
         return sorted(
             torrents,
             key=lambda t: (
-                getattr(t, 'season', None) or float('inf'),
-                getattr(t, 'episode', None) or 0,
+                t.season if t.season is not None else float('inf'),
+                t.episode or 0,
                 *_quality_key(t),
             ),
         )
     return sorted(torrents, key=_quality_key)
 
 
-def _episode_tag(t: Any) -> str:  # noqa: ANN401 - SQLAlchemy Torrent row, attribute-based access
+def _episode_tag(t: Torrent) -> str:
     """`S01E02` / `S01` / `` based on what the parser stored on the torrent."""
-    season = getattr(t, 'season', None)
-    episode = getattr(t, 'episode', None)
+    season = t.season
+    episode = t.episode
     if season and episode:
         return f'S{int(season):02d}E{int(episode):02d}'
     if season:
@@ -131,7 +131,7 @@ _NUM_BUTTON_EMOJI = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6�
 _BUTTONS_PER_ROW = 2
 
 
-def _format_torrents_lines(torrents: list[Any], film: Film) -> str:
+def _format_torrents_lines(torrents: list[Torrent], film: Film) -> str:
     """Render a numbered list of releases — one HTML line per torrent.
 
     Each line is `<numeric_emoji> <a href="rutor_url">size · seeds · tag · release</a>`.
@@ -166,7 +166,7 @@ def _format_torrents_lines(torrents: list[Any], film: Film) -> str:
     return '\n'.join(lines)
 
 
-def _format_torrents_buttons(torrents: list[Any], film: Film) -> InlineKeyboardMarkup:
+def _format_torrents_buttons(torrents: list[Torrent], film: Film) -> InlineKeyboardMarkup:
     """Number + size + seeds on each button — paired with the per-line list in caption.
 
     Layout per button: `{number_emoji} {size} 🌱{seeds}` (e.g. `1️⃣ 14.7GB 🌱29`).
@@ -356,7 +356,7 @@ def _build_film_caption(film: Film, details: dict[str, Any] | None = None) -> st
     )
 
 
-async def _format_film_card(session: AsyncSession, film: Film, torrents: list[Any]) -> list[Notification]:
+async def _format_film_card(session: AsyncSession, film: Film, torrents: list[Torrent]) -> list[Notification]:
     """Render a film as two messages: poster + TMDB info, then the releases list.
 
     Splitting frees us from the 1024-char photo-caption budget: the full TMDB blurb
