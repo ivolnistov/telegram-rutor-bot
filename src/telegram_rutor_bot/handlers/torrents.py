@@ -315,7 +315,7 @@ async def _handle_text_search(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Handle standard text search"""
     assert update.effective_chat is not None
     async with get_async_session() as session:
-        films = await get_films(session, limit=20, query=f"LOWER(f.name) LIKE LOWER('%{search}%')")
+        films = await get_films(session, limit=20, search_term=search)
 
     notifications = await format_films(films)
 

@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 _background_tasks: set[asyncio.Task[Any]] = set()
 
 
-async def run_bot() -> None:
+async def run_bot() -> None:  # noqa: PLR0915 - linear handler registration; splitting hurts readability
     """Run the Telegram bot in async mode"""
     # Sync config
     await refresh_settings_from_db()
@@ -67,6 +67,7 @@ async def run_bot() -> None:
     application.add_handler(CommandHandler('list_subscriptions', h.subscriptions_list))
     application.add_handler(CommandHandler('downloads', h.torrent_downloads))
     application.add_handler(CommandHandler('recommend', h.torrent_recommend))
+    application.add_handler(CommandHandler('discovery', h.discovery_command))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/dl_\d+)$'), h.torrent_download))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/in_\d+)$'), h.torrent_info))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/ds_\d+)$'), h.search_delete))
@@ -77,6 +78,8 @@ async def run_bot() -> None:
     application.add_handler(CommandHandler('language', h.language_handler))
     application.add_handler(CallbackQueryHandler(h.search_callback_handler, pattern=r'^(ds_|es_|sub_|unsub_)'))
     application.add_handler(CallbackQueryHandler(h.set_language_callback, pattern='^lang_'))
+    application.add_handler(CallbackQueryHandler(h.discovery_season_callback_handler, pattern=r'^disc_season:'))
+    application.add_handler(CallbackQueryHandler(h.discovery_callback_handler, pattern=r'^disc_rutor:'))
     application.add_handler(CallbackQueryHandler(h.callback_query_handler))
     application.add_handler(MessageHandler(filters.COMMAND, h.unknown))
 

@@ -77,20 +77,22 @@ async def get_or_create_film(
 
 
 async def get_films(
-    session: AsyncSession, limit: int = 20, query: str | None = None, category_id: int | None = None
+    session: AsyncSession, limit: int = 20, search_term: str | None = None, category_id: int | None = None
 ) -> list[Film]:
-    """Get films with optional query filter"""
-    if query:
-        # Use raw SQL for the LIKE query
-        # Note: category_id filtering not implemented for raw query mode yet as it's not used by API
-        text_stmt = text(f"""
-            SELECT DISTINCT f.* FROM films f
-            JOIN torrents t ON f.id = t.film_id
-            WHERE {query}
-            ORDER BY t.created DESC
+    """Get films with optional name-substring filter (case-insensitive)."""
+    if search_term:
+        text_stmt = text("""
+            SELECT f.* FROM films f
+            JOIN (
+                SELECT film_id, MAX(created) AS last_created
+                FROM torrents
+                GROUP BY film_id
+            ) t ON f.id = t.film_id
+            WHERE LOWER(f.name) LIKE LOWER(:pattern)
+            ORDER BY t.last_created DESC
             LIMIT :limit
         """)
-        result = await session.execute(text_stmt, {'limit': limit})
+        result = await session.execute(text_stmt, {'pattern': f'%{search_term}%', 'limit': limit})
         return [Film(**row) for row in result.mappings()]
 
     # Simple query for recent films

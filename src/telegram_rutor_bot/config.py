@@ -100,6 +100,12 @@ class Settings(BaseSettings):
     tmdb_session_id: str | None = Field(default=None, description='TMDB Session ID')
     tmdb_language: str = Field(default='ru-RU', description='Language for TMDB results')
 
+    # Display sort: comma-separated keywords ranked by match count, then seeds, then size
+    torrent_sort_keywords: str | None = Field(
+        default=None,
+        description='Comma-separated keywords. Releases matching more of these surface first in display lists.',
+    )
+
     # Genre to category mapping
     genre_mapping: dict[str, list[str]] = Field(
         default_factory=lambda: {

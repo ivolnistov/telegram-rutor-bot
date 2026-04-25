@@ -43,7 +43,10 @@ export const Tooltip = ({
       {isVisible && (
         <div
           className={twMerge(
-            'absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-zinc-900 border border-zinc-800 rounded shadow-xl whitespace-nowrap z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-200',
+            // `max-w-xs` + normal wrapping so long content stays inside the viewport
+            // instead of overflowing past the modal edge; short content still renders
+            // on a single line because there's nothing forcing it to wrap.
+            'absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-zinc-900 border border-zinc-800 rounded shadow-xl max-w-xs text-center z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-200',
             className,
           )}
         >

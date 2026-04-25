@@ -143,4 +143,4 @@ def format_torrent_message(
         _format_links_section(download_command, result.get('imdb_url'), result.get('kp_url'), page_link)
     )
 
-    return '\\n'.join(message_parts)
+    return '\n'.join(message_parts)

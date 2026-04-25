@@ -35,6 +35,9 @@ async def send_notifications(
                         text=note['caption'],
                         parse_mode=ParseMode.HTML,
                         reply_markup=note['reply_markup'],
+                        # Suppress rutor link preview — release-name links are an action
+                        # affordance, not content the user wants to preview inline.
+                        disable_web_page_preview=True,
                     )
             except TelegramError as e:
                 log.error('Failed to send notification to %s: %s', chat_id, e)

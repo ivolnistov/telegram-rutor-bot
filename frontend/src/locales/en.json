@@ -27,6 +27,10 @@
     "no_overview": "No overview available.",
     "your_rating": "Your Rating",
     "rated": "Rating saved!",
+    "rating_removed": "Rating removed",
+    "subscribe": "Subscribe",
+    "subscribed": "Subscribed successfully",
+    "search_on_rutor": "Search on rutor",
     "recommendations": "Similar Movies"
   },
   "sidebar": {

@@ -105,8 +105,9 @@ async def get_media_details(
     db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, Any]:
     """Get full details for a movie or TV show"""
-    # Fetch details with external_ids
-    details = await tmdb.get_details(media_type, media_id, append_to_response='external_ids')
+    # Fetch details with external_ids + credits — credits power the director / cast lines
+    # the frontend modal renders alongside the rest of the TMDB info.
+    details = await tmdb.get_details(media_type, media_id, append_to_response='external_ids,credits')
 
     # Enrich with library status (single item list)
     enriched_list = await _enrich_with_library_status([details], db)
@@ -177,7 +178,9 @@ async def get_library(
     db: AsyncSession = Depends(get_async_db),
 ) -> list[dict[str, Any]]:
     """Get films in local library"""
-    stmt = select(Film).order_by(Film.id.desc()).offset(offset).limit(limit)
+    # Films without a TMDB id can't be opened in the discovery modal — its details
+    # fetch hits TMDB by the same id, and a local id collides with random TMDB rows.
+    stmt = select(Film).where(Film.tmdb_id.is_not(None)).order_by(Film.id.desc()).offset(offset).limit(limit)
 
     if media_type != 'all':
         stmt = stmt.where(Film.tmdb_media_type == media_type)
@@ -307,8 +310,8 @@ async def search_on_rutor(
     Search for torrents on Rutor by TMDB ID.
     If film doesn't exist locally, it will be created.
     """
-    if media_type != 'movie':
-        raise HTTPException(status_code=400, detail='Only movies are supported for now')
+    if media_type not in {'movie', 'tv'}:
+        raise HTTPException(status_code=400, detail='Unsupported media_type')
 
     # Check if film exists
     stmt = select(Film).where(Film.tmdb_id == media_id)
@@ -380,17 +383,22 @@ async def search_on_rutor(
 
 
 def _build_search_queries(film: Film, details: dict[str, Any]) -> set[str]:
-    queries = set()
-    query_localized = film.name
-    if film.year:
-        query_localized += f' ({film.year})'
-    queries.add(query_localized)
+    """Compose unique rutor search strings to enqueue.
+
+    Movies get `name (year)` plus the original-title variant when distinct.
+    TV releases on rutor rarely include the air-date year (it would filter out
+    every season-pack), so we drop the year for `tv` titles.
+    """
+    queries: set[str] = set()
+    is_tv = film.tmdb_media_type == 'tv'
+
+    def _with_year(base: str) -> str:
+        return f'{base} ({film.year})' if film.year and not is_tv else base
+
+    queries.add(_with_year(film.name))
 
     original_name = details.get('original_title') or details.get('original_name')
     if original_name and original_name != film.name:
-        query_original = original_name
-        if film.year:
-            query_original += f' ({film.year})'
-        queries.add(query_original)
+        queries.add(_with_year(original_name))
 
     return queries

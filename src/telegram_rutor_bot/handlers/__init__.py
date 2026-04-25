@@ -8,6 +8,7 @@ from .commons import (
     start,
     unknown,
 )
+from .discovery import discovery_callback_handler, discovery_command, discovery_season_callback_handler
 from .search import search_callback_handler, search_delete, search_execute, search_list
 from .subscribe import subscribe, subscriptions_list, unsubscribe
 from .torrents import (
@@ -25,6 +26,9 @@ from .watchlist import watch_command
 __all__ = [
     'add_user_cmd',
     'callback_query_handler',
+    'discovery_callback_handler',
+    'discovery_command',
+    'discovery_season_callback_handler',
     'download_torrent',
     'help_handler',
     'language_handler',

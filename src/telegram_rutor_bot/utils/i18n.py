@@ -53,6 +53,22 @@ TRANSLATIONS = {
         'cron_dow_4': 'Thursday',
         'cron_dow_5': 'Friday',
         'cron_dow_6': 'Saturday',
+        'discovery_usage': 'Usage: /discovery <title>',
+        'discovery_no_results': 'No results found in TMDB',
+        'discovery_results_header': 'Found in TMDB:',
+        'discovery_tv_not_supported': 'TV shows are not yet supported by /discovery — only movies for now.',
+        'discovery_search_started': (
+            '🔎 Started a rutor search for <b>{title}</b> ({year}). I will ping you when torrents show up.'
+        ),
+        'discovery_existing_from_db': ('🎬 <b>{title}</b> ({year}) — {count} torrent(s) in your library.'),
+        'discovery_refresh_no_new': '🔎 No new torrents on rutor for «{title}» ({year}).',
+        'discovery_refresh_no_new_no_film': '🔎 No new torrents on rutor.',
+        'discovery_refresh_new_header': '🆕 {count} new torrent(s) on rutor for «{title}» ({year}):',
+        'discovery_tmdb_error': 'Could not query TMDB right now. Please try again later.',
+        'btn_discovery_pick_torrents': '🔎 Find torrents on rutor',
+        'btn_discovery_pick_seasons': '📺 Pick a season',
+        'btn_discovery_all_seasons': '🔎 All seasons',
+        'btn_discovery_season': '📺 S{n}',
     },
     'ru': {
         'start_message': 'Привет! Я Rutor Bot. Выбери действие в меню:',
@@ -101,6 +117,22 @@ TRANSLATIONS = {
         'cron_dow_4': 'Чт',
         'cron_dow_5': 'Пт',
         'cron_dow_6': 'Сб',
+        'discovery_usage': 'Использование: /discovery <название>',
+        'discovery_no_results': 'Ничего не найдено в TMDB',
+        'discovery_results_header': 'Найдено в TMDB:',
+        'discovery_tv_not_supported': 'Сериалы пока не поддерживаются командой /discovery — только фильмы.',
+        'discovery_search_started': (
+            '🔎 Запустил поиск на rutor для <b>{title}</b> ({year}). Пришлю, когда найду торренты.'
+        ),
+        'discovery_existing_from_db': ('🎬 <b>{title}</b> ({year}) — {count} торрентов в библиотеке.'),
+        'discovery_refresh_no_new': '🔎 По «{title}» ({year}) новых торрентов на rutor не найдено.',
+        'discovery_refresh_no_new_no_film': '🔎 Новых торрентов на rutor не найдено.',
+        'discovery_refresh_new_header': '🆕 По «{title}» ({year}) {count} новых торрентов на rutor:',
+        'discovery_tmdb_error': 'Не удалось обратиться к TMDB. Попробуйте позже.',
+        'btn_discovery_pick_torrents': '🔎 Найти торренты на rutor',
+        'btn_discovery_pick_seasons': '📺 Выбрать сезон',
+        'btn_discovery_all_seasons': '🔎 Все сезоны',
+        'btn_discovery_season': '📺 С{n}',
     },
 }
 
