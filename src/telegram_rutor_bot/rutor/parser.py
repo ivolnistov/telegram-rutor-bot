@@ -1,4 +1,5 @@
 """Parser for rutor.info torrent site with Transmission integration."""
+# pylint: disable=too-many-lines
 
 from __future__ import annotations
 
@@ -476,8 +477,9 @@ async def _try_match_tmdb(session: AsyncSession, film: Film) -> None:
 
     try:
         matcher = TmdbMatcher(session)
-        match = await matcher._try_find_tmdb_match(film)
-    except Exception as e:
+        # Reuse the matcher's best-match heuristic — duplicating it here would drift.
+        match = await matcher._try_find_tmdb_match(film)  # pylint: disable=protected-access
+    except Exception as e:  # pylint: disable=broad-exception-caught
         log.warning('TMDB match skipped for film %s (%r): %s', film.id, film.name, e)
         return
 

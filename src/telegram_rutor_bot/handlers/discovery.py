@@ -168,9 +168,9 @@ async def discovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     try:
         raw_results = await tmdb.search_multi(query)
-    except Exception as e:
-        # Catching broadly here because TmdbClient internals already swallow httpx errors,
-        # so a leak here usually means an unexpected client/runtime issue we want logged.
+    # Top-level: any failure must surface as a user-friendly message; TmdbClient
+    # internals already swallow httpx errors, so a leak here is unexpected.
+    except Exception as e:  # pylint: disable=broad-exception-caught
         log.exception('TMDB search_multi failed for query %r: %s', query, e)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=get_text('discovery_tmdb_error', lang))
         return
@@ -200,7 +200,8 @@ async def _safe_get_details(media_type: str, media_id: int) -> dict[str, Any]:
     """Best-effort TMDB details fetch — empty dict on any error so the picker can degrade."""
     try:
         return await tmdb.get_details(media_type, media_id, append_to_response='credits')
-    except Exception as e:
+    # External API; degrade rather than fail the picker on any transport hiccup.
+    except Exception as e:  # pylint: disable=broad-exception-caught
         log.debug('TMDB get_details failed for %s/%s: %s', media_type, media_id, e)
         return {}
 
@@ -340,8 +341,12 @@ async def discovery_callback_handler(update: Update, context: ContextTypes.DEFAU
 
 
 @security()
-async def discovery_season_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def discovery_season_callback_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
     """Replace the TV pick card's keyboard with one button per season + 'all seasons'."""
+    # pylint: disable=unused-argument
     callback_query = update.callback_query
     if not callback_query or not callback_query.data:
         return
@@ -416,9 +421,9 @@ async def _ensure_film_for_tmdb(media_type: str, media_id: int) -> tuple[Film | 
         details: dict[str, Any] = {}
         try:
             details = await tmdb.get_details(media_type, media_id)
-        except Exception as e:
-            # TmdbClient already returns {} on httpx errors, but a transport-level
-            # exception bubbling up here means we still want a row if we have one.
+        # Log and continue with the cached row if any — transport-level failures
+        # shouldn't sink the user-visible callback.
+        except Exception as e:  # pylint: disable=broad-exception-caught
             log.warning('TMDB get_details failed for %s/%s: %s', media_type, media_id, e)
 
         details_original = details.get('original_title') or details.get('original_name')
