@@ -26,8 +26,8 @@ from .torrents import (
 from .watchlist import watch_command
 
 __all__ = [
-    'add_user_cmd',
     'RUTOR_URL_RE',
+    'add_user_cmd',
     'callback_query_handler',
     'discovery_callback_handler',
     'discovery_command',
