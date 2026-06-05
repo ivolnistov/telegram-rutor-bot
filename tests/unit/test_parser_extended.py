@@ -7,7 +7,10 @@ from bs4 import BeautifulSoup
 from telegram_rutor_bot.db.models import Film, Torrent
 from telegram_rutor_bot.rutor.parser import (
     _extract_details_from_table,
+    _get_category_folder,
+    _normalize_category_folder,
     _parse_torrent_page_details,
+    _resolve_download_dir,
     add_torrent_from_page_url,
     download_torrent,
     fetch_rutor_torrents,
@@ -48,6 +51,40 @@ def test_parse_torrent_page_details_internal():
     imdb_url, _, metadata = _parse_torrent_page_details(soup)
     assert 'tt123' in imdb_url
     assert metadata['imdb_url'] == imdb_url
+
+
+def test_normalize_category_folder_uses_qbittorrent_download_root():
+    assert _normalize_category_folder('CARTOONS') == '/downloads/CARTOONS'
+    assert _normalize_category_folder('/downloads/CARTOONS') == '/downloads/CARTOONS'
+
+
+@pytest.mark.asyncio
+async def test_get_category_folder_matches_folder_case_insensitively(mocker):
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = 'CARTOONS'
+
+    mock_session = AsyncMock()
+    mock_session.execute.return_value = mock_result
+    mocker.patch(
+        'telegram_rutor_bot.rutor.parser.get_async_session',
+        return_value=MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock()),
+    )
+
+    assert await _get_category_folder('CARTOONS') == '/downloads/CARTOONS'
+
+
+@pytest.mark.asyncio
+async def test_resolve_download_dir_normalizes_film_category_folder():
+    mock_category = MagicMock()
+    mock_category.folder = 'FILMS'
+
+    mock_film = MagicMock(spec=Film)
+    mock_film.category_rel = mock_category
+
+    mock_torrent = MagicMock(spec=Torrent)
+    mock_torrent.film = mock_film
+
+    assert await _resolve_download_dir(mock_torrent, 'CARTOONS') == '/downloads/FILMS'
 
 
 @pytest.mark.asyncio
@@ -117,6 +154,7 @@ async def test_download_torrent_success(mocker):
     )
 
     mocker.patch('telegram_rutor_bot.rutor.parser._extract_genre_from_details', return_value=('Action', 'Фильмы'))
+    mocker.patch('telegram_rutor_bot.rutor.parser._get_category_folder', AsyncMock(return_value=None))
 
     mock_tc = AsyncMock()
     # Fixed return value

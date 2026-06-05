@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     qbittorrent_port: int = Field(default=8080, description='qBittorrent Web UI port')
     qbittorrent_username: str = Field(default='admin', description='qBittorrent Web UI username')
     qbittorrent_password: str = Field(default='adminadmin', description='qBittorrent Web UI password')
+    qbittorrent_download_root: str = Field(
+        default='/downloads',
+        description='Root download path as seen by the torrent client container',
+    )
 
     # Proxy settings
     proxy: str | None = Field(default=None, description='Proxy URL (e.g., socks5://host:port)')

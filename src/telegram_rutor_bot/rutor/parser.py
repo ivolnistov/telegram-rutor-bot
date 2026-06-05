@@ -11,13 +11,14 @@ from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager, suppress
 from datetime import UTC, datetime
 from hashlib import blake2s
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from telegram_rutor_bot.config import settings
@@ -992,23 +993,47 @@ async def _get_category_folder(category_name: str | None) -> str | None:
     if not category_name:
         return None
 
+    normalized_category = category_name.lower()
     try:
         async with get_async_session() as session:
             result = await session.execute(
-                select(Category.folder).where(Category.name == category_name, Category.active.is_(True))
+                select(Category.folder)
+                .where(
+                    Category.active.is_(True),
+                    or_(
+                        func.lower(Category.name) == normalized_category,
+                        func.lower(Category.folder) == normalized_category,
+                    ),
+                )
+                .limit(1)
             )
             folder = result.scalar_one_or_none()
     except (RuntimeError, SQLAlchemyError) as exc:
         log.debug('Could not resolve folder for category %s: %s', category_name, exc)
         return None
 
-    return folder if folder else None
+    return _normalize_category_folder(folder)
+
+
+def _normalize_category_folder(folder: str | None) -> str | None:
+    """Return a qBittorrent container path for a configured category folder."""
+    if not folder:
+        return None
+
+    folder = folder.strip()
+    if not folder:
+        return None
+    if Path(folder).is_absolute():
+        return folder
+
+    root = settings.qbittorrent_download_root.strip().rstrip('/') or '/downloads'
+    return f'{root}/{folder.strip("/")}'
 
 
 async def _resolve_download_dir(torrent: Torrent, category: str | None) -> str | None:
     """Resolve the save path from the film category first, then detected category."""
     if torrent.film and torrent.film.category_rel and torrent.film.category_rel.folder:
-        return torrent.film.category_rel.folder
+        return _normalize_category_folder(torrent.film.category_rel.folder)
     return await _get_category_folder(category)
 
 
