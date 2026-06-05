@@ -19,12 +19,12 @@ async def test_all_jobs_flows(mocker):
     )
     mocker.patch(
         'telegram_rutor_bot.tasks.jobs.get_search',
-        AsyncMock(return_value=MagicMock(url='http://t', cron='*', last_success_from_now=lambda: 100)),
+        AsyncMock(return_value=MagicMock(url='http://t', cron='*', is_series=False, last_success_from_now=lambda: 100)),
     )
     mocker.patch('telegram_rutor_bot.tasks.jobs.get_searches', AsyncMock(return_value=[]))
     mocker.patch('telegram_rutor_bot.tasks.jobs.get_search_subscribers', AsyncMock(return_value=[]))
     mocker.patch('telegram_rutor_bot.tasks.jobs._run_search_process', AsyncMock(return_value='Ok'))
-    mocker.patch('telegram_rutor_bot.tasks.jobs.parse_rutor', AsyncMock(return_value=[]))
+    mocker.patch('telegram_rutor_bot.tasks.jobs.parse_rutor', AsyncMock(return_value=([], [])))
 
     mock_tc = AsyncMock()
     mock_tc.list_torrents.return_value = []

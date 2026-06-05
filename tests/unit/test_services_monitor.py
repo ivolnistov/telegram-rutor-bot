@@ -38,7 +38,7 @@ async def test_check_monitored_items_v4(mocker):
 
     monitor = WatchlistMonitor(mock_session)
 
-    mocker.patch('telegram_rutor_bot.services.monitor.parse_rutor', AsyncMock(return_value=[1]))
+    mocker.patch('telegram_rutor_bot.services.monitor.parse_rutor', AsyncMock(return_value=([1], [10])))
     monitor._notify_users_about_found_items = AsyncMock()
 
     mocker.patch('telegram_rutor_bot.services.monitor.Bot')

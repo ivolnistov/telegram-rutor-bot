@@ -197,6 +197,7 @@ async def _process_torrent_item(
     category_id: int | None = None,
     film_id: int | None = None,
     is_series: bool = False,
+    new_torrent_ids: list[int] | None = None,
 ) -> None:
     """Process a single torrent item"""
     # Get or create film
@@ -213,7 +214,7 @@ async def _process_torrent_item(
         torrent_name = torrent_data['torrent'].get_text()
         ep_info = parse_episode(torrent_name) if is_series else None
 
-        await add_torrent(
+        new_torrent = await add_torrent(
             session,
             film_id=target_film_id,
             blake=torrent_data['torrent_lnk_blake'],
@@ -230,6 +231,8 @@ async def _process_torrent_item(
         # Torrent was actually new — mark film for notification
         if target_film_id not in new:
             new.append(target_film_id)
+        if new_torrent_ids is not None:
+            new_torrent_ids.append(new_torrent.id)
     except IntegrityError:
         # Torrent with this magnet already exists, update it
         existing = await get_torrent_by_magnet(session, torrent_data['magnet'])
@@ -308,9 +311,10 @@ async def parse_rutor(
     is_series: bool = False,
     quality_filters: str | None = None,
     translation_filters: str | None = None,
-) -> list[int]:
+) -> tuple[list[int], list[int]]:
     """Parse rutor.info search results and save to database.
 
+    Returns (new_film_ids, new_torrent_ids).
     Per-search filters override global filters when provided.
     """
     # Per-search filters take priority, then fall back to global config
@@ -345,6 +349,7 @@ async def parse_rutor(
 
     results = await fetch_rutor_torrents(url, progress_callback)
     new: list[int] = []
+    new_torrent_ids: list[int] = []
     film_cache: dict[str, int] = {}
 
     for torrent_data in results:
@@ -361,11 +366,12 @@ async def parse_rutor(
                 category_id,
                 film_id,
                 is_series,
+                new_torrent_ids,
             )
         except Exception as e:  # pylint: disable=broad-exception-caught
             log.error('Failed to process %s: %s', torrent_data['name'], e)
 
-    return new
+    return new, new_torrent_ids
 
 
 def _should_skip_torrent(
@@ -399,6 +405,7 @@ async def _handle_single_torrent(
     category_id: int | None,
     film_id: int | None,
     is_series: bool,
+    new_torrent_ids: list[int] | None = None,
 ) -> None:
     # Check if torrent already exists
     existing_torrent = await get_torrent_by_blake(session, torrent_data['torrent_lnk_blake'])
@@ -428,7 +435,9 @@ async def _handle_single_torrent(
             )
             return
 
-    await _process_torrent_item(session, torrent_data, film_cache, new, category_id, film_id, is_series)
+    await _process_torrent_item(
+        session, torrent_data, film_cache, new, category_id, film_id, is_series, new_torrent_ids
+    )
     log.info('Processed %s: Added/Updated', torrent_data['name'])
 
 

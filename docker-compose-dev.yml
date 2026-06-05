@@ -15,7 +15,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5433:5432" # Exposed on 5433 for local dev
+      - "5434:5432" # Exposed on 5433 for local dev
 
   redis:
     image: redis:7-alpine
@@ -28,7 +28,7 @@ services:
       timeout: 3s
       retries: 3
     ports:
-      - "6380:6379" # Exposed on 6380 for local dev
+      - "6381:6379" # Exposed on 6380 for local dev
 
   qbittorrent:
     build:

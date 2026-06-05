@@ -10,3 +10,5 @@ var
 docker-compose-dev.yml
 deploy
 tests
+._*
+**/._*

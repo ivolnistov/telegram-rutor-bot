@@ -5,7 +5,19 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TypedDict
 
-from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Table
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -206,6 +218,20 @@ class TaskExecution(Base):
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     search: Mapped[Search] = relationship('Search')
+
+
+class NotifiedEpisode(Base):
+    """Tracks which episodes have been notified for a series search."""
+
+    __tablename__ = 'notified_episodes'
+    __table_args__ = (UniqueConstraint('search_id', 'film_id', 'season', 'episode', name='uq_notified_episode'),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    search_id: Mapped[int] = mapped_column(Integer, ForeignKey('searches.id'), nullable=False)
+    film_id: Mapped[int] = mapped_column(Integer, ForeignKey('films.id'), nullable=False)
+    season: Mapped[int] = mapped_column(Integer, nullable=False)
+    episode: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class AppConfigUpdate(TypedDict, total=False):

@@ -17,7 +17,7 @@ async def test_notify_about_new_full(mocker):
     )
 
     # Mock search and subscribers
-    mock_search = MagicMock(id=1, creator_id=1, url='http://test')
+    mock_search = MagicMock(id=1, creator_id=1, url='http://test', is_series=False)
     mocker.patch('telegram_rutor_bot.tasks.jobs.get_search', AsyncMock(return_value=mock_search))
     mocker.patch('telegram_rutor_bot.tasks.jobs.get_user', AsyncMock(return_value=MagicMock(id=1)))
 
@@ -25,7 +25,7 @@ async def test_notify_about_new_full(mocker):
     mocker.patch('telegram_rutor_bot.tasks.jobs.get_search_subscribers', AsyncMock(return_value=[mock_sub]))
 
     # Mock parse_rutor returning list of film IDs
-    mocker.patch('telegram_rutor_bot.tasks.jobs.parse_rutor', AsyncMock(return_value=[10]))
+    mocker.patch('telegram_rutor_bot.tasks.jobs.parse_rutor', AsyncMock(return_value=([10], [100])))
     mocker.patch('telegram_rutor_bot.tasks.jobs.update_last_success', AsyncMock())
     mocker.patch('telegram_rutor_bot.tasks.jobs.get_films_by_ids', AsyncMock(return_value=[]))
     mocker.patch('telegram_rutor_bot.tasks.jobs.format_films', AsyncMock(return_value=[]))

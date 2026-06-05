@@ -12,10 +12,10 @@ async def test_run_search_process_success_v2(mocker):
     mock_task = MagicMock()
     mock_task.progress = 0
 
-    mock_search = MagicMock(spec=Search, id=1, url='http://t', query='q', category_id=1)
+    mock_search = MagicMock(spec=Search, id=1, url='http://t', query='q', category_id=1, is_series=False)
     mocker.patch('telegram_rutor_bot.tasks.jobs.get_search', AsyncMock(return_value=mock_search))
 
-    mocker.patch('telegram_rutor_bot.tasks.jobs.parse_rutor', AsyncMock(return_value=[10, 11]))
+    mocker.patch('telegram_rutor_bot.tasks.jobs.parse_rutor', AsyncMock(return_value=([10, 11], [100, 101])))
     mocker.patch('telegram_rutor_bot.tasks.jobs.get_films_by_ids', AsyncMock(return_value=[]))
 
     # Mock subscribers - use REAL strings

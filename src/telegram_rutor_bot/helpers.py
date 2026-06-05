@@ -10,17 +10,18 @@ from urllib.parse import urljoin
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-from telegram_rutor_bot.db import get_async_session, get_torrents_by_film, update_film_metadata
+from telegram_rutor_bot.db import get_async_session, get_films_by_ids, get_torrents_by_film, update_film_metadata
 from telegram_rutor_bot.rutor import get_torrent_info
 from telegram_rutor_bot.rutor.constants import RUTOR_BASE_URL
 from telegram_rutor_bot.schemas import Notification
+from telegram_rutor_bot.utils.episode_parser import EpisodeInfo, format_episode_label
 
 log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from telegram_rutor_bot.db.models import Film
+    from telegram_rutor_bot.db.models import Film, Torrent
 
 
 def gen_hash(text: str, prefix: str | None = None) -> str:
@@ -166,5 +167,59 @@ async def format_films(films: Iterable[Film]) -> list[Notification]:
             # Format film with details or simple format
             notification = await _format_film_with_details(session, film, torrents)
             notifications.append(notification)
+
+    return notifications
+
+
+def _episode_label_for_torrent(torrent: Torrent) -> str:
+    """Build a human-readable episode label from torrent fields."""
+    if torrent.season is None:
+        return ''
+    info = EpisodeInfo(
+        season=torrent.season,
+        episode=torrent.episode,
+        episode_end=None,
+        is_full_season=torrent.episode is None,
+    )
+    return format_episode_label(info)
+
+
+async def format_series_notifications(films_torrents: dict[int, list[Torrent]]) -> list[Notification]:
+    """Format series episode notifications showing only new episode torrents."""
+    notifications: list[Notification] = []
+
+    async with get_async_session() as session:
+        film_ids = list(films_torrents.keys())
+        films = await get_films_by_ids(session, film_ids)
+        films_by_id = {f.id: f for f in films}
+
+        for film_id, torrents in films_torrents.items():
+            film = films_by_id.get(film_id)
+            if not film:
+                continue
+
+            # Build episode summary line
+            episode_labels = []
+            for t in torrents:
+                label = _episode_label_for_torrent(t)
+                if label and label not in episode_labels:
+                    episode_labels.append(label)
+
+            safe_name = html.escape(film.name)
+            ep_summary = ', '.join(episode_labels) if episode_labels else 'new episodes'
+            caption = f'📺 <b>{safe_name}</b> ({film.year})\n🆕 {ep_summary}'
+
+            if len(caption) > 1000:
+                caption = caption[:997] + '...'
+
+            markup = _format_torrents_buttons(torrents, film)
+            notifications.append(
+                {
+                    'type': 'text',
+                    'media': None,
+                    'caption': caption,
+                    'reply_markup': markup,
+                }
+            )
 
     return notifications
