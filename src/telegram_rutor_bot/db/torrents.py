@@ -166,7 +166,7 @@ async def search_torrents(session: AsyncSession, query: str, limit: int = 50, of
 
 async def count_torrents(session: AsyncSession, query: str | None = None) -> int:
     """Count torrents, optionally filtered by search query"""
-    stmt = select(func.count(Torrent.id))
+    stmt = select(func.count(Torrent.id))  # pylint: disable=not-callable
     if query:
         stmt = stmt.where(Torrent.name.ilike(f'%{query}%'))
     result = await session.execute(stmt)
