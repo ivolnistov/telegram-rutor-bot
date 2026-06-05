@@ -20,7 +20,9 @@ RUN apt-get update &&\
     mkdir /app && mkdir /app/var &&\
     useradd -m rutor && \
     chown -R rutor:rutor /app
-ENV LC_ALL "en_US.UTF-8"
+ARG APP_VERSION=0.0.0
+ENV LC_ALL=en_US.UTF-8
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_TELEGRAM_RUTOR_BOT=${APP_VERSION}
 COPY --chown=rutor:rutor ./ /app
 # Copy built frontend from stage 1
 COPY --from=frontend-builder --chown=rutor:rutor /frontend/dist /app/frontend/dist

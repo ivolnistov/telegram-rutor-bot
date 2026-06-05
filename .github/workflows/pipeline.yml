@@ -129,5 +129,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ startsWith(github.ref, 'refs/tags/v') && steps.meta.outputs.version || '0.0.0' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
