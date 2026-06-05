@@ -9,6 +9,7 @@ from telegram.ext import ContextTypes
 
 from telegram_rutor_bot.db import get_async_session
 from telegram_rutor_bot.db.models import Film
+from telegram_rutor_bot.handlers.pending import request_arg
 from telegram_rutor_bot.tasks.jobs import search_film_on_rutor
 from telegram_rutor_bot.utils import security
 
@@ -24,12 +25,7 @@ async def watch_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     text = update.message.text
     if text == '/watch':
-        msg = (
-            'Usage: /watch <Movie Name> [voice:<filter>] [min:<GB>] [max:<GB>] [size:<GB>]\n\n'
-            'Example: /watch Breaking Bad voice:LostFilm min:5 max:20\n'
-            'Example: /watch Interstellar size:15'
-        )
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
+        await request_arg(update, context, 'watch')
         return
 
     # Parse arguments

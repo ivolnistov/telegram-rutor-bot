@@ -5,7 +5,19 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TypedDict
 
-from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Table
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -208,6 +220,20 @@ class TaskExecution(Base):
     search: Mapped[Search] = relationship('Search')
 
 
+class NotifiedEpisode(Base):
+    """Tracks which episodes have been notified for a series search."""
+
+    __tablename__ = 'notified_episodes'
+    __table_args__ = (UniqueConstraint('search_id', 'film_id', 'season', 'episode', name='uq_notified_episode'),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    search_id: Mapped[int] = mapped_column(Integer, ForeignKey('searches.id'), nullable=False)
+    film_id: Mapped[int] = mapped_column(Integer, ForeignKey('films.id'), nullable=False)
+    season: Mapped[int] = mapped_column(Integer, nullable=False)
+    episode: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
 class AppConfigUpdate(TypedDict, total=False):
     """TypedDict for AppConfig updates."""
 
@@ -229,6 +255,7 @@ class AppConfigUpdate(TypedDict, total=False):
     search_quality_filters: str | None
     search_translation_filters: str | None
     torrent_sort_keywords: str | None
+    discovery_max_results: int
     seed_ratio_limit: float
     seed_time_limit: int
     inactive_seeding_time_limit: int
@@ -274,6 +301,9 @@ class AppConfig(Base):
 
     # Display sort: comma-separated keywords; releases matching more of these float to the top
     torrent_sort_keywords: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Discovery (TMDB -> bot menu): how many TMDB hits to show per query
+    discovery_max_results: Mapped[int] = mapped_column(Integer, default=10, server_default='10', nullable=False)
 
     # Seed limits
     seed_ratio_limit: Mapped[float] = mapped_column(Float, default=1.0)

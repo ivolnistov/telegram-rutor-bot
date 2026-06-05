@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
-from sqlalchemy import CursorResult, or_, select, update
+from sqlalchemy import CursorResult, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,6 +12,7 @@ from .models import Film, Torrent
 
 __all__ = (
     'add_torrent',
+    'count_torrents',
     'get_recent_torrents',
     'get_torrent_by_blake',
     'get_torrent_by_id',
@@ -150,13 +151,23 @@ async def mark_torrent_downloaded(session: AsyncSession, torrent_id: int) -> boo
     return cast(CursorResult[Any], result).rowcount > 0
 
 
-async def search_torrents(session: AsyncSession, query: str, limit: int = 50) -> list[Torrent]:
+async def search_torrents(session: AsyncSession, query: str, limit: int = 50, offset: int = 0) -> list[Torrent]:
     """Search torrents by name"""
     result = await session.execute(
         select(Torrent)
         .options(selectinload(Torrent.film))
         .where(Torrent.name.ilike(f'%{query}%'))
         .order_by(Torrent.created.desc())
+        .offset(offset)
         .limit(limit)
     )
     return list(result.scalars().all())
+
+
+async def count_torrents(session: AsyncSession, query: str | None = None) -> int:
+    """Count torrents, optionally filtered by search query"""
+    stmt = select(func.count(Torrent.id))
+    if query:
+        stmt = stmt.where(Torrent.name.ilike(f'%{query}%'))
+    result = await session.execute(stmt)
+    return result.scalar_one()

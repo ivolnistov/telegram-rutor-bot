@@ -69,6 +69,7 @@ class ConfigSetupRequest(BaseModel):
     tmdb_api_key: str | None = None
     tmdb_session_id: str | None = None
     torrent_sort_keywords: str | None = None
+    discovery_max_results: int = Field(default=10, ge=1, le=20)
     seed_ratio_limit: float = 1.0
     seed_time_limit: int = 2880
     inactive_seeding_time_limit: int = 0
@@ -107,6 +108,7 @@ async def get_config() -> ConfigCheckResponse:
         'tmdb_api_key': db_config.tmdb_api_key,
         'tmdb_session_id': db_config.tmdb_session_id,
         'torrent_sort_keywords': db_config.torrent_sort_keywords,
+        'discovery_max_results': db_config.discovery_max_results,
     }
 
     # Fetch live limits from qBittorrent
@@ -251,6 +253,7 @@ async def save_config(config: ConfigSetupRequest) -> ConfigCheckResponse:
         updates['tmdb_session_id'] = config.tmdb_session_id
     # Persist torrent sort keywords as-is (None / '' clears the preference).
     updates['torrent_sort_keywords'] = config.torrent_sort_keywords or None
+    updates['discovery_max_results'] = config.discovery_max_results
 
     # Save to DB
     async with get_async_session() as session:

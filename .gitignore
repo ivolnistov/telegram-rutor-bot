@@ -39,6 +39,12 @@ ANTIGRAVITY.md
 .scannerwork/
 sonar-project.properties
 
+# Coverage reports
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
 # Misc
 cookie.txt
 

@@ -3,36 +3,57 @@ import { downloadTorrent, getTorrents } from 'api'
 import { Button } from 'components/ui/Button'
 import { Input } from 'components/ui/Input'
 import { useDebounce } from 'hooks/useDebounce'
-import { Download, Search } from 'lucide-react'
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Search,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import type { Torrent } from 'types'
 
+const PAGE_SIZE = 30
+
 const LibraryPage = () => {
   const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(0)
   const debouncedQuery = useDebounce(searchQuery, 300)
 
-  const { data: torrents, isLoading } = useQuery({
-    queryKey: ['torrents', debouncedQuery],
-    queryFn: () => getTorrents(100, debouncedQuery),
+  const { data, isLoading } = useQuery({
+    queryKey: ['torrents', debouncedQuery, page],
+    queryFn: () => getTorrents(PAGE_SIZE, page * PAGE_SIZE, debouncedQuery),
   })
+
+  const torrents = data?.items ?? []
+  const total = data?.total ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value)
+    setPage(0)
+  }
 
   return (
     <div>
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
         <h3 className="text-xl font-semibold">{t('library.title')}</h3>
-        <div className="w-full md:w-64">
-          <Input
-            icon={<Search className="size-4 " />}
-            type="text"
-            placeholder={t('library.search_placeholder')}
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value)
-            }}
-          />
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-zinc-500">{total} torrents</span>
+          <div className="w-64">
+            <Input
+              icon={<Search className="size-4" />}
+              type="text"
+              placeholder={t('library.search_placeholder')}
+              value={searchQuery}
+              onChange={(e) => {
+                handleSearch(e.target.value)
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -51,7 +72,7 @@ const LibraryPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/50">
-                {torrents?.map((torrent: Torrent) => (
+                {torrents.map((torrent: Torrent) => (
                   <tr
                     key={torrent.id}
                     className="group hover:bg-zinc-900/50 transition-colors"
@@ -95,25 +116,32 @@ const LibraryPage = () => {
                       {new Date(torrent.created).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 text-xs bg-zinc-800 hover:bg-zinc-700"
-                        onClick={() => {
-                          void (async () => {
-                            try {
-                              await downloadTorrent(torrent.id)
-                              toast.success(t('library.download_started'))
-                            } catch (e) {
-                              console.error(e)
-                              toast.error(t('library.download_failed'))
-                            }
-                          })()
-                        }}
-                      >
-                        <Download className="size-3 mr-1.5" />
-                        {t('library.download')}
-                      </Button>
+                      {torrent.downloaded ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-green-400 bg-green-500/10 px-2.5 py-1.5 rounded-md border border-green-500/20">
+                          <Check className="size-3" />
+                          Downloaded
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-8 text-xs bg-zinc-800 hover:bg-zinc-700"
+                          onClick={() => {
+                            void (async () => {
+                              try {
+                                await downloadTorrent(torrent.id)
+                                toast.success(t('library.download_started'))
+                              } catch (e) {
+                                console.error(e)
+                                toast.error(t('library.download_failed'))
+                              }
+                            })()
+                          }}
+                        >
+                          <Download className="size-3 mr-1.5" />
+                          {t('library.download')}
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -121,9 +149,39 @@ const LibraryPage = () => {
             </table>
           </div>
 
-          {torrents?.length === 0 && (
+          {torrents.length === 0 && (
             <div className="py-12 text-center text-zinc-500 border-t border-zinc-800">
               {t('library.no_films')}
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800 bg-zinc-900/50">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => {
+                  setPage((p) => p - 1)
+                }}
+              >
+                <ChevronLeft className="size-4 mr-1" />
+                Prev
+              </Button>
+              <span className="text-xs text-zinc-500">
+                {page + 1} / {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={page >= totalPages - 1}
+                onClick={() => {
+                  setPage((p) => p + 1)
+                }}
+              >
+                Next
+                <ChevronRight className="size-4 ml-1" />
+              </Button>
             </div>
           )}
         </div>

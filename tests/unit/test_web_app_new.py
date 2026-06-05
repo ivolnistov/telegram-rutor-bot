@@ -15,7 +15,8 @@ def test_app_get_endpoints(mocker):
     mocker.patch('telegram_rutor_bot.web.app.get_searches', AsyncMock(return_value=[]))
     mocker.patch('telegram_rutor_bot.web.app.get_all_users', AsyncMock(return_value=[]))
     mocker.patch('telegram_rutor_bot.web.app.get_categories', AsyncMock(return_value=[]))
-    mocker.patch('telegram_rutor_bot.web.app.get_recent_torrents', AsyncMock(return_value=[]))
+    mocker.patch('telegram_rutor_bot.web.app.get_torrents', AsyncMock(return_value=[]))
+    mocker.patch('telegram_rutor_bot.web.app.count_torrents', AsyncMock(return_value=0))
     mocker.patch('telegram_rutor_bot.web.app.get_films', AsyncMock(return_value=[]))
 
     # GET /api/searches

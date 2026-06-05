@@ -284,7 +284,7 @@ class TestParseRutor:
 
             # Mock locale context manager
             with patch('telegram_rutor_bot.rutor.parser.localize'):
-                new_films = await parse_rutor('http://rutor.info/search/matrix', async_session)
+                new_films, _new_torrent_ids = await parse_rutor('http://rutor.info/search/matrix', async_session)
 
         # Should create at least one film
         assert len(new_films) >= 1

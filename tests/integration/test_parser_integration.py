@@ -147,7 +147,7 @@ class TestRutorParserIntegration:
             with patch('telegram_rutor_bot.rutor.parser.localize'):
                 # Parse the page
                 url = 'http://rutor.info/search/0/0/100/0/matrix'
-                new_films = await parse_rutor(url, async_session)
+                new_films, _new_torrent_ids = await parse_rutor(url, async_session)
 
             # Verify results
             assert len(new_films) == 2
@@ -340,7 +340,7 @@ async def test_real_rutor_search(async_session, search_url):
     pytest.skip('Skipping external API test')
 
     try:
-        new_films = await parse_rutor(search_url, async_session)
+        new_films, _new_torrent_ids = await parse_rutor(search_url, async_session)
 
         # Basic assertions
         assert isinstance(new_films, list)

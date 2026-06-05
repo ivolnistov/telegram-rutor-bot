@@ -10,6 +10,7 @@ from telegram_rutor_bot.db import (
     grant_access,
     set_user_language,
 )
+from telegram_rutor_bot.handlers.pending import request_arg
 from telegram_rutor_bot.utils import DEFAULT_LANGUAGE, get_text, security
 
 __all__ = (
@@ -134,7 +135,7 @@ async def add_user_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     lang = await _get_lang(update)
 
     if not context.args:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=get_text('usage_adduser', lang))
+        await request_arg(update, context, 'adduser', lang)
         return
 
     try:

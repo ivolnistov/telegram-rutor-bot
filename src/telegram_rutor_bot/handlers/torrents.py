@@ -19,8 +19,9 @@ from telegram_rutor_bot.db import (
     get_torrent_by_id,
     get_user_by_chat,
 )
+from telegram_rutor_bot.handlers.pending import request_arg
 from telegram_rutor_bot.helpers import format_films
-from telegram_rutor_bot.rutor import download_torrent, get_torrent_info
+from telegram_rutor_bot.rutor import add_torrent_from_page_url, download_torrent, get_torrent_info
 from telegram_rutor_bot.rutor.constants import RUTOR_BASE_URL
 from telegram_rutor_bot.rutor.rating_parser import get_imdb_details
 from telegram_rutor_bot.torrent_clients import get_torrent_client
@@ -31,10 +32,16 @@ __all__ = (
     'download_torrent',
     'torrent_download',
     'torrent_downloads',
+    'torrent_from_url',
     'torrent_info',
     'torrent_list',
     'torrent_recommend',
     'torrent_search',
+)
+
+RUTOR_URL_RE = re.compile(
+    r'https?://(?:www\.)?rutor\.[a-z]{2,6}/torrent/(\d+)(?:/[^\s]*)?',
+    re.IGNORECASE,
 )
 
 
@@ -234,6 +241,10 @@ async def torrent_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     lang = await _get_lang(update)
     search = str.strip(update.message.text.replace('/search', ''))
 
+    if not search:
+        await request_arg(update, context, 'search', lang)
+        return
+
     # Check for IMDB ID/URL
     if 'imdb.com' in search or search.startswith('tt'):
         await _handle_imdb_search(update, context, search, lang)
@@ -432,3 +443,34 @@ async def _handle_management_action(query: CallbackQuery, update: Update, action
             # Casting or ignoring for now as bot is usually present
             bot = query.get_bot()
             await bot.send_message(chat_id=update.effective_chat.id, text=f'Error: {e}')
+
+
+@security()
+async def torrent_from_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Add a torrent directly when a user pastes a rutor torrent-page URL."""
+    assert update.message is not None
+    assert update.effective_chat is not None
+    assert update.message.text is not None
+
+    match = RUTOR_URL_RE.search(update.message.text)
+    if not match:
+        return
+
+    page_url = match.group(0)
+    chat_id = update.effective_chat.id
+
+    await context.bot.send_message(chat_id=chat_id, text=f'Adding torrent from {page_url}...')
+
+    try:
+        result = await add_torrent_from_page_url(page_url)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        await context.bot.send_message(chat_id=chat_id, text=f'Не удалось добавить: {exc}')
+        return
+
+    safe_name = html.escape(result.get('name') or page_url)
+    category = html.escape(result.get('category') or '-')
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f'<b>{safe_name}</b>\nКатегория: <code>{category}</code>',
+        parse_mode=ParseMode.HTML,
+    )

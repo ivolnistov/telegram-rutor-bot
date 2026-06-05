@@ -12,10 +12,12 @@ from .discovery import discovery_callback_handler, discovery_command, discovery_
 from .search import search_callback_handler, search_delete, search_execute, search_list
 from .subscribe import subscribe, subscriptions_list, unsubscribe
 from .torrents import (
+    RUTOR_URL_RE,
     callback_query_handler,
     download_torrent,
     torrent_download,
     torrent_downloads,
+    torrent_from_url,
     torrent_info,
     torrent_list,
     torrent_recommend,
@@ -25,6 +27,7 @@ from .watchlist import watch_command
 
 __all__ = [
     'add_user_cmd',
+    'RUTOR_URL_RE',
     'callback_query_handler',
     'discovery_callback_handler',
     'discovery_command',
@@ -42,6 +45,7 @@ __all__ = [
     'subscriptions_list',
     'torrent_download',
     'torrent_downloads',
+    'torrent_from_url',
     'torrent_info',
     'torrent_list',
     'torrent_recommend',

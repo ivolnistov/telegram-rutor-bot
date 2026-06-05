@@ -18,20 +18,24 @@ from telegram_rutor_bot.db import (
     delete_search,
     get_async_session,
     get_films_by_ids,
+    get_notified_episodes,
     get_search,
     get_search_subscribers,
     get_searches,
+    get_torrent_by_id,
     get_user,
     get_user_by_chat,
+    mark_episodes_notified,
     update_last_success,
 )
-from telegram_rutor_bot.db.models import Film, Search, TaskExecution, User, subscribes_table
-from telegram_rutor_bot.helpers import format_films
+from telegram_rutor_bot.db.models import Film, Search, TaskExecution, Torrent, User, subscribes_table
+from telegram_rutor_bot.helpers import format_films, format_series_notifications
 from telegram_rutor_bot.rutor import parse_rutor
 from telegram_rutor_bot.rutor.constants import RUTOR_BASE_URL
 from telegram_rutor_bot.services.watchlist import check_matches
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.utils import DEFAULT_LANGUAGE, get_text, send_notifications
+from telegram_rutor_bot.utils.episode_filter import filter_new_episode_torrents
 
 from .broker import broker
 
@@ -100,7 +104,7 @@ async def _run_search_process(session: AsyncSession, task: TaskExecution, search
     current_year = datetime.now(UTC).year
     resolved_url = search.url.replace('{year}', str(current_year))
 
-    new = await parse_rutor(
+    new, new_torrent_ids = await parse_rutor(
         resolved_url,
         session,
         category_id=search.category_id,
@@ -139,7 +143,10 @@ async def _run_search_process(session: AsyncSession, task: TaskExecution, search
         else:
             result_details += '<br>No subscribers to notify.'
 
-        await notify_subscribers(search_id, new)
+        if search.is_series:
+            await notify_subscribers_series(search_id, new_torrent_ids)
+        else:
+            await notify_subscribers(search_id, new)
 
     return result_details
 
@@ -300,7 +307,7 @@ async def search_film_on_rutor(
             film_row = await session.get(Film, film_id)
             is_series = bool(film_row and film_row.tmdb_media_type == 'tv')
 
-            new_ids = await parse_rutor(url, session, film_id=film_id, is_series=is_series)
+            new_ids, _ = await parse_rutor(url, session, film_id=film_id, is_series=is_series)
 
             log.info('Film search %s finished. Found %s torrents.', film_id, len(new_ids))
 
@@ -395,6 +402,57 @@ async def notify_subscribers(search_id: int, new_film_ids: list[int]) -> None:
             await send_notifications(bot, subscriber.chat_id, notifications)
 
 
+@broker.task
+async def notify_subscribers_series(search_id: int, new_torrent_ids: list[int]) -> None:
+    """Notify subscribers about new series episodes only (episode-aware dedup)."""
+    log.info('Notifying subscribers (series) for search %s, %d new torrents', search_id, len(new_torrent_ids))
+
+    token = settings.telegram_token
+    if not token:
+        log.error('Telegram token not set, cannot notify subscribers')
+        return
+
+    bot = Bot(token=token)
+
+    async with get_async_session() as session:
+        # Load new torrents
+        new_torrents: list[Torrent] = []
+        for tid in new_torrent_ids:
+            t = await get_torrent_by_id(session, tid)
+            if t:
+                new_torrents.append(t)
+
+        if not new_torrents:
+            return
+
+        # Group by film_id
+        torrents_by_film: dict[int, list[Torrent]] = {}
+        for t in new_torrents:
+            torrents_by_film.setdefault(t.film_id, []).append(t)
+
+        # Filter to genuinely new episodes per film
+        films_to_notify: dict[int, list[Torrent]] = {}
+        for film_id, torrents in torrents_by_film.items():
+            already = await get_notified_episodes(session, search_id, film_id)
+            new_episode_torrents = filter_new_episode_torrents(torrents, already)
+
+            if new_episode_torrents:
+                films_to_notify[film_id] = new_episode_torrents
+                episodes_to_mark = [(t.season, t.episode) for t in new_episode_torrents if t.season is not None]
+                if episodes_to_mark:
+                    await mark_episodes_notified(session, search_id, film_id, episodes_to_mark)
+
+        if not films_to_notify:
+            log.info('No new episodes to notify for search %s', search_id)
+            return
+
+        notifications = await format_series_notifications(films_to_notify)
+
+        subscribers = await get_search_subscribers(session, search_id)
+        for subscriber in subscribers:
+            await send_notifications(bot, subscriber.chat_id, notifications)
+
+
 async def _handle_connection_error(bot: Bot, search: Search, user: User, search_id: int, e: ConnectionError) -> None:
     """Handle connection errors during search execution"""
     tb_str = ''.join(traceback.format_tb(e.__traceback__))
@@ -451,7 +509,7 @@ async def notify_about_new(search_id: int) -> None:
             resolved_url = search.url.replace('{year}', str(current_year))
 
             # Run the search
-            new = await parse_rutor(
+            new, new_torrent_ids = await parse_rutor(
                 resolved_url,
                 session,
                 category_id=search.category_id,
@@ -464,12 +522,15 @@ async def notify_about_new(search_id: int) -> None:
             if not new:
                 return
 
-            # Get films and format messages
-            films = await get_films_by_ids(session, new)
-            notifications = await format_films(films)
+            if search.is_series:
+                await notify_subscribers_series(search_id, new_torrent_ids)
+            else:
+                # Get films and format messages
+                films = await get_films_by_ids(session, new)
+                notifications = await format_films(films)
 
-            for subscriber in subscribers:
-                await send_notifications(bot, subscriber.chat_id, notifications)
+                for subscriber in subscribers:
+                    await send_notifications(bot, subscriber.chat_id, notifications)
 
         except ValueError as e:
             log.exception(e)

@@ -39,6 +39,7 @@ async def refresh_settings_from_db() -> None:
                 'tmdb_api_key',
                 'tmdb_session_id',
                 'torrent_sort_keywords',
+                'discovery_max_results',
             ]
             for field in fields_to_check:
                 val = getattr(db_config, field, None)
@@ -66,6 +67,7 @@ async def refresh_settings_from_db() -> None:
                 'seed_ratio_limit': 'RUTOR_BOT_SEED_RATIO_LIMIT',
                 'seed_time_limit': 'RUTOR_BOT_SEED_TIME_LIMIT',
                 'inactive_seeding_time_limit': 'RUTOR_BOT_INACTIVE_SEEDING_TIME_LIMIT',
+                'discovery_max_results': 'RUTOR_BOT_DISCOVERY_MAX_RESULTS',
             }
 
             final_updates = {}

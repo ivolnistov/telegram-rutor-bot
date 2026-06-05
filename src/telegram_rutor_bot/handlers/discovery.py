@@ -13,6 +13,7 @@ from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 from telegram_rutor_bot.clients.tmdb import TmdbClient
+from telegram_rutor_bot.config import settings
 from telegram_rutor_bot.db import (
     get_async_session,
     get_or_create_film,
@@ -21,6 +22,7 @@ from telegram_rutor_bot.db import (
     update_film_metadata,
 )
 from telegram_rutor_bot.db.models import Film
+from telegram_rutor_bot.handlers.pending import request_arg
 from telegram_rutor_bot.helpers import build_tmdb_caption, format_films
 from telegram_rutor_bot.tasks.jobs import search_film_on_rutor
 from telegram_rutor_bot.utils import DEFAULT_LANGUAGE, get_text, security, send_notifications
@@ -33,7 +35,6 @@ __all__ = (
 
 log = logging.getLogger(__name__)
 
-_MAX_RESULTS: int = 5
 _CALLBACK_PREFIX: str = 'disc_rutor:'
 _SEASON_PICKER_PREFIX: str = 'disc_season:'
 _SEASONS_PER_ROW: int = 4
@@ -163,7 +164,7 @@ async def discovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     query = update.message.text.replace('/discovery', '', 1).strip()
 
     if not query:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=get_text('discovery_usage', lang))
+        await request_arg(update, context, 'discovery', lang)
         return
 
     try:
@@ -175,7 +176,7 @@ async def discovery_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await context.bot.send_message(chat_id=update.effective_chat.id, text=get_text('discovery_tmdb_error', lang))
         return
 
-    results = _filter_results(raw_results)[:_MAX_RESULTS]
+    results = _filter_results(raw_results)[: settings.discovery_max_results]
     if not results:
         await context.bot.send_message(chat_id=update.effective_chat.id, text=get_text('discovery_no_results', lang))
         return
@@ -306,8 +307,16 @@ async def discovery_callback_handler(update: Update, context: ContextTypes.DEFAU
     if season is not None:
         existing_torrents = [t for t in existing_torrents if (t.season or 0) == season]
 
+    search_query = _build_search_query(
+        display_name,
+        display_year,
+        original_title,
+        is_tv=(media_type == 'tv'),
+        season=season,
+    )
+    await search_film_on_rutor.kiq(film.id, search_query, requester_chat_id=chat_id)
+
     if existing_torrents:
-        # DB has the film + torrents — show what we have, skip the rutor refresh.
         notifications = await format_films([film])
         await send_notifications(context.bot, chat_id, notifications)
         confirmation = get_text(
@@ -318,16 +327,7 @@ async def discovery_callback_handler(update: Update, context: ContextTypes.DEFAU
             count=len(existing_torrents),
         )
     else:
-        # Nothing yet for this film/season — go to rutor and notify when the worker finishes.
         confirmation = get_text('discovery_search_started', lang, title=safe_title, year=year_str)
-        search_query = _build_search_query(
-            display_name,
-            display_year,
-            original_title,
-            is_tv=(media_type == 'tv'),
-            season=season,
-        )
-        await search_film_on_rutor.kiq(film.id, search_query, requester_chat_id=chat_id)
 
     # Prefer editing the picker message so the user sees their choice was registered;
     # fall back to a fresh message if Telegram refuses the edit.

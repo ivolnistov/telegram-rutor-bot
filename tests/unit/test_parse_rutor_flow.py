@@ -29,5 +29,9 @@ async def test_parse_flow_v3(mocker):
         'telegram_rutor_bot.rutor.parser.localize', return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())
     )
 
-    res = await parse_rutor(mock_session, 'http://t', category_id=1)
-    assert isinstance(res, list)
+    res = await parse_rutor('http://t', mock_session, category_id=1)
+    assert isinstance(res, tuple)
+    assert len(res) == 2
+    film_ids, torrent_ids = res
+    assert isinstance(film_ids, list)
+    assert isinstance(torrent_ids, list)

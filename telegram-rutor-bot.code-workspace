@@ -1,0 +1,163 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "python.analysis.extraPaths": [
+      "${workspaceFolder}/src"
+    ],
+    "[python]": {
+      "editor.defaultFormatter": "charliermarsh.ruff",
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit",
+        "source.organizeImports": "explicit"
+      }
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "**/node_modules": true,
+      "**/*.pyc": true,
+      "htmlcov": true,
+      "coverage.xml": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.venv": true,
+      "**/uv.lock": true,
+      "**/htmlcov": true
+    },
+    "vscodeTasksSidebar.includeSources": ["Workspace"]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Start Infra",
+        "type": "shell",
+        "command": "docker compose -f docker-compose-dev.yml up -d postgres redis qbittorrent",
+        "presentation": { "reveal": "always", "panel": "dedicated" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Stop Infra",
+        "type": "shell",
+        "command": "docker compose -f docker-compose-dev.yml down",
+        "presentation": { "reveal": "always", "panel": "dedicated" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Run API",
+        "type": "shell",
+        "command": "uv run uvicorn src.telegram_rutor_bot.web.app:app --reload --port 8088 --host 0.0.0.0",
+        "isBackground": true,
+        "presentation": { "reveal": "always", "panel": "dedicated" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Run Bot",
+        "type": "shell",
+        "command": "uv run telegram-rutor-bot bot",
+        "isBackground": true,
+        "options": { "env": { "RUTOR_BOT_RUN_MIGRATIONS": "true" } },
+        "presentation": { "reveal": "always", "panel": "dedicated" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Run Worker",
+        "type": "shell",
+        "command": "uv run telegram-rutor-bot worker",
+        "isBackground": true,
+        "presentation": { "reveal": "always", "panel": "dedicated" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Run Scheduler",
+        "type": "shell",
+        "command": "uv run telegram-rutor-bot scheduler",
+        "isBackground": true,
+        "presentation": { "reveal": "always", "panel": "dedicated" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Frontend Dev",
+        "type": "shell",
+        "command": "npm run dev",
+        "options": { "cwd": "${workspaceFolder}/frontend" },
+        "isBackground": true,
+        "presentation": { "reveal": "always", "panel": "dedicated" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Frontend Build",
+        "type": "shell",
+        "command": "npm run build",
+        "options": { "cwd": "${workspaceFolder}/frontend" },
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "Tests",
+        "type": "shell",
+        "command": "uv run pytest",
+        "group": { "kind": "test", "isDefault": true },
+        "problemMatcher": []
+      },
+      {
+        "label": "Test Current File",
+        "type": "shell",
+        "command": "uv run pytest ${file} -v",
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "DB Migrate",
+        "type": "shell",
+        "command": "uv run alembic upgrade head",
+        "problemMatcher": []
+      },
+      {
+        "label": "DB New Migration",
+        "type": "shell",
+        "command": "uv run alembic revision --autogenerate -m \"${input:migrationName}\"",
+        "problemMatcher": []
+      },
+      {
+        "label": "Full Dev",
+        "dependsOn": ["Start Infra", "Run API", "Frontend Dev"],
+        "dependsOrder": "sequence",
+        "problemMatcher": []
+      }
+    ],
+    "inputs": [
+      {
+        "id": "migrationName",
+        "description": "Migration description",
+        "type": "promptString",
+        "default": "describe changes"
+      }
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "charliermarsh.ruff",
+      "ms-python.python",
+      "esbenp.prettier-vscode",
+      "bradlc.vscode-tailwindcss",
+      "dbaeumer.vscode-eslint"
+    ]
+  }
+}

@@ -47,7 +47,7 @@ async def test_monitor_check_monitored_items_full(mocker, monitor):
     monitor.session.execute.return_value = mock_result
 
     # Mock parse_rutor
-    mocker.patch('telegram_rutor_bot.services.monitor.parse_rutor', AsyncMock(return_value=[10]))
+    mocker.patch('telegram_rutor_bot.services.monitor.parse_rutor', AsyncMock(return_value=([10], [100])))
 
     # Mock notifications
     monitor._notify_users_about_found_items = AsyncMock()

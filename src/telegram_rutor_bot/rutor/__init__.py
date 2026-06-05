@@ -1,6 +1,7 @@
 """Rutor.info torrent parser and downloader module."""
 
 from .parser import (
+    add_torrent_from_page_url,
     download_torrent,
     get_file_link,
     get_torrent_details,
@@ -9,6 +10,7 @@ from .parser import (
 )
 
 __all__ = [
+    'add_torrent_from_page_url',
     'download_torrent',
     'get_file_link',
     'get_torrent_details',

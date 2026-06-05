@@ -19,11 +19,11 @@ services:
         condition: service_healthy
     volumes:
       - film_cache:/app/data/film_cache
-    restart: unless-stopped
+    restart: always
 
   postgres:
     image: postgres:18-alpine
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_USER: rutor
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -38,7 +38,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    restart: unless-stopped
+    restart: always
     volumes:
       - redis_data:/data
     healthcheck:
@@ -53,8 +53,9 @@ services:
       dockerfile: Dockerfile
     image: telegram-rutor-bot-qbittorrent
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${QBITTORRENT_PUID:-1000}
+      - PGID=${QBITTORRENT_PGID:-1000}
+      - UMASK=${QBITTORRENT_UMASK:-002}
       - TZ=Etc/UTC
       - WEBUI_PORT=8080
       - TORRENTING_PORT=6881
@@ -67,11 +68,11 @@ services:
       - 8090:8080
       - 6881:6881
       - 6881:6881/udp
-    restart: unless-stopped
+    restart: always
 
   bot:
     build: .
-    restart: unless-stopped
+    restart: always
     command: ["bot"]
     volumes:
       - ./src:/app/src
@@ -97,7 +98,7 @@ services:
 
   scheduler:
     build: .
-    restart: unless-stopped
+    restart: always
     command: ["scheduler"]
     volumes:
       - ./src:/app/src
@@ -121,7 +122,7 @@ services:
 
   worker:
     build: .
-    restart: unless-stopped
+    restart: always
     command: ["worker"]
     volumes:
       - ./src:/app/src

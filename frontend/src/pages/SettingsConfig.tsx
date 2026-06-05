@@ -34,6 +34,7 @@ export default function SettingsConfig() {
   const [tmdbApiKey, setTmdbApiKey] = useState('')
   const [tmdbSessionId, setTmdbSessionId] = useState('')
   const [torrentSortKeywords, setTorrentSortKeywords] = useState('')
+  const [discoveryMaxResults, setDiscoveryMaxResults] = useState(10)
 
   // Torrent Client State
   const [host, setHost] = useState('localhost')
@@ -106,6 +107,9 @@ export default function SettingsConfig() {
         setTorrentSortKeywords(
           String(res.current_values.torrent_sort_keywords || ''),
         )
+        setDiscoveryMaxResults(
+          Number(res.current_values.discovery_max_results || 10),
+        )
 
         setHost(String(res.current_values.qbittorrent_host || 'localhost'))
         setPort(Number(res.current_values.qbittorrent_port || 8080))
@@ -136,6 +140,7 @@ export default function SettingsConfig() {
       tmdb_api_key: tmdbApiKey,
       tmdb_session_id: tmdbSessionId,
       torrent_sort_keywords: torrentSortKeywords,
+      discovery_max_results: discoveryMaxResults,
       torrent: {
         client: 'qbittorrent',
         host,
@@ -363,6 +368,32 @@ export default function SettingsConfig() {
                 setTorrentSortKeywords(e.target.value)
               }}
               placeholder="LostFilm, Кубик в Кубе, BDRip"
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="discoveryMaxResults"
+                className="text-sm font-medium text-zinc-400"
+              >
+                Discovery max results
+              </label>
+              <Tooltip content="How many TMDB matches /discovery shows per query.">
+                <div className="p-1 cursor-help rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300">
+                  <Info className="size-4" />
+                </div>
+              </Tooltip>
+            </div>
+            <Input
+              id="discoveryMaxResults"
+              type="number"
+              min={1}
+              max={20}
+              value={discoveryMaxResults}
+              onChange={(e) => {
+                setDiscoveryMaxResults(Number(e.target.value))
+              }}
             />
           </div>
         </div>

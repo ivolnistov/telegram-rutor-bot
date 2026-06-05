@@ -105,6 +105,12 @@ class Settings(BaseSettings):
         default=None,
         description='Comma-separated keywords. Releases matching more of these surface first in display lists.',
     )
+    discovery_max_results: int = Field(
+        default=10,
+        ge=1,
+        le=20,
+        description='Max number of TMDB hits to show per /discovery query (1..20)',
+    )
 
     # Genre to category mapping
     genre_mapping: dict[str, list[str]] = Field(

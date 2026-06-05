@@ -14,6 +14,7 @@ import uvicorn
 from sqlalchemy import update
 from taskiq import InMemoryBroker
 from taskiq.receiver import Receiver
+from telegram import BotCommand
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from telegram_rutor_bot import handlers as h
@@ -22,6 +23,7 @@ from telegram_rutor_bot.config_listener import config_listener_task, refresh_set
 from telegram_rutor_bot.db import get_async_session, init_db
 from telegram_rutor_bot.db.migrate import init_database
 from telegram_rutor_bot.db.models import TaskExecution
+from telegram_rutor_bot.handlers.pending import handle_pending_arg, register_pending_handler
 from telegram_rutor_bot.services.search_manager import sync_system_searches
 from telegram_rutor_bot.tasks.broker import broker, scheduler
 from telegram_rutor_bot.tasks.jobs import (
@@ -37,6 +39,28 @@ log = logging.getLogger(__name__)
 
 # Keep strong references to background tasks to prevent garbage collection
 _background_tasks: set[asyncio.Task[Any]] = set()
+
+_BOT_COMMANDS: tuple[tuple[str, str, str], ...] = (
+    ('start', 'Show main menu', 'Главное меню'),
+    ('search', 'Find a torrent', 'Поиск торрента'),
+    ('list', 'Active torrents', 'Активные торренты'),
+    ('downloads', 'Downloads', 'Загрузки'),
+    ('watch', 'Add show to watchlist', 'Добавить в подписки'),
+    ('recommend', 'Recommendations', 'Рекомендации'),
+    ('discovery', 'Browse TMDB', 'Каталог TMDB'),
+    ('list_search', 'Saved searches', 'Сохранённые поиски'),
+    ('list_subscriptions', 'My subscriptions', 'Мои подписки'),
+    ('language', 'Change language', 'Сменить язык'),
+    ('help', 'Show help', 'Помощь'),
+)
+
+
+async def _register_bot_commands(application: Application[Any, Any, Any, Any, Any, Any]) -> None:
+    """Register Telegram command menu hints."""
+    en = [BotCommand(command, en_desc) for command, en_desc, _ in _BOT_COMMANDS]
+    ru = [BotCommand(command, ru_desc) for command, _, ru_desc in _BOT_COMMANDS]
+    await application.bot.set_my_commands(en)
+    await application.bot.set_my_commands(ru, language_code='ru')
 
 
 async def run_bot() -> None:  # noqa: PLR0915 - linear handler registration; splitting hurts readability
@@ -74,6 +98,7 @@ async def run_bot() -> None:  # noqa: PLR0915 - linear handler registration; spl
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/es_\d+)$'), h.search_execute))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/subscribe_\d+)$'), h.subscribe))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^(/unsubscribe_\d+)$'), h.unsubscribe))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(h.RUTOR_URL_RE), h.torrent_from_url))
     application.add_handler(CommandHandler('adduser', h.add_user_cmd))
     application.add_handler(CommandHandler('language', h.language_handler))
     application.add_handler(CallbackQueryHandler(h.search_callback_handler, pattern=r'^(ds_|es_|sub_|unsub_)'))
@@ -81,6 +106,13 @@ async def run_bot() -> None:  # noqa: PLR0915 - linear handler registration; spl
     application.add_handler(CallbackQueryHandler(h.discovery_season_callback_handler, pattern=r'^disc_season:'))
     application.add_handler(CallbackQueryHandler(h.discovery_callback_handler, pattern=r'^disc_rutor:'))
     application.add_handler(CallbackQueryHandler(h.callback_query_handler))
+
+    register_pending_handler('search', h.torrent_search)
+    register_pending_handler('watch', h.watch_command)
+    register_pending_handler('adduser', h.add_user_cmd)
+    register_pending_handler('discovery', h.discovery_command)
+    application.add_handler(MessageHandler(filters.REPLY & filters.TEXT & ~filters.COMMAND, handle_pending_arg))
+
     application.add_handler(MessageHandler(filters.COMMAND, h.unknown))
 
     # Menu Handlers
@@ -94,6 +126,7 @@ async def run_bot() -> None:  # noqa: PLR0915 - linear handler registration; spl
 
     # Start bot
     await application.initialize()
+    await _register_bot_commands(application)
     await application.start()
     if application.updater:
         await application.updater.start_polling()

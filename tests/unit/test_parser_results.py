@@ -44,5 +44,7 @@ async def test_parse_rutor_with_results(mocker):
     )
     mocker.patch('telegram_rutor_bot.rutor.parser._process_torrent_item', AsyncMock(return_value=1))
 
-    res = await parse_rutor(AsyncMock(), 'http://test')
-    assert isinstance(res, list)
+    res = await parse_rutor('http://test', AsyncMock())
+    assert isinstance(res, tuple)
+    assert isinstance(res[0], list)
+    assert isinstance(res[1], list)

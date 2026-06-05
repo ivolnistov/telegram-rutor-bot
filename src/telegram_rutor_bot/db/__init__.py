@@ -2,6 +2,7 @@
 
 # Database initialization and session management
 from .database import get_async_db, get_async_session, init_db
+from .episodes import get_notified_episodes, mark_episodes_notified
 
 # Film operations
 from .films import (
@@ -12,7 +13,7 @@ from .films import (
     search_films,
     update_film_metadata,
 )
-from .models import Base, Film, Search, Torrent, User
+from .models import Base, Film, NotifiedEpisode, Search, Torrent, User
 
 # Search operations
 from .searches import (
@@ -37,6 +38,7 @@ from .subscriptions import get_subscriptions, is_subscribed, subscribe, unsubscr
 # Torrent operations
 from .torrents import (
     add_torrent,
+    count_torrents,
     get_recent_torrents,
     get_torrent_by_blake,
     get_torrent_by_id,
@@ -62,11 +64,13 @@ from .users import (
 __all__ = [
     'Base',
     'Film',
+    'NotifiedEpisode',
     'Search',
     'Torrent',
     'User',
     'add_search_to_db',
     'add_torrent',
+    'count_torrents',
     'create_category',
     'delete_category',
     'delete_search',
@@ -76,6 +80,7 @@ __all__ = [
     'get_categories',
     'get_films',
     'get_films_by_ids',
+    'get_notified_episodes',
     'get_or_create_film',
     'get_or_create_user_by_chat_id',
     'get_recent_torrents',
@@ -96,6 +101,7 @@ __all__ = [
     'grant_access',
     'init_db',
     'is_subscribed',
+    'mark_episodes_notified',
     'mark_torrent_downloaded',
     'modify_torrent',
     'search_films',

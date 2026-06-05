@@ -21,6 +21,7 @@ from telegram_rutor_bot.config import settings
 from telegram_rutor_bot.config_listener import config_listener_task, refresh_settings_from_db
 from telegram_rutor_bot.db import (
     add_search_to_db,
+    count_torrents,
     create_category,
     delete_category,
     delete_search,
@@ -29,10 +30,10 @@ from telegram_rutor_bot.db import (
     get_categories,
     get_films,
     get_or_create_user_by_chat_id,
-    get_recent_torrents,
     get_search_subscribers,
     get_searches,
     get_torrent_by_id,
+    get_torrents,
     get_user,
     init_db,
     search_films,
@@ -47,6 +48,7 @@ from telegram_rutor_bot.rutor import download_torrent
 from telegram_rutor_bot.schemas import (
     CategoryResponse,
     FilmResponse,
+    PaginatedTorrentResponse,
     SearchResponse,
     StatusResponse,
     TaskExecutionResponse,
@@ -275,15 +277,21 @@ async def remove_search_subscriber(search_id: int, user_id: int) -> StatusRespon
     return StatusResponse(status='ok')
 
 
-@api_router.get('/api/torrents', response_model=list[TorrentResponse], dependencies=[Depends(get_current_admin_user)])
-async def list_torrents(q: str | None = None, limit: int = 50) -> list[TorrentResponse]:
-    """List recent torrents."""
+@api_router.get(
+    '/api/torrents', response_model=PaginatedTorrentResponse, dependencies=[Depends(get_current_admin_user)]
+)
+async def list_torrents(q: str | None = None, limit: int = 50, offset: int = 0) -> PaginatedTorrentResponse:
+    """List torrents with server-side pagination and search."""
     async with get_async_session() as session:
+        total = await count_torrents(session, query=q)
         if q:
-            torrents = await search_torrents(session, q, limit=limit)
+            torrents = await search_torrents(session, q, limit=limit, offset=offset)
         else:
-            torrents = await get_recent_torrents(session, limit=limit)
-        return [TorrentResponse.model_validate(t) for t in torrents]
+            torrents = await get_torrents(session, limit=limit, offset=offset)
+        return PaginatedTorrentResponse(
+            items=[TorrentResponse.model_validate(t) for t in torrents],
+            total=total,
+        )
 
 
 @api_router.post('/api/films/{film_id}/search', response_model=StatusResponse)
