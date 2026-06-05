@@ -8,6 +8,7 @@ from telegram_rutor_bot.db.models import Film, Torrent
 from telegram_rutor_bot.rutor.parser import (
     _extract_details_from_table,
     _parse_torrent_page_details,
+    add_torrent_from_page_url,
     download_torrent,
     fetch_rutor_torrents,
     get_torrent_info,
@@ -125,3 +126,72 @@ async def test_download_torrent_success(mocker):
     res = await download_torrent(mock_torrent)
 
     assert res['status'] == 'ok'
+
+
+@pytest.mark.asyncio
+async def test_download_torrent_uses_detected_category_folder(mocker):
+    mock_film = MagicMock(spec=Film)
+    mock_film.category_rel = None
+    mock_film.tmdb_id = None
+
+    mock_torrent = MagicMock(spec=Torrent)
+    mock_torrent.link = '/t/1'
+    mock_torrent.name = 'Cartoon Name'
+    mock_torrent.magnet = 'magnet:?xt=urn:btih:cartoon'
+    mock_torrent.film = mock_film
+
+    mock_response = MagicMock()
+    mock_response.text = '<html></html>'
+    mock_response.raise_for_status = MagicMock()
+
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_response
+    mocker.patch(
+        'telegram_rutor_bot.rutor.parser._get_client',
+        return_value=mocker.MagicMock(__aenter__=AsyncMock(return_value=mock_client), __aexit__=AsyncMock()),
+    )
+    mocker.patch('telegram_rutor_bot.rutor.parser._extract_genre_from_details', return_value=('animation', None))
+    mocker.patch('telegram_rutor_bot.rutor.parser._get_category_folder', AsyncMock(return_value='/downloads/cartoons'))
+
+    mock_tc = AsyncMock()
+    mock_tc.add_torrent.return_value = {'status': 'ok'}
+    mocker.patch('telegram_rutor_bot.rutor.parser.get_torrent_client', return_value=mock_tc)
+
+    await download_torrent(mock_torrent)
+
+    mock_tc.add_torrent.assert_awaited_once_with(
+        'magnet:?xt=urn:btih:cartoon',
+        download_dir='/downloads/cartoons',
+        category='CARTOONS',
+        rename='Cartoon Name',
+        tags=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_add_torrent_from_page_url_uses_detected_category_folder(mocker):
+    mock_response = MagicMock()
+    mock_response.text = '<html><h1>Cartoon Name (2024)</h1><a href="magnet:?xt=urn:btih:cartoon">m</a></html>'
+    mock_response.raise_for_status = MagicMock()
+
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_response
+    mocker.patch(
+        'telegram_rutor_bot.rutor.parser._get_client',
+        return_value=mocker.MagicMock(__aenter__=AsyncMock(return_value=mock_client), __aexit__=AsyncMock()),
+    )
+    mocker.patch('telegram_rutor_bot.rutor.parser._extract_genre_from_details', return_value=('animation', None))
+    mocker.patch('telegram_rutor_bot.rutor.parser._get_category_folder', AsyncMock(return_value='/downloads/cartoons'))
+
+    mock_tc = AsyncMock()
+    mocker.patch('telegram_rutor_bot.rutor.parser.get_torrent_client', return_value=mock_tc)
+
+    result = await add_torrent_from_page_url('/torrent/1/cartoon')
+
+    assert result['category'] == 'CARTOONS'
+    mock_tc.add_torrent.assert_awaited_once_with(
+        'magnet:?xt=urn:btih:cartoon',
+        download_dir='/downloads/cartoons',
+        category='CARTOONS',
+        rename='Cartoon Name',
+    )

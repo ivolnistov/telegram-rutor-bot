@@ -18,7 +18,7 @@ import httpx
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from telegram_rutor_bot.config import settings
 from telegram_rutor_bot.db import (
@@ -30,7 +30,8 @@ from telegram_rutor_bot.db import (
     modify_torrent,
     update_film_metadata,
 )
-from telegram_rutor_bot.db.models import AppConfig, Film, Torrent
+from telegram_rutor_bot.db.database import get_async_session
+from telegram_rutor_bot.db.models import AppConfig, Category, Film, Torrent
 from telegram_rutor_bot.services.matcher import TmdbMatcher
 from telegram_rutor_bot.torrent_clients import get_torrent_client
 from telegram_rutor_bot.utils.cache import FilmInfoCache
@@ -986,6 +987,31 @@ def _determine_category(genre: str | None, rutor_category: str | None, torrent_n
     return category
 
 
+async def _get_category_folder(category_name: str | None) -> str | None:
+    """Return configured download folder for an active category name."""
+    if not category_name:
+        return None
+
+    try:
+        async with get_async_session() as session:
+            result = await session.execute(
+                select(Category.folder).where(Category.name == category_name, Category.active.is_(True))
+            )
+            folder = result.scalar_one_or_none()
+    except (RuntimeError, SQLAlchemyError) as exc:
+        log.debug('Could not resolve folder for category %s: %s', category_name, exc)
+        return None
+
+    return folder if folder else None
+
+
+async def _resolve_download_dir(torrent: Torrent, category: str | None) -> str | None:
+    """Resolve the save path from the film category first, then detected category."""
+    if torrent.film and torrent.film.category_rel and torrent.film.category_rel.folder:
+        return torrent.film.category_rel.folder
+    return await _get_category_folder(category)
+
+
 async def download_torrent(torrent: Torrent) -> dict[str, Any]:
     """Download torrent using configured torrent client"""
     category = None
@@ -1012,10 +1038,8 @@ async def download_torrent(torrent: Torrent) -> dict[str, Any]:
         # If we can't get genre, try to detect from torrent name
         category = detect_category_from_title(torrent.name)
 
-    # Determine download directory from category
-    download_dir = None
-    if torrent.film and torrent.film.category_rel and torrent.film.category_rel.folder:
-        download_dir = torrent.film.category_rel.folder
+    # Determine download directory from the detected category if the film has no explicit category folder.
+    download_dir = await _resolve_download_dir(torrent, category)
 
     # Download the torrent
     torrent_client = get_torrent_client()
@@ -1064,7 +1088,12 @@ async def add_torrent_from_page_url(page_url: str) -> dict[str, Any]:
     torrent_client = get_torrent_client()
     await torrent_client.connect()
     try:
-        await torrent_client.add_torrent(magnet, category=category, rename=name or raw_title or None)
+        await torrent_client.add_torrent(
+            magnet,
+            download_dir=await _get_category_folder(category),
+            category=category,
+            rename=name or raw_title or None,
+        )
     finally:
         await torrent_client.disconnect()
 
