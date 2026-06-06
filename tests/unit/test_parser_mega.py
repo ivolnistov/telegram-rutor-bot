@@ -54,8 +54,72 @@ async def test_process_torrent_item_simple(mocker):
     torrent_data['torrent'].get_text.return_value = 'Film'
 
     mocker.patch('telegram_rutor_bot.rutor.parser.get_or_create_film', AsyncMock(return_value=MagicMock(id=1)))
-    mocker.patch('telegram_rutor_bot.rutor.parser.add_torrent', AsyncMock())
+    mocker.patch('telegram_rutor_bot.rutor.parser._film_has_torrents', AsyncMock(return_value=False))
+    mocker.patch('telegram_rutor_bot.rutor.parser.add_torrent', AsyncMock(return_value=MagicMock(id=1)))
 
     new = []
     await _process_torrent_item(mock_session, torrent_data, {}, new)
     assert 1 in new
+
+
+@pytest.mark.asyncio
+async def test_process_torrent_item_skips_movie_notification_for_existing_film_torrents(mocker):
+    mock_session = AsyncMock()
+
+    torrent_data = {
+        'blake': 'b1',
+        'torrent_lnk_blake': 'tb2',
+        'name': 'Film',
+        'magnet': 'mag2',
+        'date': date(2024, 1, 1),
+        'torrent_lnk': '/t/2',
+        'size': 100,
+        'torrent': MagicMock(),
+        'year': '2024',
+    }
+    torrent_data['torrent'].get_text.return_value = 'Film New Release'
+
+    mocker.patch('telegram_rutor_bot.rutor.parser._film_has_torrents', AsyncMock(return_value=True))
+    mocker.patch('telegram_rutor_bot.rutor.parser.add_torrent', AsyncMock(return_value=MagicMock(id=2)))
+
+    new: list[int] = []
+    new_torrent_ids: list[int] = []
+    await _process_torrent_item(mock_session, torrent_data, {'b1': 1}, new, new_torrent_ids=new_torrent_ids)
+
+    assert new == []
+    assert new_torrent_ids == [2]
+
+
+@pytest.mark.asyncio
+async def test_process_torrent_item_keeps_series_notification_for_existing_film_torrents(mocker):
+    mock_session = AsyncMock()
+
+    torrent_data = {
+        'blake': 'b1',
+        'torrent_lnk_blake': 'tb3',
+        'name': 'Show',
+        'magnet': 'mag3',
+        'date': date(2024, 1, 1),
+        'torrent_lnk': '/t/3',
+        'size': 100,
+        'torrent': MagicMock(),
+        'year': '2024',
+    }
+    torrent_data['torrent'].get_text.return_value = 'Show S01E02'
+
+    mocker.patch('telegram_rutor_bot.rutor.parser._film_has_torrents', AsyncMock(return_value=True))
+    mocker.patch('telegram_rutor_bot.rutor.parser.add_torrent', AsyncMock(return_value=MagicMock(id=3)))
+
+    new: list[int] = []
+    new_torrent_ids: list[int] = []
+    await _process_torrent_item(
+        mock_session,
+        torrent_data,
+        {'b1': 1},
+        new,
+        is_series=True,
+        new_torrent_ids=new_torrent_ids,
+    )
+
+    assert new == [1]
+    assert new_torrent_ids == [3]

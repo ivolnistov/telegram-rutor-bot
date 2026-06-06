@@ -233,6 +233,8 @@ async def _process_torrent_item(
         target_film_id = film.id
         film_cache[torrent_data['blake']] = target_film_id
 
+    had_torrents_before = await _film_has_torrents(session, target_film_id)
+
     try:
         torrent_name = torrent_data['torrent'].get_text()
         ep_info = parse_episode(torrent_name) if is_series else None
@@ -252,8 +254,9 @@ async def _process_torrent_item(
             season=ep_info.season if ep_info else None,
             episode=ep_info.episode if ep_info else None,
         )
-        # Torrent was actually new — mark film for notification
-        if target_film_id not in new:
+        # Movie searches notify once: when the first matching torrent appears for a film.
+        should_notify_film = is_series or not had_torrents_before
+        if should_notify_film and target_film_id not in new:
             new.append(target_film_id)
         if new_torrent_ids is not None:
             new_torrent_ids.append(new_torrent.id)
@@ -281,6 +284,12 @@ async def _process_torrent_item(
         # search rendering paths get a poster + original_title + ratings.
         if not film.tmdb_id:
             await _try_match_tmdb(session, film)
+
+
+async def _film_has_torrents(session: AsyncSession, film_id: int) -> bool:
+    """Return whether a film already has any torrent rows."""
+    result = await session.execute(select(Torrent.id).where(Torrent.film_id == film_id).limit(1))
+    return result.scalar_one_or_none() is not None
 
 
 async def fetch_rutor_torrents(
